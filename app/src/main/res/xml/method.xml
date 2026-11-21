@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+	android:settingsActivity="fr.type1.keyboard.SetupActivity"
+	android:supportsSwitchingToNextInputMethod="true">
+
+	<subtype
+		android:imeSubtypeLocale="fr_FR"
+		android:imeSubtypeMode="keyboard"
+		android:label="@string/subtype_azerty" />
+
+	<subtype
+		android:imeSubtypeLocale="fr_FR"
+		android:imeSubtypeMode="keyboard"
+		android:imeSubtypeExtraValue="AsciiCapable"
+		android:label="@string/subtype_azerty_ascii" />
+
+</input-method>

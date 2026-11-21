@@ -1,0 +1,26 @@
+[package]
+name = "type1-core"
+version = "0.1.0"
+edition = "2021"
+description = "Platform-independent core for the Type1 single-row keyboard"
+license = "MIT"
+
+[lib]
+name = "type1_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = { version = "0.21", default-features = false }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[lints.rust]
+unused_parens = "allow"

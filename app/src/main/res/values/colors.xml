@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<color name="keyboard_background">#FF11131A</color>
+	<color name="suggestion_background">#FF1A1D27</color>
+	<color name="key_background">#FF262A36</color>
+	<color name="key_background_pressed">#FF4C6FFF</color>
+	<color name="key_text">#FFFFFFFF</color>
+	<color name="key_text_muted">#FF8C93A8</color>
+	<color name="accent">#FF4C6FFF</color>
+	<color name="brand">#FF4C6FFF</color>
+	<color name="ic_launcher_background">#FF1B1B8F</color>
+</resources>
