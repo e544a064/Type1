@@ -53,6 +53,9 @@ release on the letter you want.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
+- Move the caret back into an existing word and the strip re-suggests
+  corrections for it; tapping one replaces the whole word in place
+  (`Roppxjf` → `Comment`).
 - Conservative application: a confidence margin (stricter for two-letter
   tokens), no all-caps/mixed-case words, no suggestions in password/email/URI/
   name/address/number fields or when the editor asks for none.
@@ -76,7 +79,7 @@ release on the letter you want.
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
 
-Not in the MVP: next-word prediction (context model), cursor-back re-suggestions,
+Not in the MVP: next-word prediction (context model),
 personal dictionary, dictionary imports, glide typing, emoji panel, clipboard
 manager, voice input, themes, physical keyboard.
 
@@ -241,7 +244,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 95 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 97 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
@@ -258,6 +261,7 @@ untested.
 | Tap a letter | Type it (respects shift / auto-caps) |
 | Drag along the letter line | Move the highlight, release to type |
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
+| Move the caret into an existing word | Re-suggests corrections for that word; tap one to replace it |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `!` and `?`; slide and release |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
@@ -268,7 +272,7 @@ untested.
 
 ## Roadmap
 
-1. **Prediction** — next-word model and cursor-back re-suggestions, so the strip
+1. **Prediction** — next-word model and context-aware ranking, so the strip
    earns its space.
 2. **Typing comfort** — magnification popup above the strip, per-letter touch
    model, haptic strength setting.

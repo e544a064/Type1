@@ -716,6 +716,33 @@ fn dot_and_punctuation_alts_commit_at_the_boundary() {
 }
 
 #[test]
+fn moving_back_into_a_word_offers_a_recorrection() {
+	let mut engine = plain();
+	engine.set_context_word("Ropp", "xjf");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "Comment");
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![Action::ReplaceSurrounding {
+			before: 4,
+			after: 3,
+			text: "Comment".into(),
+		}]
+	);
+	// The context is consumed; the strip goes back to empty.
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn moving_back_into_a_known_word_keeps_the_strip_empty() {
+	let mut engine = plain();
+	engine.set_context_word("bon", "jour");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn symbol_row_is_valid_json_with_quotes() {	let mut engine = plain();
 	engine.on_key("page");
 	engine.on_key("page");

@@ -47,6 +47,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       elisions with a mistyped clitic (`vqjmd` → `t'aime`), two-key slips
       (`bknjpur` → `bonjour`), spelling variants (`commant` → `comment`) and
       a last-resort closest-word suggestion (`bodjmur` → `bonjour`)
+- [x] Re-suggest corrections when the caret moves back into an existing word
 - [ ] Next-word prediction
 - [x] Auto-capitalisation (sentences / words / characters)
 - [x] Automatic spacing around French punctuation

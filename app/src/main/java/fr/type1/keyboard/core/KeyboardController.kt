@@ -22,6 +22,9 @@ class KeyboardController {
 
 	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
 
+	fun syncContext(before: String, after: String) =
+		NativeBridge.nativeSyncContext(handle, before, after)
+
 	fun render(): RowModel = RowModel.parse(NativeBridge.nativeRender(handle))
 
 	fun press(keyId: String): List<KeyAction> =

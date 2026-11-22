@@ -72,6 +72,29 @@ pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSelectionC
 }
 
 #[no_mangle]
+pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSyncContext(
+	mut env: JNIEnv<'_>,
+	_this: JObject<'_>,
+	_handle: jlong,
+	before: JString<'_>,
+	after: JString<'_>,
+) {
+	let _ = catch_unwind(AssertUnwindSafe(|| {
+		let before = match env.get_string(&before) {
+			Ok(value) => value.to_string_lossy().into_owned(),
+			Err(_) => return,
+		};
+		let after = match env.get_string(&after) {
+			Ok(value) => value.to_string_lossy().into_owned(),
+			Err(_) => return,
+		};
+		if let Some(engine) = lock().as_mut() {
+			engine.set_context_word(&before, &after);
+		}
+	}));
+}
+
+#[no_mangle]
 pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSetInputType(
 	_env: JNIEnv<'_>,
 	_this: JObject<'_>,

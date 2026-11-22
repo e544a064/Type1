@@ -17,6 +17,8 @@ public class NativeBridge {
 
 	public static native void nativeReset(long handle);
 
+	public static native void nativeSyncContext(long handle, String before, String after);
+
 	public static native void nativeSetInputType(long handle, int inputType, int imeOptions);
 
 	public static native String nativeRender(long handle);
@@ -58,6 +60,12 @@ public class NativeBridge {
 		System.out.println("corrected: " + nativeRender(handle));
 		System.out.println("backspace-> " + nativeKey(handle, "backspace"));
 		System.out.println("reverted : " + nativeRender(handle));
+
+		nativeReset(handle);
+		nativeSetInputType(handle, 0x0000_4001, 0);
+		nativeSyncContext(handle, "Ropp", "xjf");
+		System.out.println("recorrection: " + nativeRender(handle));
+		System.out.println("sug:0    -> " + nativeKey(handle, "sug:0"));
 
 		nativeDestroy(handle);
 		System.out.println("OK");

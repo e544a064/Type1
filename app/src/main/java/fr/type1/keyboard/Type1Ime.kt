@@ -116,6 +116,10 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 					is KeyAction.DeleteChars -> if (action.count > 0) {
 						ic.deleteSurroundingText(action.count, 0)
 					}
+					is KeyAction.ReplaceSurrounding -> {
+						ic.deleteSurroundingText(action.before, action.after)
+						ic.commitText(action.text, 1)
+					}
 					is KeyAction.Cursor -> sendCursor(ic, action.delta)
 					is KeyAction.StartSelection -> startSelection(ic)
 					is KeyAction.ExtendSelection -> extendSelection(ic, action.delta)
@@ -147,8 +151,30 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		)
 		// Our own commits also update the selection; ignore those.
 		if (SystemClock.uptimeMillis() - lastActionAt < SELECTION_IGNORE_MS) return
-		controller.selectionChanged()
+		if (newSelStart != newSelEnd) {
+			controller.selectionChanged()
+			keyboardView?.refresh()
+			return
+		}
+		val ic = currentInputConnection
+		if (ic == null) {
+			controller.selectionChanged()
+			keyboardView?.refresh()
+			return
+		}
+		val before = ic.getTextBeforeCursor(MAX_CONTEXT_CHARS, 0)?.toString().orEmpty()
+		val after = ic.getTextAfterCursor(MAX_CONTEXT_CHARS, 0)?.toString().orEmpty()
+		val prefix = before.takeLastWhile { it.isWordChar() }
+		val suffix = after.takeWhile { it.isWordChar() }
+		if (prefix.length + suffix.length < 2) {
+			controller.selectionChanged()
+		} else {
+			controller.syncContext(prefix, suffix)
+		}
+		keyboardView?.refresh()
 	}
+
+	private fun Char.isWordChar(): Boolean = isLetter() || this == '\'' || this == '’'
 
 	private fun sendCursor(ic: InputConnection, delta: Int) {
 		if (delta == 0) return
@@ -220,6 +246,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private companion object {
 		const val MAX_SELECTION_CHARS = 10_000
+		const val MAX_CONTEXT_CHARS = 64
 		const val SELECTION_IGNORE_MS = 200L
 	}
 }

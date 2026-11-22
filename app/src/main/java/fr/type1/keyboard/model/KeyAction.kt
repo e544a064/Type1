@@ -11,6 +11,9 @@ sealed class KeyAction {
 
 	data class DeleteChars(val count: Int) : KeyAction()
 
+	/** Replace the word around the caret, with [before]/[after] characters on each side. */
+	data class ReplaceSurrounding(val before: Int, val after: Int, val text: String) : KeyAction()
+
 	/** Move the caret by [delta] characters; negative moves left. */
 	data class Cursor(val delta: Int) : KeyAction()
 
@@ -40,6 +43,11 @@ sealed class KeyAction {
 						}
 					}
 					"cursor" -> out += Cursor(item.optInt("v", 0))
+					"replace" -> out += ReplaceSurrounding(
+						item.optInt("b", 0),
+						item.optInt("a", 0),
+						item.optString("v", ""),
+					)
 					"select" -> out += ExtendSelection(item.optInt("v", 0))
 					"startSelection" -> out += StartSelection
 					"deleteSelection" -> out += DeleteSelection

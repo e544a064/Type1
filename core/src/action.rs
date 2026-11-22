@@ -62,6 +62,9 @@ pub enum Action {
 	Delete { word: bool },
 	/// Delete an exact number of characters (used when replacing a suggestion).
 	DeleteChars(u32),
+	/// Replace the word around the caret, with `before`/`after` characters on
+	/// each side (used when re-correcting existing text).
+	ReplaceSurrounding { before: u32, after: u32, text: String },
 	/// Move the caret by `delta` characters (negative is left).
 	MoveCursor(i32),
 	/// Start a zero-width selection at the caret.
@@ -95,6 +98,19 @@ impl Action {
 				Action::DeleteChars(count) => {
 					out.push_str("{\"t\":\"delete\",\"n\":");
 					out.push_str(&count.to_string());
+					out.push('}');
+				}
+				Action::ReplaceSurrounding {
+					before,
+					after,
+					text,
+				} => {
+					out.push_str("{\"t\":\"replace\",\"b\":");
+					out.push_str(&before.to_string());
+					out.push_str(",\"a\":");
+					out.push_str(&after.to_string());
+					out.push_str(",\"v\":");
+					json::string_into(&mut out, text);
 					out.push('}');
 				}
 				Action::MoveCursor(delta) => {
@@ -144,6 +160,11 @@ mod tests {
 		let json = Action::list_json(&[
 			Action::Commit("é".into()),
 			Action::Delete { word: true },
+			Action::ReplaceSurrounding {
+				before: 2,
+				after: 3,
+				text: "test".into(),
+			},
 			Action::MoveCursor(-2),
 			Action::StartSelection,
 			Action::ExtendSelection(-1),
@@ -152,7 +173,7 @@ mod tests {
 		]);
 		assert_eq!(
 			json,
-			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"cursor","v":-2},{"t":"startSelection"},{"t":"select","v":-1},{"t":"deleteSelection"},{"t":"ime","v":"send"}]"#
+			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"replace","b":2,"a":3,"v":"test"},{"t":"cursor","v":-2},{"t":"startSelection"},{"t":"select","v":-1},{"t":"deleteSelection"},{"t":"ime","v":"send"}]"#
 		);
 	}
 }

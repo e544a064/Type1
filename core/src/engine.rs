@@ -33,6 +33,19 @@ struct CorrectionRecord {
 	alternatives: Vec<String>,
 }
 
+/// Word around the caret, restored when the user taps back into existing text.
+#[derive(Debug, Clone)]
+struct ContextWord {
+	before: String,
+	after: String,
+}
+
+impl ContextWord {
+	fn full(&self) -> String {
+		format!("{}{}", self.before, self.after)
+	}
+}
+
 #[derive(Debug)]
 pub struct Engine {
 	page: Page,
@@ -53,6 +66,8 @@ pub struct Engine {
 	/// the user edits it.
 	reverted: bool,
 	suggestion_cache: Option<(String, Suggestion)>,
+	/// Word around the caret when the user moves back into existing text.
+	context: Option<ContextWord>,
 }
 
 impl Default for Engine {
@@ -77,6 +92,7 @@ impl Engine {
 			pending_boundary: None,
 			reverted: false,
 			suggestion_cache: None,
+			context: None,
 		}
 	}
 
@@ -93,6 +109,7 @@ impl Engine {
 		self.pending_boundary = None;
 		self.reverted = false;
 		self.suggestion_cache = None;
+		self.context = None;
 	}
 
 	/// Configure from `EditorInfo`. Flags mirror the Android constants so the
@@ -133,11 +150,36 @@ impl Engine {
 		self.last_correction = None;
 		self.pending_boundary = None;
 		self.reverted = false;
+		self.context = None;
+	}
+
+	/// The caret moved into existing text. `before` and `after` are the two
+	/// halves of the word around the caret, so suggestions can cover the whole
+	/// word even when the caret is in the middle.
+	pub fn set_context_word(&mut self, before: &str, after: &str) {
+		self.selection_changed();
+		self.word.clear();
+		self.word.push_str(before);
+		let total = before.chars().count() + after.chars().count();
+		self.context = if total >= 2 && self.suggestions_enabled {
+			Some(ContextWord {
+				before: before.to_string(),
+				after: after.to_string(),
+			})
+		} else {
+			None
+		};
+		self.suggestion_cache = None;
+		self.last_char = before.chars().last().or_else(|| after.chars().last());
+		self.at_start = false;
 	}
 
 	/// Handle a key press. Returns the editor actions to apply, in order.
 	/// The UI always re-renders afterwards.
 	pub fn on_key(&mut self, id: &str) -> Vec<Action> {
+		if !id.starts_with("sug:") {
+			self.context = None;
+		}
 		if let Some(symbol) = id.strip_prefix("sym:") {
 			let space_before = matches!(symbol, "!" | "?" | ":" | ";");
 			return self.finish_word(symbol, space_before);
@@ -431,6 +473,21 @@ impl Engine {
 			None => return Vec::new(),
 		};
 
+		if let Some(context) = self.context.take() {
+			let before = context.before.chars().count() as u32;
+			let after = context.after.chars().count() as u32;
+			self.word.clear();
+			self.last_correction = None;
+			self.pending_boundary = None;
+			self.reverted = false;
+			self.suggestion_cache = None;
+			return vec![Action::ReplaceSurrounding {
+				before,
+				after,
+				text: chosen,
+			}];
+		}
+
 		if self.word.is_empty() {
 			if let Some(record) = self.last_correction.take() {
 				let delete =
@@ -512,6 +569,24 @@ impl Engine {
 	fn current_suggestions(&mut self) -> Vec<String> {
 		if !self.suggestions_enabled {
 			return Vec::new();
+		}
+		if let Some(full) = self.context.as_ref().map(ContextWord::full) {
+			if full.chars().count() < 2 {
+				return Vec::new();
+			}
+			if matches!(
+				case_pattern(&full),
+				CasePattern::AllCaps | CasePattern::Mixed
+			) {
+				return Vec::new();
+			}
+			let suggestion = self.suggestion_for(&full);
+			return suggestion
+			.candidates
+			.iter()
+			.take(STRIP_SUGGESTIONS)
+			.map(|candidate| apply_case(&full, &candidate.text))
+			.collect();
 		}
 		if !self.word.is_empty() {
 			let typed = self.word.clone();
