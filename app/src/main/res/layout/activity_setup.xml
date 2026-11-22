@@ -70,6 +70,36 @@
 			android:layout_height="wrap_content"
 			android:layout_marginTop="8dp" />
 
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="28dp"
+			android:text="@string/setup_swipe_sensitivity"
+			android:textColor="#FF11131A"
+			android:textSize="16sp" />
+
+		<TextView
+			android:id="@+id/swipeSensitivityValue"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:textColor="#FF6B7285"
+			android:textSize="14sp" />
+
+		<SeekBar
+			android:id="@+id/swipeSensitivitySeek"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp" />
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:text="@string/setup_swipe_hint"
+			android:textColor="#FF6B7285"
+			android:textSize="13sp" />
+
 		<EditText
 			android:id="@+id/demoField"
 			android:layout_width="match_parent"

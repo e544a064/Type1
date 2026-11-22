@@ -27,6 +27,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Backspace with a configurable long-press (repeat, swipe-to-size selection, nothing)
 - [x] Word delete in the core (not bound to a gesture yet)
 - [x] Swipe on the spacebar to move the cursor (switch in the setup screen)
+- [x] Configurable swipe sensitivity for the spacebar cursor and backspace selection
 - [ ] Select word / line / all
 - [ ] Clipboard history panel
 - [ ] Undo / redo

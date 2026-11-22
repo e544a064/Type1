@@ -96,6 +96,7 @@ class KeyboardView(
 	private var selectAnchorX = 0f
 	private var selectSteps = 0
 	private var lastX = 0f
+	private var swipeStepDp = 20
 
 	private val backgroundPaint = Paint().apply {
 		color = context.getColor(R.color.keyboard_background)
@@ -185,6 +186,11 @@ class KeyboardView(
 	/** Choose what a long press on the backspace key does. */
 	fun setBackspaceHold(mode: BackspaceHold) {
 		backspaceHold = mode
+	}
+
+	/** dp of horizontal travel per caret/selection step (8-40). */
+	fun setSwipeSensitivity(dpPerStep: Int) {
+		swipeStepDp = dpPerStep.coerceIn(8, 40)
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -641,9 +647,9 @@ class KeyboardView(
 		refresh()
 	}
 
-	/** One caret step per 20 dp of horizontal travel on the spacebar. */
+	/** One caret step per configured number of dp of horizontal travel. */
 	private fun dragSpaceCursor(x: Float) {
-		val step = dp(20f)
+		val step = dp(swipeStepDp.toFloat())
 		var delta = x - spaceAnchorX
 		while (abs(delta) >= step) {
 			val direction = if (delta > 0f) 1 else -1
@@ -682,9 +688,9 @@ class KeyboardView(
 		}
 	}
 
-	/** One character of selection per 20 dp between the finger and the anchor. */
+	/** One selection character per configured number of dp between finger and anchor. */
 	private fun dragSelection(x: Float) {
-		val step = dp(20f)
+		val step = dp(swipeStepDp.toFloat())
 		val target = maxOf(0, ((selectAnchorX - x) / step).toInt())
 		while (selectSteps < target) {
 			selectSteps++

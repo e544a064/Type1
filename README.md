@@ -42,6 +42,8 @@ release on the letter you want.
 - Drag along the letter line to correct a press before releasing.
 - Drag horizontally on the spacebar to move the caret; the setup screen has a
   switch to turn this off.
+- Swipe sensitivity (8–40 dp per character) is adjustable with a slider and
+  shared by the spacebar caret drag and the backspace selection.
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   just page, space, comma and enter.
 - Sounds, haptics, pressed-letter highlight.

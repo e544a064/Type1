@@ -9,8 +9,10 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.Switch
+import android.widget.TextView
 
 /** Onboarding: enable the IME, then pick it. */
 class SetupActivity : Activity() {
@@ -54,5 +56,23 @@ class SetupActivity : Activity() {
 
 			override fun onNothingSelected(parent: AdapterView<*>?) = Unit
 		}
+
+		val swipeSeek = findViewById<SeekBar>(R.id.swipeSensitivitySeek)
+		val swipeValue = findViewById<TextView>(R.id.swipeSensitivityValue)
+		swipeSeek.max = 32
+		val initialSensitivity = Prefs.swipeSensitivity(this)
+		swipeSeek.progress = initialSensitivity - 8
+		swipeValue.text = getString(R.string.setup_swipe_value, initialSensitivity)
+		swipeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+			override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
+				val dp = progress + 8
+				swipeValue.text = getString(R.string.setup_swipe_value, dp)
+				if (fromUser) Prefs.setSwipeSensitivity(this@SetupActivity, dp)
+			}
+
+			override fun onStartTrackingTouch(bar: SeekBar?) = Unit
+
+			override fun onStopTrackingTouch(bar: SeekBar?) = Unit
+		})
 	}
 }
