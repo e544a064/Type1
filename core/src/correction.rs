@@ -28,6 +28,8 @@ const AGGRESSIVE_MARGIN: f32 = 0.25;
 const NEIGHBOUR_COST: f32 = 1.5;
 /// A second ring around the intended key, used when nothing closer exists.
 const TWO_KEY_COST: f32 = 2.3;
+/// A same-length one-letter spelling variant, not a keyboard slip.
+const SPELLING_COST: f32 = 4.0;
 const TRANSPOSE_COST: f32 = 0.6;
 /// Cost of inserting the elision apostrophe.
 const APOSTROPHE_COST: f32 = 0.15;
@@ -43,7 +45,7 @@ const OTHER: usize = 26;
 pub struct Candidate {
 	pub text: String,
 	pub score: f32,
-	/// 1 for a one-key slip, 2 for a two-key slip.
+	/// 1 for a one-key slip, 2 for a farther slip or spelling variant.
 	pub tier: u8,
 }
 
@@ -417,13 +419,40 @@ fn near_distance(a: &[u8], b: &[u8], limit: f32) -> Option<f32> {
 	}
 }
 
-/// The nearest explanation, with a tier: 1 when every key is one step away,
-/// 2 when the narrow-keyboard rescue needs the second ring.
-fn neighbour_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
+/// One arbitrary letter changed, with the rest identical. Covers spelling
+/// variants that are nowhere near on the keyboard (`commant` -> `comment`).
+fn spelling_distance(a: &[u8], b: &[u8]) -> Option<f32> {
+	if a.len() != b.len() || a.len() < 4 {
+		return None;
+	}
+	let mut differences = 0;
+	for (&x, &y) in a.iter().zip(b) {
+		if x != y {
+			differences += 1;
+			if differences > 1 {
+				return None;
+			}
+		}
+	}
+	if differences == 1 {
+		Some(SPELLING_COST)
+	} else {
+		None
+	}
+}
+
+/// Key-slip distance only: one-key ring, then the two-key ring.
+fn keyboard_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
 	if let Some(distance) = near_distance(a, b, NEIGHBOUR_COST) {
 		return Some((distance, 1));
 	}
 	near_distance(a, b, TWO_KEY_COST).map(|distance| (distance, 2))
+}
+
+/// Closest explanation, with a tier: 1 for one-key slips, 2 for the second key
+/// ring or a one-letter spelling variant.
+fn candidate_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
+	keyboard_distance(a, b).or_else(|| spelling_distance(a, b).map(|distance| (distance, 2)))
 }
 
 fn sort_candidates(list: &mut [Candidate]) {
@@ -445,7 +474,7 @@ fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>)
 		if word.folded.len() != typed_bytes.len() {
 			continue;
 		}
-		let Some((distance, tier)) = neighbour_distance(typed_bytes, word.folded.as_bytes())
+		let Some((distance, tier)) = candidate_distance(typed_bytes, word.folded.as_bytes())
 		else {
 			continue;
 		};
@@ -472,7 +501,7 @@ fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) 
 			continue;
 		}
 		let Some((prefix_cost, prefix_tier)) =
-			neighbour_distance(&bytes[..clitic_len], clitic.as_bytes())
+			keyboard_distance(&bytes[..clitic_len], clitic.as_bytes())
 		else {
 			continue;
 		};
@@ -485,7 +514,7 @@ fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) 
 			if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
 				continue;
 			}
-			let Some((rest_cost, rest_tier)) = neighbour_distance(rest, word.folded.as_bytes())
+			let Some((rest_cost, rest_tier)) = keyboard_distance(rest, word.folded.as_bytes())
 			else {
 				continue;
 			};

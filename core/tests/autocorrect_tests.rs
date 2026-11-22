@@ -107,6 +107,7 @@ fn named_regressions() {
 	let cases = [
 		("glnjojr", "bonjour"),
 		("bknjpur", "bonjour"),
+		("commant", "comment"),
 		("vqjmd", "t'aime"),
 		("geqnvx", "beauté"),
 		("secg", "sert"),
@@ -148,6 +149,7 @@ fn named_regressions() {
 fn common_words_stay_put() {
 	for word in [
 		"test", "la", "ma", "bonjour", "maison", "personne", "vraiment", "toutes",
+		"comment",
 	] {
 		let suggestion = correction::suggest(word);
 		assert!(
@@ -241,6 +243,47 @@ fn one_key_candidates_rank_before_two_key_candidates() {
 		.iter()
 		.map(|candidate| (candidate.text.as_str(), candidate.tier))
 		.collect::<Vec<_>>()
+	);
+}
+
+#[test]
+fn spelling_and_keyboard_variants_are_both_suggested() {
+	let suggestion = correction::suggest("commant");
+	assert!(suggestion.apply);
+	let texts: Vec<&str> = suggestion
+	.candidates
+	.iter()
+	.map(|candidate| candidate.text.as_str())
+	.collect();
+	let position = |word: &str| texts.iter().position(|text| *text == word);
+	let comment = position("comment").expect("comment");
+	let collant = position("collant").expect("collant");
+	assert!(comment < collant, "unexpected order: {texts:?}");
+}
+
+#[test]
+fn spelling_variant_is_offered_before_the_keyboard_variant() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT, 0);
+	for key in ["c", "o", "m", "m", "a", "n", "t"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions: Vec<&str> = json["suggestions"]
+	.as_array()
+	.unwrap()
+	.iter()
+	.map(|value| value.as_str().unwrap())
+	.collect();
+	assert_eq!(suggestions[0], "comment");
+	assert!(suggestions.contains(&"collant"), "suggestions: {suggestions:?}");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(7),
+			Action::Commit("comment".into()),
+			Action::Commit(" ".into()),
+		]
 	);
 }
 

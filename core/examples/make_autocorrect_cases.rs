@@ -83,6 +83,21 @@ fn substitute_far(word: &str, count: usize, rng: &mut Rng, order: &[char]) -> St
 	chars.into_iter().collect()
 }
 
+fn spelling(word: &str, rng: &mut Rng) -> String {
+	let mut chars: Vec<char> = word.chars().collect();
+	if chars.len() < 4 {
+		return word.to_string();
+	}
+	let i = rng.below(chars.len());
+	let vowels = ['a', 'e', 'i', 'o', 'u'];
+	let mut replacement = vowels[rng.below(vowels.len())];
+	if replacement == chars[i] {
+		replacement = 'y';
+	}
+	chars[i] = replacement;
+	chars.into_iter().collect()
+}
+
 fn transpose(word: &str, rng: &mut Rng) -> String {
 	let mut chars: Vec<char> = word.chars().collect();
 	if chars.len() < 2 {
@@ -140,6 +155,7 @@ fn main() {
 		let variants = [
 			substitute(word, 1, &mut rng, &order),
 			substitute_far(word, 1, &mut rng, &order),
+			spelling(word, &mut rng),
 			substitute(word, 2, &mut rng, &order),
 			substitute(word, 3, &mut rng, &order),
 			transpose(word, &mut rng),
