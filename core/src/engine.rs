@@ -45,7 +45,6 @@ pub struct Engine {
 	word: String,
 	ime_action: ImeActionKind,
 	multiline: bool,
-	numeric: bool,
 	suggestions_enabled: bool,
 	last_correction: Option<CorrectionRecord>,
 	/// Boundary text left just after the caret when a correction is undone.
@@ -73,7 +72,6 @@ impl Engine {
 			word: String::new(),
 			ime_action: ImeActionKind::None,
 			multiline: false,
-			numeric: false,
 			suggestions_enabled: true,
 			last_correction: None,
 			pending_boundary: None,
@@ -108,7 +106,7 @@ impl Engine {
 		);
 		let no_suggestions = input_type & 0x0008_0000 != 0;
 
-		self.numeric = matches!(class, 0x2..=0x4);
+		let numeric = matches!(class, 0x2..=0x4);
 		self.multiline = class == 0x1 && (input_type & 0x0002_0000) != 0;
 		self.suggestions_enabled = class == 0x1 && !blocked_variation && !no_suggestions;
 		self.caps = if input_type & 0x0000_1000 != 0 {
@@ -122,7 +120,7 @@ impl Engine {
 		};
 		self.ime_action = ImeActionKind::from_ime_options(ime_options);
 
-		self.page = if self.numeric {
+		self.page = if numeric {
 			Page::Numbers
 		} else {
 			Page::Letters
@@ -284,6 +282,7 @@ impl Engine {
 
 	/// Correct the current word (when possible) and commit a word boundary.
 	fn finish_word(&mut self, boundary: &str, space_before: bool) -> Vec<Action> {
+		debug_assert!(!boundary.is_empty());
 		let mut out = Vec::new();
 		// After an undo the user's boundary is still in the editor, just after
 		// the caret. Reuse a kept space, or step over kept punctuation.
@@ -293,7 +292,7 @@ impl Engine {
 		let step_over = boundary == " " && pending.is_some() && !keep_space;
 
 		let leading_space = space_before && !matches!(self.last_char, Some(' ') | None);
-		let boundary_text = if leading_space {
+		let boundary_record = if leading_space {
 			format!(" {boundary}")
 		} else {
 			boundary.to_string()
@@ -313,7 +312,7 @@ impl Engine {
 			self.last_correction = Some(CorrectionRecord {
 				original,
 				corrected,
-				boundary: boundary_text.clone(),
+				boundary: boundary_record,
 				alternatives,
 			});
 		} else {
@@ -332,32 +331,28 @@ impl Engine {
 				}
 			}
 			if step_over {
-				out.push(Action::Commit(" ".into()));
-				self.note(' ');
-			} else if !boundary_text.is_empty() {
-				if leading_space {
-					out.push(Action::Commit(" ".into()));
-					self.note(' ');
-				}
-				out.push(Action::Commit(boundary.to_string()));
-				for c in boundary.chars() {
-					self.note(c);
-				}
+				self.commit_boundary(&mut out, " ", false);
+			} else {
+				self.commit_boundary(&mut out, boundary, leading_space);
 			}
-		} else if !boundary_text.is_empty() {
-			if leading_space {
-				out.push(Action::Commit(" ".into()));
-				self.note(' ');
-			}
-			out.push(Action::Commit(boundary.to_string()));
-			for c in boundary.chars() {
-				self.note(c);
-			}
+		} else {
+			self.commit_boundary(&mut out, boundary, leading_space);
 		}
 		self.word.clear();
 		self.reverted = false;
 		self.suggestion_cache = None;
 		out
+	}
+
+	fn commit_boundary(&mut self, out: &mut Vec<Action>, boundary: &str, leading_space: bool) {
+		if leading_space {
+			out.push(Action::Commit(" ".into()));
+			self.note(' ');
+		}
+		out.push(Action::Commit(boundary.to_string()));
+		for c in boundary.chars() {
+			self.note(c);
+		}
 	}
 
 	/// Move the caret past the boundary kept by an undo and remove it, so the
@@ -692,28 +687,20 @@ impl Engine {
 }
 
 fn case_pattern(word: &str) -> CasePattern {
-	let mut first_alphabetic = true;
+	let mut first = true;
 	let mut first_upper = false;
 	let mut rest_upper = false;
-	let mut has_upper = false;
 	let mut has_lower = false;
-	for c in word.chars() {
-		if !c.is_alphabetic() {
-			continue;
-		}
-		if first_alphabetic {
+	for c in word.chars().filter(|c| c.is_alphabetic()) {
+		if first {
 			first_upper = c.is_uppercase();
-			first_alphabetic = false;
+			first = false;
 		} else if c.is_uppercase() {
 			rest_upper = true;
 		}
-		if c.is_uppercase() {
-			has_upper = true;
-		}
-		if c.is_lowercase() {
-			has_lower = true;
-		}
+		has_lower |= c.is_lowercase();
 	}
+	let has_upper = first_upper || rest_upper;
 	if has_upper && !has_lower {
 		CasePattern::AllCaps
 	} else if first_upper && !rest_upper {

@@ -12,7 +12,7 @@ use crate::layout;
 use crate::lexicon::fold;
 
 /// Minimum score a candidate needs before it may replace the typed word.
-pub const MIN_SCORE: f32 = 0.5;
+const MIN_SCORE: f32 = 0.5;
 const MAX_COST: f32 = 1.55;
 /// Frequency dominates the ranking: among words whose letters are all one key
 /// away, the common word is the likely one.
@@ -23,7 +23,7 @@ const LENGTH_PENALTY: f32 = 2.0;
 /// likely (`pa` -> `la`, but `la` stays `la`).
 const KNOWN_WORD_MARGIN: f32 = 2.0;
 /// The top candidate must lead the runner-up by this much.
-pub const AGGRESSIVE_MARGIN: f32 = 0.25;
+const AGGRESSIVE_MARGIN: f32 = 0.25;
 /// A substituted letter must be this close to count as a neighbouring key.
 const NEIGHBOUR_COST: f32 = 1.5;
 const TRANSPOSE_COST: f32 = 0.6;
@@ -38,7 +38,6 @@ const OTHER: usize = 26;
 #[derive(Clone, Debug)]
 pub struct Candidate {
 	pub text: String,
-	pub cost: f32,
 	pub score: f32,
 }
 
@@ -59,19 +58,6 @@ impl Suggestion {
 	}
 }
 
-fn positions() -> &'static HashMap<char, (f32, f32)> {
-	static POSITIONS: OnceLock<HashMap<char, (f32, f32)>> = OnceLock::new();
-	POSITIONS.get_or_init(|| {
-		let mut map = HashMap::new();
-		for (index, letter) in layout::LETTERS.iter().enumerate() {
-			if let Some(c) = letter.id.chars().next() {
-				map.insert(c, (index as f32, letter.row as f32 * 0.55));
-			}
-		}
-		map
-	})
-}
-
 fn char_index(byte: u8) -> usize {
 	match byte {
 		b'a'..=b'z' => (byte - b'a') as usize,
@@ -83,17 +69,19 @@ fn char_index(byte: u8) -> usize {
 fn costs() -> &'static [[f32; OTHER + 1]; OTHER + 1] {
 	static COSTS: OnceLock<[[f32; OTHER + 1]; OTHER + 1]> = OnceLock::new();
 	COSTS.get_or_init(|| {
-		let mut table = [[1.5f32; OTHER + 1]; OTHER + 1];
-		for (a, row) in table.iter_mut().enumerate() {
-			row[a] = 0.0;
+		let mut positions: [Option<(f32, f32)>; 26] = [None; 26];
+		for (index, letter) in layout::LETTERS.iter().enumerate() {
+			if let Some(c) = letter.id.chars().next() {
+				positions[(c as u8 - b'a') as usize] =
+					Some((index as f32, letter.row as f32 * 0.55));
+			}
 		}
+
+		let mut table = [[1.5f32; OTHER + 1]; OTHER + 1];
+		table[OTHER][OTHER] = 0.0;
 		for (a, row) in table.iter_mut().enumerate().take(26) {
 			for (b, slot) in row.iter_mut().enumerate().take(26) {
-				let ca = (b'a' + a as u8) as char;
-				let cb = (b'a' + b as u8) as char;
-				if let (Some(&(x1, y1)), Some(&(x2, y2))) =
-					(positions().get(&ca), positions().get(&cb))
-				{
+				if let (Some((x1, y1)), Some((x2, y2))) = (positions[a], positions[b]) {
 					let dx = x1 - x2;
 					let dy = y1 - y2;
 					*slot = (dx * dx + dy * dy).sqrt().min(2.6);
@@ -262,7 +250,6 @@ fn insert_elision(
 		found,
 		Candidate {
 			text,
-			cost,
 			score: log_freq * AGGRESSIVE_WEIGHT - penalty - cost,
 		},
 	);
@@ -275,14 +262,11 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 	if lower.chars().count() < 2 || lower.contains('\'') || dictionary::exact(&lower).is_some() {
 		return Vec::new();
 	}
-	candidates_with(&lower, true)
+	candidates_inner(&lower)
 }
 
-fn candidates_with(lower: &str, elisions: bool) -> Vec<Candidate> {
-	if lower.chars().count() < 2 || lower.contains('\'') {
-		return Vec::new();
-	}
-
+fn candidates_inner(lower: &str) -> Vec<Candidate> {
+	debug_assert!(lower.chars().count() >= 2 && !lower.contains('\''));
 	let folded_typed = fold(lower);
 	let typed_bytes = folded_typed.as_bytes();
 	let mut found: HashMap<String, Candidate> = HashMap::new();
@@ -294,61 +278,27 @@ fn candidates_with(lower: &str, elisions: bool) -> Vec<Candidate> {
 			&mut found,
 			Candidate {
 				text: word.text.to_string(),
-				cost,
 				score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
 			},
 		);
 	}
 
-	if elisions {
-		// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
-		// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
-		for &(clitic, penalty) in CLITICS {
-			if !lower.starts_with(clitic) {
-				continue;
-			}
-			let rest = &lower[clitic.len()..];
-			// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
-			let shortest = if clitic.len() >= 3 { 1 } else { 2 };
-			if rest.chars().count() < shortest {
-				continue;
-			}
+	// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
+	// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
+	for &(clitic, penalty) in CLITICS {
+		if !lower.starts_with(clitic) {
+			continue;
+		}
+		let rest = &lower[clitic.len()..];
+		// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
+		let shortest = if clitic.len() >= 3 { 1 } else { 2 };
+		if rest.chars().count() < shortest {
+			continue;
+		}
 
-			let folded_rest = fold(rest);
-			if let Some(word) = dictionary::folded(&folded_rest) {
-				if elision_allowed(clitic, word) {
-					let (remainder, log_freq) = elision_remainder(clitic, word);
-					insert_elision(
-						&mut found,
-						clitic,
-						remainder,
-						log_freq,
-						penalty,
-						APOSTROPHE_COST,
-					);
-				}
-			}
-
-			// Short remainders are covered by the exact lookup above; scanning
-			// them for typos only invents forms like `j'air`.
-			if folded_rest.len() < 3 {
-				continue;
-			}
-			for word in dictionary::words() {
-				if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
-					continue;
-				}
-				if !elision_allowed(clitic, word) {
-					continue;
-				}
-				let Some(distance) =
-					distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
-				else {
-					continue;
-				};
-				if distance == 0.0 {
-					continue;
-				}
+		let folded_rest = fold(rest);
+		if let Some(word) = dictionary::folded(&folded_rest) {
+			if elision_allowed(clitic, word) {
 				let (remainder, log_freq) = elision_remainder(clitic, word);
 				insert_elision(
 					&mut found,
@@ -356,9 +306,40 @@ fn candidates_with(lower: &str, elisions: bool) -> Vec<Candidate> {
 					remainder,
 					log_freq,
 					penalty,
-					APOSTROPHE_COST + distance,
+					APOSTROPHE_COST,
 				);
 			}
+		}
+
+		// Short remainders are covered by the exact lookup above; scanning
+		// them for typos only invents forms like `j'air`.
+		if folded_rest.len() < 3 {
+			continue;
+		}
+		for word in dictionary::words() {
+			if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
+				continue;
+			}
+			if !elision_allowed(clitic, word) {
+				continue;
+			}
+			let Some(distance) =
+				distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
+			else {
+				continue;
+			};
+			if distance == 0.0 {
+				continue;
+			}
+			let (remainder, log_freq) = elision_remainder(clitic, word);
+			insert_elision(
+				&mut found,
+				clitic,
+				remainder,
+				log_freq,
+				penalty,
+				APOSTROPHE_COST + distance,
+			);
 		}
 	}
 
@@ -377,7 +358,6 @@ fn candidates_with(lower: &str, elisions: bool) -> Vec<Candidate> {
 				&mut found,
 				Candidate {
 					text: word.text.to_string(),
-					cost,
 					score: word.log_freq * AGGRESSIVE_WEIGHT
 						- cost
 						- LENGTH_PENALTY * length_diff,
@@ -434,18 +414,8 @@ fn sort_candidates(list: &mut [Candidate]) {
 /// Words where every typed letter is one key away from the intended one,
 /// ranked by frequency. This is the narrow-keyboard rescue: an input can be
 /// complete nonsense and still point at a common word.
-fn add_neighbour_candidates(
-	typed: &str,
-	weight: f32,
-	found: &mut HashMap<String, Candidate>,
-) {
-	let lower = typed.to_lowercase();
-	let length = lower.chars().count();
-	if length < 2 || lower.contains('\'') {
-		return;
-	}
-
-	let folded_typed = fold(&lower);
+fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>) {
+	let folded_typed = fold(lower);
 	let typed_bytes = folded_typed.as_bytes();
 	for word in dictionary::words() {
 		if word.folded.len() != typed_bytes.len() {
@@ -458,8 +428,7 @@ fn add_neighbour_candidates(
 			found,
 			Candidate {
 				text: word.text.to_string(),
-				cost: distance,
-				score: word.log_freq * weight - distance,
+				score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
 			},
 		);
 	}
@@ -467,12 +436,8 @@ fn add_neighbour_candidates(
 
 /// Elisions whose clitic and remainder are both one key away from the typed
 /// token, with the apostrophe missing: `vqjmd` -> `t'aime`.
-fn add_aggressive_elisions(typed: &str, found: &mut HashMap<String, Candidate>) {
-	let lower = typed.to_lowercase();
-	if lower.chars().count() < 3 || lower.contains('\'') {
-		return;
-	}
-	let folded = fold(&lower);
+fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) {
+	let folded = fold(lower);
 	let bytes = folded.as_bytes();
 
 	for &(clitic, penalty) in CLITICS {
@@ -489,43 +454,17 @@ fn add_aggressive_elisions(typed: &str, found: &mut HashMap<String, Candidate>) 
 			continue;
 		}
 		for word in dictionary::words() {
-			if word.folded.len() != rest.len() {
-				continue;
-			}
-			if !elision_allowed(clitic, word) {
+			if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
 				continue;
 			}
 			let Some(rest_cost) = near_distance(rest, word.folded.as_bytes()) else {
 				continue;
 			};
 			let cost = prefix_cost + rest_cost + APOSTROPHE_COST;
-			insert(
-				found,
-				Candidate {
-					text: format!("{clitic}'{}", word.text),
-					cost,
-					score: word.log_freq * AGGRESSIVE_WEIGHT - cost - penalty,
-				},
-			);
+			let (remainder, log_freq) = elision_remainder(clitic, word);
+			insert_elision(found, clitic, remainder, log_freq, penalty, cost);
 		}
 	}
-}
-
-pub fn aggressive_candidates(typed: &str) -> Vec<Candidate> {
-	let lower = typed.to_lowercase();
-	if lower.chars().count() < 3 || lower.contains('\'') {
-		return Vec::new();
-	}
-	if dictionary::exact(&lower).is_some() {
-		return Vec::new();
-	}
-	let mut found: HashMap<String, Candidate> = HashMap::new();
-	add_neighbour_candidates(&lower, AGGRESSIVE_WEIGHT, &mut found);
-	add_aggressive_elisions(&lower, &mut found);
-	let mut list: Vec<Candidate> = found.into_values().collect();
-	sort_candidates(&mut list);
-	list.truncate(MAX_RESULTS);
-	list
 }
 
 /// Candidates for the strip plus the auto-apply decision. Known words are
@@ -546,7 +485,6 @@ pub fn suggest(typed: &str) -> Suggestion {
 			&mut found,
 			Candidate {
 				text: word.text.to_string(),
-				cost: 0.0,
 				score,
 			},
 		);
@@ -554,11 +492,11 @@ pub fn suggest(typed: &str) -> Suggestion {
 	});
 
 	if known.is_none() {
-		for candidate in candidates_with(&lower, true) {
+		for candidate in candidates_inner(&lower) {
 			insert(&mut found, candidate);
 		}
 	}
-	add_neighbour_candidates(&lower, AGGRESSIVE_WEIGHT, &mut found);
+	add_neighbour_candidates(&lower, &mut found);
 	if known.is_none() && length >= 3 {
 		add_aggressive_elisions(&lower, &mut found);
 	}
