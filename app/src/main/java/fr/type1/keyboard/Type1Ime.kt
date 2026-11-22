@@ -30,6 +30,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
 		view.setBackspaceHold(Prefs.backspaceHold(this))
 		view.setSwipeSensitivity(Prefs.swipeSensitivity(this))
+		view.setUtilityRowHeight(Prefs.utilityRowHeight(this))
 		view.setOnApplyWindowInsetsListener { _, insets ->
 			view.setBottomInset(navigationBarHeight(insets))
 			insets
@@ -52,6 +53,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		keyboardView?.setSpaceCursorEnabled(Prefs.spaceCursor(this))
 		keyboardView?.setBackspaceHold(Prefs.backspaceHold(this))
 		keyboardView?.setSwipeSensitivity(Prefs.swipeSensitivity(this))
+		keyboardView?.setUtilityRowHeight(Prefs.utilityRowHeight(this))
 		selectAnchor = -1
 		selectWidth = 0
 		keyboardView?.refresh()

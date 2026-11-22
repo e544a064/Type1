@@ -57,7 +57,7 @@ class KeyboardView(
 
 	private val suggestionHeight = dp(38f)
 	private val letterHeight = dp(56f)
-	private val utilityHeight = dp(48f)
+	private var utilityHeight = dp(48f)
 	private val bandGap = dp(3f)
 	private val padding = dp(3f)
 	private val corner = dp(8f)
@@ -65,7 +65,7 @@ class KeyboardView(
 	private val suggestionTop = padding
 	private val letterTop = padding + suggestionHeight + bandGap
 	private val utilityTop = letterTop + letterHeight + bandGap
-	private val contentHeight = utilityTop + utilityHeight + padding
+	private val contentHeight: Float get() = utilityTop + utilityHeight + padding
 
 	/** Height of the system navigation bar overlapping the IME window. */
 	private var bottomInset = 0f
@@ -208,6 +208,15 @@ class KeyboardView(
 	/** dp of horizontal travel per caret/selection step (8-40). */
 	fun setSwipeSensitivity(dpPerStep: Int) {
 		swipeStepDp = dpPerStep.coerceIn(8, 40)
+	}
+
+	/** Height in dp of the bottom row holding the spacebar (36-72). */
+	fun setUtilityRowHeight(heightDp: Int) {
+		val height = dp(heightDp.coerceIn(36, 72).toFloat())
+		if (height == utilityHeight) return
+		utilityHeight = height
+		requestLayout()
+		invalidate()
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

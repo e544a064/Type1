@@ -74,5 +74,23 @@ class SetupActivity : Activity() {
 
 			override fun onStopTrackingTouch(bar: SeekBar?) = Unit
 		})
+
+		val heightSeek = findViewById<SeekBar>(R.id.utilityHeightSeek)
+		val heightValue = findViewById<TextView>(R.id.utilityHeightValue)
+		heightSeek.max = 36
+		val initialHeight = Prefs.utilityRowHeight(this)
+		heightSeek.progress = initialHeight - 36
+		heightValue.text = getString(R.string.setup_height_value, initialHeight)
+		heightSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+			override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
+				val dp = progress + 36
+				heightValue.text = getString(R.string.setup_height_value, dp)
+				if (fromUser) Prefs.setUtilityRowHeight(this@SetupActivity, dp)
+			}
+
+			override fun onStartTrackingTouch(bar: SeekBar?) = Unit
+
+			override fun onStopTrackingTouch(bar: SeekBar?) = Unit
+		})
 	}
 }

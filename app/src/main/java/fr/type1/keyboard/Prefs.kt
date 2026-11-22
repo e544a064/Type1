@@ -11,6 +11,7 @@ object Prefs {
 	private const val SPACE_CURSOR = "space_cursor"
 	private const val BACKSPACE_HOLD = "backspace_hold"
 	private const val SWIPE_SENSITIVITY = "swipe_sensitivity"
+	private const val UTILITY_ROW_HEIGHT = "utility_row_height"
 
 	/** Drag horizontally on the spacebar to move the caret. Enabled by default. */
 	fun spaceCursor(context: Context): Boolean = (
@@ -57,6 +58,20 @@ object Prefs {
 		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 		. edit()
 		. putInt(SWIPE_SENSITIVITY, dpPerStep.coerceIn(8, 40))
+		. apply()
+	}
+
+	/** Height in dp of the bottom row holding the spacebar. Default 48 dp. */
+	fun utilityRowHeight(context: Context): Int = (
+		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+		. getInt(UTILITY_ROW_HEIGHT, 48)
+		. coerceIn(36, 72)
+	)
+
+	fun setUtilityRowHeight(context: Context, heightDp: Int) {
+		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+		. edit()
+		. putInt(UTILITY_ROW_HEIGHT, heightDp.coerceIn(36, 72))
 		. apply()
 	}
 }

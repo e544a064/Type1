@@ -44,6 +44,7 @@ release on the letter you want.
   switch to turn this off.
 - Swipe sensitivity (8–40 dp per character) is adjustable with a slider and
   shared by the spacebar caret drag and the backspace selection.
+- Spacebar row height is adjustable (36–72 dp, 48 dp by default).
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   just page, space, comma and enter.
 - Vector icons for shift, backspace and enter (the enter icon follows the editor
@@ -70,11 +71,13 @@ the offsets there and the UI follows.
 
 ## Sizing
 
-The three bands are 38 dp (suggestions), 56 dp (letters) and 48 dp (utilities),
-plus 3 dp gaps: **154 dp** total. On a 411 dp-wide phone a letter is ~12.5 dp
-wide; on 360 dp it is ~11 dp. Tuning knobs:
+The three bands are 38 dp (suggestions), 56 dp (letters) and 36–72 dp
+(utilities, 48 dp by default),
+plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
+~12.5 dp wide; on 360 dp it is ~11 dp. Tuning knobs:
 
-- `suggestionHeight`, `letterHeight`, `utilityHeight` in `KeyboardView.kt`,
+- `suggestionHeight`, `letterHeight` in `KeyboardView.kt`,
+- the utility row height is a setting (36–72 dp, default 48),
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
 - the `WORDS` list in `core/src/lexicon.rs`.

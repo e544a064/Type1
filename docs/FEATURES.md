@@ -28,6 +28,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Word delete in the core (not bound to a gesture yet)
 - [x] Swipe on the spacebar to move the cursor (switch in the setup screen)
 - [x] Configurable swipe sensitivity for the spacebar cursor and backspace selection
+- [x] Configurable spacebar row height (36–72 dp)
 - [ ] Select word / line / all
 - [ ] Clipboard history panel
 - [ ] Undo / redo
