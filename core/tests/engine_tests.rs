@@ -54,8 +54,8 @@ fn shift_resets_when_changing_page() {
 fn auto_capitalises_sentences() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
-	assert_eq!(commits(&engine.on_key("z")), vec!["Z"]);
-	assert_eq!(commits(&engine.on_key("o")), vec!["o"]);
+	assert_eq!(commits(&engine.on_key("l")), vec!["L"]);
+	assert_eq!(commits(&engine.on_key("a")), vec!["a"]);
 	assert_eq!(commits(&engine.on_key("space")), vec![" "]);
 	assert_eq!(commits(&engine.on_key("e")), vec!["e"]);
 	engine.on_key("page");
@@ -610,6 +610,37 @@ fn rescues_an_elision_whose_clitic_is_a_neighbouring_key() {
 		vec![
 			Action::DeleteChars(5),
 			Action::Commit("t'aime".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn corrects_a_known_rare_word_to_a_neighbouring_word() {
+	let mut engine = plain();
+	engine.on_key("p");
+	engine.on_key("a");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(2),
+			Action::Commit("la".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn corrects_a_full_word_with_nearby_keys() {
+	let mut engine = plain();
+	for key in ["s", "e", "c", "g"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("sert".into()),
 			Action::Commit(" ".into()),
 		]
 	);

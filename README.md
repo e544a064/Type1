@@ -40,8 +40,8 @@ release on the letter you want.
 - The suggestion strip ranks by word frequency as well as key distance, so
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
-  (with `ma` offered next in the strip). No input is left untouched just
-  because it is ambiguous.
+  (with `ma` offered next in the strip). Rare dictionary words are corrected
+  the same way (`pa` → `la`), while common words stay put.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
@@ -99,9 +99,8 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the utility row height is a setting (36–72 dp, default 48),
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
-- `MIN_SCORE` and `FREQ_WEIGHT` in `core/src/correction.rs`,
-- `AGGRESSIVE_MIN_SCORE`, `AGGRESSIVE_WEIGHT` and `AGGRESSIVE_MARGIN` for the
-  narrow-key rescue,
+- `MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY` and
+  `KNOWN_WORD_MARGIN` in `core/src/correction.rs`,
 - the dictionary in `core/data/fr.tsv` (see `core/data/NOTICE.md`).
 
 ## Repository layout
@@ -137,7 +136,8 @@ tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 
 `core/data/fr.tsv` is derived from [Lexique 3.83](http://www.lexique.org)
 (CC BY-SA 4.0): the 20,000 most frequent lowercase forms, film and book
-frequencies summed per form and stored as hundredths of `ln(freq + 1)`. The
+frequencies summed per form, stored as hundredths of `ln(freq + 1)` plus a
+part-of-speech flag used to validate elisions (`j'aime` but not `t'est`). The
 setup screen shows the attribution and `core/data/NOTICE.md` carries the full
 notice. `cargo run --release --example evaluate` reports top-1 accuracy on
 synthetic typos and the random-string false-positive rate.

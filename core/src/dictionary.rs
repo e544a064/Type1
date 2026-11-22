@@ -14,7 +14,14 @@ pub struct Word {
 	pub folded: String,
 	/// `ln(frequency per million + 1)`, computed offline.
 	pub log_freq: f32,
+	/// Part-of-speech flags from the dictionary builder.
+	pub flags: u8,
 }
+
+pub const VERB: u8 = 1;
+pub const NOUN: u8 = 2;
+pub const ADJ: u8 = 4;
+pub const ADV: u8 = 8;
 
 struct Index {
 	words: Vec<Word>,
@@ -29,17 +36,27 @@ fn index() -> &'static Index {
 		let source: &'static str = include_str!("../data/fr.tsv");
 		let mut words = Vec::with_capacity(20_000);
 		for line in source.lines() {
-			let Some((text, score)) = line.split_once('\t') else {
+			let mut parts = line.split('\t');
+			let Some(text) = parts.next() else {
 				continue;
 			};
 			if text.is_empty() {
 				continue;
 			}
-			let log_freq = score.parse::<i32>().unwrap_or(0) as f32 / 100.0;
+			let log_freq = parts
+			.next()
+			.and_then(|score| score.parse::<i32>().ok())
+			.unwrap_or(0) as f32
+				/ 100.0;
+			let flags = parts
+			.next()
+			.and_then(|flags| flags.parse::<u8>().ok())
+			.unwrap_or(0);
 			words.push(Word {
 				text,
 				folded: fold(text),
 				log_freq,
+				flags,
 			});
 		}
 
@@ -88,5 +105,7 @@ mod tests {
 		assert!(exact("dire").is_some());
 		assert!(exact("ecole").is_none());
 		assert_eq!(folded("ecole").map(|w| w.text), Some("école"));
+		assert_ne!(exact("aime").unwrap().flags & VERB, 0);
+		assert_ne!(exact("action").unwrap().flags & NOUN, 0);
 	}
 }

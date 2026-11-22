@@ -39,7 +39,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Frequency-ranked 20k French dictionary with a layout-aware touch model
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with
-      typos inside the elided word (`taimx` → `t'aime`)
+      typos inside the elided word (`taimx` → `t'aime`) and grammar-aware
+      validation (`j'aime`, not `t'est`)
 - [x] Narrow-key rescue for fully garbled tokens (`geqnvx` → `beauté`) and
       elisions with a mistyped clitic (`vqjmd` → `t'aime`)
 - [ ] Next-word prediction

@@ -14,9 +14,10 @@ $root = Split-Path -Parent $PSScriptRoot
 $out = Join-Path $root "core/data/fr.tsv"
 
 $freq = @{}
+$flags = @{}
 $reader = [IO.File]::OpenText($Lexique)
 try {
-	# Columns: ortho, ..., freqfilms2 (8), freqlivres (9).
+	# Columns: ortho (0), cgram (3), freqfilms2 (8), freqlivres (9).
 	$null = $reader.ReadLine()
 	while (($line = $reader.ReadLine()) -ne $null) {
 		$c = $line -split "`t"
@@ -30,6 +31,14 @@ try {
 		$f = $f1 + $f2
 		if ($f -le 0) { continue }
 		if ($freq.ContainsKey($w)) { $freq[$w] += $f } else { $freq[$w] = $f }
+		$flag = switch -Regex ($c[3]) {
+			'^(VER|AUX)$' { 1 }
+			'^NOM$' { 2 }
+			'^ADJ$' { 4 }
+			'^ADV$' { 8 }
+			default { 0 }
+		}
+		if ($flag -ne 0) { $flags[$w] = ($flags[$w] -bor $flag) }
 	}
 } finally {
 	$reader.Close()
@@ -37,9 +46,11 @@ try {
 
 $top = $freq.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First $Count
 $lines = foreach ($e in $top) {
-	# Hundredths of ln(frequency per million + 1).
+	# Hundredths of ln(frequency per million + 1), then POS flags:
+	# 1 verb, 2 noun, 4 adjective, 8 adverb.
 	$score = [math]::Round([math]::Log($e.Value + 1) * 100)
-	"$($e.Key)`t$score"
+	$flag = if ($flags.ContainsKey($e.Key)) { $flags[$e.Key] } else { 0 }
+	"$($e.Key)`t$score`t$flag"
 }
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 [IO.File]::WriteAllText($out, (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
