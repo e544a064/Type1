@@ -91,6 +91,7 @@ class KeyboardView(
 	private var pressedStrip = -1
 	private var downUtility = -1
 	private var downStrip = -1
+	private var downBackspace = false
 	private var longPressFired = false
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
@@ -657,6 +658,8 @@ class KeyboardView(
 					else -> -1
 				}
 				downStrip = pressedStrip
+				downBackspace = pressedStrip >= 0 &&
+					model?.strip?.getOrNull(pressedStrip)?.kind == "backspace"
 				if (pressedStrip >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
@@ -676,6 +679,8 @@ class KeyboardView(
 			Band.Utilities -> {
 				downUtility = hit(utilityRects, x)
 				pressedUtility = downUtility
+				downBackspace = downUtility >= 0 &&
+					model?.keys?.getOrNull(downUtility)?.kind == "backspace"
 				if (downUtility >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
@@ -770,6 +775,18 @@ class KeyboardView(
 				val x = event.getX(index)
 				val y = event.getY(index)
 				lastX = x
+				// A clear leftward swipe on backspace means the user wants
+				// selection mode; start it now instead of waiting for the
+				// long-press timeout.
+				if (!selecting && downBackspace &&
+					backspaceHold == BackspaceHold.Select &&
+					x <= downX - dp(swipeStepDp.toFloat())
+				) {
+					cancelTimers()
+					handleBackspaceHold()
+					dragSelection(x)
+					return true
+				}
 				if (selecting) {
 					dragSelection(x)
 					return true
@@ -960,6 +977,7 @@ class KeyboardView(
 		pressedStrip = -1
 		downUtility = -1
 		downStrip = -1
+		downBackspace = false
 		dismissAltPopup()
 		longPressFired = false
 		spaceDragging = false
@@ -988,6 +1006,8 @@ class KeyboardView(
 	private fun dp(value: Float): Float = value * resources.displayMetrics.density
 
 	private companion object {
+		// Long press tells a tap apart from a hold. A deliberate leftward
+		// swipe on backspace starts selection before this timer fires.
 		const val LONG_PRESS_MS = 320L
 		const val REPEAT_MS = 55L
 		const val ALT_CELL_DP = 40f

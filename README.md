@@ -276,7 +276,7 @@ untested.
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
-| Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |
+| Hold ⌫ | Depends on the setting: repeat delete, swipe left to size a selection then delete, or nothing. In Select mode a clear leftward swipe starts selecting immediately. |
 | Page key (`123` / `#+=` / `ABC`) | Letters → numbers → symbols → letters |
 | Tap ⇧ once / twice | One capital / caps lock |
 
