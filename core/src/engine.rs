@@ -262,6 +262,20 @@ impl Engine {
 		}
 	}
 
+	fn enter_icon(&self) -> &'static str {
+		if self.multiline || self.ime_action == ImeActionKind::None {
+			return "enter";
+		}
+		match self.ime_action {
+			ImeActionKind::Go | ImeActionKind::Next => "arrow-right",
+			ImeActionKind::Search => "search",
+			ImeActionKind::Send => "send",
+			ImeActionKind::Done => "check",
+			ImeActionKind::Previous => "arrow-left",
+			ImeActionKind::None => "enter",
+		}
+	}
+
 	/// Full keyboard model for the UI, as JSON.
 	pub fn render_json(&self) -> String {
 		let suggestions = if self.page == Page::Letters {
@@ -303,6 +317,8 @@ impl Engine {
 			json::string_into(&mut out, key.label);
 			out.push_str(",\"kind\":");
 			json::string_into(&mut out, kind_id(key.kind));
+			out.push_str(",\"icon\":");
+			json::string_into(&mut out, key.icon);
 			out.push_str(",\"on\":");
 			json::bool_into(&mut out, active);
 			out.push('}');
@@ -317,12 +333,19 @@ impl Engine {
 				"enter" => self.enter_label(),
 				_ => key.label,
 			};
+			let icon = if key.id == "enter" {
+				self.enter_icon()
+			} else {
+				key.icon
+			};
 			out.push_str("{\"id\":");
 			json::string_into(&mut out, key.id);
 			out.push_str(",\"label\":");
 			json::string_into(&mut out, label);
 			out.push_str(",\"kind\":");
 			json::string_into(&mut out, kind_id(key.kind));
+			out.push_str(",\"icon\":");
+			json::string_into(&mut out, icon);
 			out.push_str(",\"w\":");
 			json::float_into(&mut out, key.weight);
 			out.push_str(",\"on\":");

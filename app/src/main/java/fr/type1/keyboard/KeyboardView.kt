@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -119,6 +120,22 @@ class KeyboardView(
 		muted = context.getColor(R.color.key_text_muted),
 		strip = context.getColor(R.color.suggestion_background),
 	)
+
+	private val iconDrawables: Map<String, Drawable> by lazy {
+		val map = HashMap<String, Drawable>()
+		fun add(name: String, res: Int) {
+			context.getDrawable(res)?.let { map[name] = it }
+		}
+		add("shift", R.drawable.ic_shift)
+		add("backspace", R.drawable.ic_backspace)
+		add("enter", R.drawable.ic_enter)
+		add("arrow-right", R.drawable.ic_arrow_right)
+		add("arrow-left", R.drawable.ic_arrow_left)
+		add("check", R.drawable.ic_check)
+		add("search", R.drawable.ic_search)
+		add("send", R.drawable.ic_send)
+		map
+	}
 
 	private data class Colors(
 		val key: Int,
@@ -322,6 +339,11 @@ class KeyboardView(
 			else -> colors.key
 		}
 		canvas.drawRoundRect(rect, corner, corner, keyPaint)
+		if (key.icon.isNotEmpty()) {
+			val tint = if (key.active || pressed) Color.WHITE else colors.muted
+			drawIcon(canvas, rect, key.icon, tint, 20f)
+			return
+		}
 		labelPaint.color = if (key.active || pressed) Color.WHITE else colors.muted
 		labelPaint.textSize = fitText(
 			key.label,
@@ -380,6 +402,16 @@ class KeyboardView(
 			}
 			canvas.drawRoundRect(rect, corner, corner, keyPaint)
 
+			if (key.icon.isNotEmpty()) {
+				val tint = if (pressedUtility == i || key.kind == "enter" || key.active) {
+					Color.WHITE
+				} else {
+					colors.muted
+				}
+				drawIcon(canvas, rect, key.icon, tint, 22f)
+				continue
+			}
+
 			labelPaint.color = when (key.kind) {
 				"space", "page" -> colors.muted
 				else -> colors.text
@@ -387,6 +419,16 @@ class KeyboardView(
 			labelPaint.textSize = fitText(key.label, rect.width() - dp(6f), dp(16f), dp(9f))
 			canvas.drawText(key.label, rect.centerX(), baseline(rect), labelPaint)
 		}
+	}
+
+	private fun drawIcon(canvas: Canvas, rect: RectF, name: String, color: Int, sizeDp: Float) {
+		val drawable = iconDrawables[name] ?: return
+		val size = dp(sizeDp)
+		val left = (rect.centerX() - size / 2f).toInt()
+		val top = (rect.centerY() - size / 2f).toInt()
+		drawable.setBounds(left, top, left + size.toInt(), top + size.toInt())
+		drawable.setTint(color)
+		drawable.draw(canvas)
 	}
 
 	/** Floating bubble with the accents of the pressed key and its neighbours. */

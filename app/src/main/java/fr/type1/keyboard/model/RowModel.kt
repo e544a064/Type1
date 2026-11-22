@@ -19,6 +19,8 @@ data class UtilityKey(
 	val kind: String,
 	val weight: Float,
 	val active: Boolean,
+	/** Vector icon name, or "" to draw [label] as text. */
+	val icon: String,
 )
 
 /** Suggestions are addressed as `sug:0`, `sug:1`, ... by the core. */
@@ -76,6 +78,7 @@ data class RowModel(
 					kind = key.optString("kind", "char"),
 					weight = key.optDouble("w", 1.0).toFloat(),
 					active = key.optBoolean("on", false),
+					icon = key.optString("icon", ""),
 				)
 			}
 
@@ -91,6 +94,7 @@ data class RowModel(
 						kind = key.optString("kind", "char"),
 						weight = 1f,
 						active = key.optBoolean("on", false),
+						icon = key.optString("icon", ""),
 					)
 				}
 			}

@@ -46,6 +46,8 @@ release on the letter you want.
   shared by the spacebar caret drag and the backspace selection.
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   just page, space, comma and enter.
+- Vector icons for shift, backspace and enter (the enter icon follows the editor
+  action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
 
 Not in the MVP: autocorrect, next-word prediction, glide typing, emoji panel,

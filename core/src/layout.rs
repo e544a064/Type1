@@ -128,6 +128,8 @@ pub struct UtilityKey {
 	pub weight: f32,
 	/// Text inserted by `KeyKind::Char` utilities.
 	pub commit: &'static str,
+	/// Vector icon drawn instead of the label ("" means text).
+	pub icon: &'static str,
 }
 
 /// Keys pinned to the ends of the suggestion strip.
@@ -138,6 +140,7 @@ pub static STRIP: &[UtilityKey] = &[
 		kind: KeyKind::Shift,
 		weight: 1.0,
 		commit: "",
+		icon: "shift",
 	},
 	UtilityKey {
 		id: "backspace",
@@ -145,6 +148,7 @@ pub static STRIP: &[UtilityKey] = &[
 		kind: KeyKind::Backspace,
 		weight: 1.0,
 		commit: "",
+		icon: "backspace",
 	},
 ];
 
@@ -156,6 +160,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		kind: KeyKind::Page,
 		weight: 1.00,
 		commit: "",
+		icon: "",
 	},
 	UtilityKey {
 		id: "space",
@@ -163,6 +168,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		kind: KeyKind::Space,
 		weight: 5.20,
 		commit: " ",
+		icon: "",
 	},
 	UtilityKey {
 		id: "comma",
@@ -170,6 +176,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		kind: KeyKind::Char,
 		weight: 0.90,
 		commit: ",",
+		icon: "",
 	},
 	UtilityKey {
 		id: "enter",
@@ -177,6 +184,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		kind: KeyKind::Enter,
 		weight: 1.25,
 		commit: "\n",
+		icon: "",
 	},
 ];
 
