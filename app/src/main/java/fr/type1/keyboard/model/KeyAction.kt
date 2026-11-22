@@ -7,6 +7,9 @@ sealed class KeyAction {
 
 	data class Commit(val text: String) : KeyAction()
 
+	/** Commit a suggestion plus its convenience space, avoiding a duplicate space. */
+	data class CommitSuggestion(val text: String) : KeyAction()
+
 	data class DeleteWord(val word: Boolean) : KeyAction()
 
 	data class DeleteChars(val count: Int) : KeyAction()
@@ -35,6 +38,7 @@ sealed class KeyAction {
 				val item = array.getJSONObject(i)
 				when (item.optString("t")) {
 					"commit" -> out += Commit(item.optString("v"))
+					"suggest" -> out += CommitSuggestion(item.optString("v"))
 					"delete" -> {
 						if (item.has("n")) {
 							out += DeleteChars(item.optInt("n", 0))

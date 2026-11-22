@@ -65,7 +65,8 @@ release on the letter you want.
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
 - French spacing: space before `? ! : ;`, automatic space after `. , ; : ! ?`
   when a new word starts. A stray space before `.` or `,` is removed, including
-  the convenience space added by tapping a suggestion.
+  the convenience space added by tapping a suggestion. Applying a suggestion or
+  correction never stacks a second space on an existing one.
 - Backspace with a configurable long-press (repeat, swipe to size a selection,
   or nothing); enter adapts to the editor action
   (`→`, `✓`, `🔍`, `➤`) and inserts a newline in multiline fields.

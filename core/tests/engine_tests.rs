@@ -240,7 +240,7 @@ fn applying_a_suggestion_replaces_the_word() {
 		actions,
 		vec![
 			Action::DeleteChars(4),
-			Action::Commit("test ".into())
+			Action::CommitSuggestion("test ".into())
 		]
 	);
 	// The word buffer is now empty: no suggestions until new letters arrive.
@@ -759,7 +759,7 @@ fn punctuation_after_a_suggestion_removes_the_auto_space() {
 		engine.on_key("sug:0"),
 		vec![
 			Action::DeleteChars(3),
-			Action::Commit("j'ai ".into()),
+			Action::CommitSuggestion("j'ai ".into()),
 		]
 	);
 	assert_eq!(

@@ -525,7 +525,7 @@ impl Engine {
 		if delete > 0 {
 			out.push(Action::DeleteChars(delete));
 		}
-		out.push(Action::Commit(format!("{chosen} ")));
+		out.push(Action::CommitSuggestion(format!("{chosen} ")));
 		self.word.clear();
 		self.last_correction = None;
 		self.reverted = false;

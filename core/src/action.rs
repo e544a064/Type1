@@ -58,6 +58,9 @@ impl ImeActionKind {
 pub enum Action {
 	/// Insert text at the cursor.
 	Commit(String),
+	/// Insert a suggestion plus its convenience space. The platform removes any
+	/// spaces that already followed the old word, so no duplicate is left.
+	CommitSuggestion(String),
 	/// Delete one character, or one word when `word` is true.
 	Delete { word: bool },
 	/// Delete an exact number of characters (used when replacing a suggestion).
@@ -87,6 +90,11 @@ impl Action {
 			match action {
 				Action::Commit(text) => {
 					out.push_str("{\"t\":\"commit\",\"v\":");
+					json::string_into(&mut out, text);
+					out.push('}');
+				}
+				Action::CommitSuggestion(text) => {
+					out.push_str("{\"t\":\"suggest\",\"v\":");
 					json::string_into(&mut out, text);
 					out.push('}');
 				}
@@ -159,6 +167,7 @@ mod tests {
 	fn serialises_actions() {
 		let json = Action::list_json(&[
 			Action::Commit("é".into()),
+			Action::CommitSuggestion("mot ".into()),
 			Action::Delete { word: true },
 			Action::ReplaceSurrounding {
 				before: 2,
@@ -173,7 +182,7 @@ mod tests {
 		]);
 		assert_eq!(
 			json,
-			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"replace","b":2,"a":3,"v":"test"},{"t":"cursor","v":-2},{"t":"startSelection"},{"t":"select","v":-1},{"t":"deleteSelection"},{"t":"ime","v":"send"}]"#
+			r#"[{"t":"commit","v":"é"},{"t":"suggest","v":"mot "},{"t":"delete","word":true},{"t":"replace","b":2,"a":3,"v":"test"},{"t":"cursor","v":-2},{"t":"startSelection"},{"t":"select","v":-1},{"t":"deleteSelection"},{"t":"ime","v":"send"}]"#
 		);
 	}
 }

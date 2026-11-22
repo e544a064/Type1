@@ -117,6 +117,11 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	override fun onActions(actions: List<KeyAction>) {
 		val ic = currentInputConnection ?: return
+		val trimAfter = when (val last = actions.lastOrNull()) {
+			is KeyAction.Commit -> last.text.endsWith(' ')
+			is KeyAction.CommitSuggestion -> true
+			else -> false
+		}
 		var cursorMoved = false
 		var resyncContext = false
 		// Keep replacement (delete + commit) atomic for the editor.
@@ -125,6 +130,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			for (action in actions) {
 				when (action) {
 					is KeyAction.Commit -> ic.commitText(action.text, 1)
+					is KeyAction.CommitSuggestion -> ic.commitText(action.text, 1)
 					is KeyAction.DeleteWord -> {
 						deleteWord(ic, action.word)
 						resyncContext = true
@@ -149,6 +155,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 					is KeyAction.Ime -> performEditorAction(ic, action.action)
 				}
 			}
+			if (trimAfter) trimSpacesAfterCursor(ic)
 		} finally {
 			ic.endBatchEdit()
 		}
@@ -174,6 +181,17 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		// its corrections come back without moving the caret. Post it so a
 		// DEL key event has reached the editor before the text is read.
 		if (resyncContext) keyboardView?.post { syncContextFromEditor() }
+	}
+
+	/** Keep only the space just committed when the old text already had one. */
+	private fun trimSpacesAfterCursor(ic: InputConnection) {
+		var surplus = 0
+		while (surplus < 4) {
+			val next = ic.getTextAfterCursor(1, 0)?.toString()
+			if (next != " " && next != "\u00A0") break
+			ic.deleteSurroundingText(0, 1)
+			surplus++
+		}
 	}
 
 	override fun onUpdateSelection(
