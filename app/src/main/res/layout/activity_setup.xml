@@ -40,6 +40,22 @@
 			android:layout_marginTop="12dp"
 			android:text="@string/setup_step_select" />
 
+		<EditText
+			android:id="@+id/demoField"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="20dp"
+			android:background="#FFFFFFFF"
+			android:gravity="top|start"
+			android:hint="@string/setup_demo_hint"
+			android:importantForAutofill="no"
+			android:inputType="textCapSentences|textMultiLine"
+			android:minLines="3"
+			android:padding="12dp"
+			android:textColor="#FF11131A"
+			android:textColorHint="#FF8C93A8"
+			android:textSize="16sp" />
+
 		<TextView
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
@@ -99,21 +115,5 @@
 			android:text="@string/setup_swipe_hint"
 			android:textColor="#FF6B7285"
 			android:textSize="13sp" />
-
-		<EditText
-			android:id="@+id/demoField"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="20dp"
-			android:background="#FFFFFFFF"
-			android:gravity="top|start"
-			android:hint="@string/setup_demo_hint"
-			android:importantForAutofill="no"
-			android:inputType="textCapSentences|textMultiLine"
-			android:minLines="3"
-			android:padding="12dp"
-			android:textColor="#FF11131A"
-			android:textColorHint="#FF8C93A8"
-			android:textSize="16sp" />
 	</LinearLayout>
 </ScrollView>
