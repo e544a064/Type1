@@ -42,8 +42,8 @@ fn neighbour(c: char, rng: &mut Rng, order: &[char]) -> char {
 	order[next]
 }
 
-fn cases() -> Vec<(&'static str, &'static str)> {
-	include_str!("data/autocorrect_cases.tsv")
+fn parse_cases(source: &'static str) -> Vec<(&'static str, &'static str)> {
+	source
 	.lines()
 	.filter_map(|line| {
 		let (typed, expected) = line.split_once('\t')?;
@@ -53,6 +53,18 @@ fn cases() -> Vec<(&'static str, &'static str)> {
 		Some((typed, expected))
 	})
 	.collect()
+}
+
+fn cases() -> Vec<(&'static str, &'static str)> {
+	parse_cases(include_str!("data/autocorrect_cases.tsv"))
+}
+
+fn two_key_cases() -> Vec<(&'static str, &'static str)> {
+	parse_cases(include_str!("data/two_key_cases.tsv"))
+}
+
+fn spelling_cases() -> Vec<(&'static str, &'static str)> {
+	parse_cases(include_str!("data/spelling_cases.tsv"))
 }
 
 fn best(typed: &str) -> (bool, Option<String>, u8) {
@@ -303,6 +315,78 @@ fn two_key_typo_is_suggested_and_applied() {
 			Action::Commit("bonjour".into()),
 			Action::Commit(" ".into()),
 		]
+	);
+}
+
+fn check_rule_cases(cases: &[(&str, &str)]) -> (Vec<String>, usize) {
+	let mut failures = Vec::new();
+	let mut applied = 0usize;
+	for (typed, expected) in cases {
+		let suggestion = correction::suggest(typed);
+		let tier_ordered = suggestion
+		.candidates
+		.windows(2)
+		.all(|pair| pair[0].tier <= pair[1].tier);
+		let found = suggestion
+		.candidates
+		.iter()
+		.position(|candidate| candidate.text == *expected);
+		let visible = found.is_some_and(|index| {
+			index < 3 && suggestion.candidates[index].tier == 2
+		});
+		if !tier_ordered || !visible {
+			failures.push(format!(
+				"{typed} -> want {expected}, got {:?}",
+				suggestion
+				.candidates
+				.iter()
+				.map(|candidate| (candidate.text.as_str(), candidate.tier))
+				.collect::<Vec<_>>()
+			));
+		}
+		if suggestion.apply {
+			applied += 1;
+		}
+	}
+	(failures, applied)
+}
+
+#[test]
+fn thousands_of_two_key_typos_are_suggested() {
+	let cases = two_key_cases();
+	assert!(cases.len() >= 2_000, "only {} two-key cases", cases.len());
+	let (failures, applied) = check_rule_cases(&cases);
+	assert!(
+		failures.is_empty(),
+		"{} / {} two-key cases failed:\n{}",
+		failures.len(),
+		cases.len(),
+		failures
+		. iter()
+		.take(20)
+		.cloned()
+		.collect::<Vec<_>>()
+		. join("\n")
+	);
+	assert!(applied >= 100, "only {applied} two-key cases auto-applied");
+}
+
+#[test]
+fn thousands_of_spelling_variants_are_suggested() {
+	let cases = spelling_cases();
+	assert!(cases.len() >= 2_000, "only {} spelling cases", cases.len());
+	let (failures, _) = check_rule_cases(&cases);
+	assert!(
+		failures.is_empty(),
+		"{} / {} spelling cases failed:\n{}",
+		failures.len(),
+		cases.len(),
+		failures
+		. iter()
+		.take(20)
+		.cloned()
+		.collect::<Vec<_>>()
+		. join("\n")
 	);
 }
 

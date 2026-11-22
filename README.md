@@ -123,7 +123,9 @@ core/                     Rust crate (no Android dependency)
   examples/make_autocorrect_cases.rs  regenerate the bulk fixture
   tests/engine_tests.rs   keyboard-engine behaviour tests
   tests/autocorrect_tests.rs  bulk autocorrect regressions
-  tests/data/autocorrect_cases.tsv  2,500 generated typo cases
+  tests/data/autocorrect_cases.tsv  2,500 mixed typo cases
+  tests/data/two_key_cases.tsv  2,000 two-key-slip cases
+  tests/data/spelling_cases.tsv  2,000 spelling-variant cases
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -213,14 +215,14 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic, vault of 2,500 autocorrect cases and held-out accuracy floor
+# core logic, 6,500 autocorrect cases and held-out accuracy floors
 cd core; cargo test
 
 # JNI contract: real JVM -> Rust -> JSON (uses the host build of the core)
 ./tools/jni-smoke/run.ps1
 ```
 
-The bulk fixture is regenerated after tuning the corrector:
+The bulk fixtures are regenerated after tuning the corrector:
 
 ```powershell
 cd core; cargo run --release --example make_autocorrect_cases
@@ -234,7 +236,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 88 tests plus 2,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 90 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

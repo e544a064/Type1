@@ -1,9 +1,12 @@
-//! Generates `core/tests/data/autocorrect_cases.tsv`.
+//! Generates the bulk fixtures in `core/tests/data/`:
 //!
-//! The cases are deterministic typo variants of dictionary words that the
-//! current corrector resolves to the intended word. They form a bulk
-//! regression suite: rerun this example after tuning the corrector and commit
-//! the new fixture.
+//! - `autocorrect_cases.tsv` (mixed typo classes)
+//! - `two_key_cases.tsv` (typos with two-key substitutions)
+//! - `spelling_cases.tsv` (one-letter spelling variants)
+//!
+//! The cases are deterministic variants of dictionary words that the current
+//! corrector resolves to the intended word. They form a bulk regression suite:
+//! rerun this example after tuning the corrector and commit the new fixtures.
 //!
 //!     cargo run --release --example make_autocorrect_cases
 
@@ -15,7 +18,9 @@ use type1_core::correction::suggest;
 use type1_core::dictionary;
 use type1_core::layout::LETTERS;
 
-const TARGET: usize = 2_500;
+const MIXED_TARGET: usize = 2_500;
+const TWO_KEY_TARGET: usize = 2_000;
+const SPELLING_TARGET: usize = 2_000;
 
 struct Rng(u64);
 
@@ -83,18 +88,32 @@ fn substitute_far(word: &str, count: usize, rng: &mut Rng, order: &[char]) -> St
 	chars.into_iter().collect()
 }
 
-fn spelling(word: &str, rng: &mut Rng) -> String {
-	let mut chars: Vec<char> = word.chars().collect();
+fn spelling(word: &str, rng: &mut Rng, order: &[char]) -> String {
+	let chars: Vec<char> = word.chars().collect();
 	if chars.len() < 4 {
 		return word.to_string();
 	}
-	let i = rng.below(chars.len());
-	let vowels = ['a', 'e', 'i', 'o', 'u'];
-	let mut replacement = vowels[rng.below(vowels.len())];
-	if replacement == chars[i] {
-		replacement = 'y';
+	let positions: Vec<usize> = (0..chars.len())
+	.filter(|&index| order.contains(&chars[index]))
+	.collect();
+	if positions.is_empty() {
+		return word.to_string();
 	}
-	chars[i] = replacement;
+	let i = positions[rng.below(positions.len())];
+	let Some(original) = order.iter().position(|&c| c == chars[i]) else {
+		return word.to_string();
+	};
+	let far: Vec<char> = order
+	.iter()
+	.enumerate()
+	.filter(|(index, _)| index.abs_diff(original) >= 3)
+	.map(|(_, &c)| c)
+	.collect();
+	if far.is_empty() {
+		return word.to_string();
+	}
+	let mut chars = chars;
+	chars[i] = far[rng.below(far.len())];
 	chars.into_iter().collect()
 }
 
@@ -130,6 +149,29 @@ fn accentless(word: &str) -> String {
 	type1_core::lexicon::fold(word)
 }
 
+fn accepted(typed: &str, word: &str, top: usize, tier: u8) -> bool {
+	if typed == word || typed.is_empty() || dictionary::exact(typed).is_some() {
+		return false;
+	}
+	let suggestion = suggest(typed);
+	suggestion
+	.candidates
+	.iter()
+	.take(top)
+	.any(|candidate| candidate.text == word && candidate.tier == tier)
+}
+
+fn write_cases(path: &str, cases: &mut [(String, &'static str)]) {
+	cases.sort_by(|a, b| a.0.cmp(&b.0));
+	let mut out = String::new();
+	for (typed, word) in cases.iter() {
+		writeln!(out, "{typed}\t{word}").unwrap();
+	}
+	fs::create_dir_all("tests/data").unwrap();
+	fs::write(path, out).unwrap();
+	println!("wrote {} cases to {path}", cases.len());
+}
+
 fn main() {
 	let order = letters();
 	let mut rng = Rng(0x2545_f491_4f6c_dd1d);
@@ -142,58 +184,95 @@ fn main() {
 	.map(|w| w.text)
 	.collect();
 
-	let mut seen = HashSet::new();
-	let mut cases: Vec<(String, &'static str)> = Vec::new();
+	let mut mixed = Vec::new();
+	let mut two_key = Vec::new();
+	let mut spelling_cases = Vec::new();
+	let mut mixed_seen = HashSet::new();
+	let mut two_key_seen = HashSet::new();
+	let mut spelling_seen = HashSet::new();
 	let mut index = 0usize;
 
-	while cases.len() < TARGET {
+	while (mixed.len() < MIXED_TARGET
+		|| two_key.len() < TWO_KEY_TARGET
+		|| spelling_cases.len() < SPELLING_TARGET)
+		&& index < pool.len() * 120
+	{
 		let word = pool[index % pool.len()];
 		index += 1;
-		if index > pool.len() * 40 {
-			break;
+
+		if mixed.len() < MIXED_TARGET {
+			let variants = [
+				substitute(word, 1, &mut rng, &order),
+				substitute_far(word, 1, &mut rng, &order),
+				spelling(word, &mut rng, &order),
+				substitute(word, 2, &mut rng, &order),
+				substitute(word, 3, &mut rng, &order),
+				transpose(word, &mut rng),
+				remove(word, &mut rng),
+				insert(word, &mut rng, &order),
+				accentless(word),
+			];
+			for typed in variants {
+				if typed == word || typed.is_empty() || !mixed_seen.insert(typed.clone()) {
+					continue;
+				}
+				if dictionary::exact(&typed).is_some() {
+					continue;
+				}
+				let suggestion = suggest(&typed);
+				let best = suggestion
+				.candidates
+				.first()
+				.map(|candidate| candidate.text.as_str());
+				if suggestion.apply && best == Some(word) {
+					mixed.push((typed, word));
+					if mixed.len() >= MIXED_TARGET {
+						break;
+					}
+				}
+			}
 		}
-		let variants = [
-			substitute(word, 1, &mut rng, &order),
-			substitute_far(word, 1, &mut rng, &order),
-			spelling(word, &mut rng),
-			substitute(word, 2, &mut rng, &order),
-			substitute(word, 3, &mut rng, &order),
-			transpose(word, &mut rng),
-			remove(word, &mut rng),
-			insert(word, &mut rng, &order),
-			accentless(word),
-		];
-		for typed in variants {
-			if typed == word || typed.is_empty() {
-				continue;
+
+		if two_key.len() < TWO_KEY_TARGET {
+			let variants = [
+				substitute_far(word, 1, &mut rng, &order),
+				substitute_far(word, 2, &mut rng, &order),
+				substitute_far(word, 3, &mut rng, &order),
+			];
+			for typed in variants {
+				if !two_key_seen.insert(typed.clone()) {
+					continue;
+				}
+				if accepted(&typed, word, 3, 2) {
+					two_key.push((typed, word));
+					if two_key.len() >= TWO_KEY_TARGET {
+						break;
+					}
+				}
 			}
-			if !seen.insert(typed.clone()) {
-				continue;
-			}
-			if dictionary::exact(&typed).is_some() {
-				continue;
-			}
-			let suggestion = suggest(&typed);
-			let best = suggestion
-			.candidates
-			.first()
-			.map(|candidate| candidate.text.as_str());
-			if suggestion.apply && best == Some(word) {
-				cases.push((typed, word));
-				if cases.len() >= TARGET {
-					break;
+		}
+
+		if spelling_cases.len() < SPELLING_TARGET {
+			let variants = [
+				spelling(word, &mut rng, &order),
+				spelling(word, &mut rng, &order),
+				spelling(word, &mut rng, &order),
+			];
+			for typed in variants {
+				if !spelling_seen.insert(typed.clone()) {
+					continue;
+				}
+				if accepted(&typed, word, 3, 2) {
+					spelling_cases.push((typed, word));
+					if spelling_cases.len() >= SPELLING_TARGET {
+						break;
+					}
 				}
 			}
 		}
 	}
 
-	cases.sort_by(|a, b| a.0.cmp(&b.0));
-	let mut out = String::new();
-	for (typed, word) in &cases {
-		writeln!(out, "{typed}\t{word}").unwrap();
-	}
-	let path = "tests/data/autocorrect_cases.tsv";
-	fs::create_dir_all("tests/data").unwrap();
-	fs::write(path, out).unwrap();
-	println!("wrote {} cases to {path}", cases.len());
+	write_cases("tests/data/autocorrect_cases.tsv", &mut mixed);
+	write_cases("tests/data/two_key_cases.tsv", &mut two_key);
+	write_cases("tests/data/spelling_cases.tsv", &mut spelling_cases);
 }
