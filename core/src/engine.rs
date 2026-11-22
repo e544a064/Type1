@@ -114,6 +114,16 @@ impl Engine {
 				self.word.pop();
 				vec![Action::Delete { word: false }]
 			}
+			"cursor_left" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::MoveCursor(-1)]
+			}
+			"cursor_right" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::MoveCursor(1)]
+			}
 			"enter" => {
 				self.word.clear();
 				if self.multiline || self.ime_action == ImeActionKind::None {

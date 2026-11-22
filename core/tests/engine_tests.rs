@@ -128,6 +128,30 @@ fn backspace_emits_delete() {
 }
 
 #[test]
+fn cursor_moves_are_reported() {
+	let mut engine = plain();
+	assert_eq!(
+		engine.on_key("cursor_left"),
+		vec![Action::MoveCursor(-1)]
+	);
+	assert_eq!(
+		engine.on_key("cursor_right"),
+		vec![Action::MoveCursor(1)]
+	);
+}
+
+#[test]
+fn cursor_moves_clear_the_word() {
+	let mut engine = plain();
+	engine.on_key("e");
+	engine.on_key("c");
+	engine.on_key("cursor_left");
+	let json: serde_json::Value =
+		serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn enter_commits_newline_by_default() {
 	let mut engine = plain();
 	assert_eq!(engine.on_key("enter"), vec![Action::Commit("\n".into())]);

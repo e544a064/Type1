@@ -26,7 +26,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 ## 3. Text editing
 - [x] Backspace with repeat (suggestion strip, right end)
 - [x] Word delete in the core (not bound to a gesture yet)
-- [ ] Cursor arrows / swipe-on-space cursor control
+- [x] Swipe on the spacebar to move the cursor (switch in the setup screen)
 - [ ] Select word / line / all
 - [ ] Clipboard history panel
 - [ ] Undo / redo

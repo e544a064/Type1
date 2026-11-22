@@ -3,12 +3,14 @@ package fr.type1.keyboard
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
+import kotlin.math.abs
 
 /**
  * The IME itself. All keyboard logic lives in the Rust core; this service only
@@ -22,6 +24,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
 		view.listener = this
+		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
 		view.setOnApplyWindowInsetsListener { _, insets ->
 			view.setBottomInset(navigationBarHeight(insets))
 			insets
@@ -41,6 +44,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		// Some IME windows do not dispatch insets to the input view; query the
 		// window directly as well.
 		applyNavigationInset()
+		keyboardView?.setSpaceCursorEnabled(Prefs.spaceCursor(this))
 		keyboardView?.refresh()
 	}
 
@@ -98,11 +102,21 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 					is KeyAction.DeleteChars -> if (action.count > 0) {
 						ic.deleteSurroundingText(action.count, 0)
 					}
+					is KeyAction.Cursor -> sendCursor(ic, action.delta)
 					is KeyAction.Ime -> performEditorAction(ic, action.action)
 				}
 			}
 		} finally {
 			ic.endBatchEdit()
+		}
+	}
+
+	private fun sendCursor(ic: InputConnection, delta: Int) {
+		if (delta == 0) return
+		val keyCode = if (delta < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+		repeat(abs(delta)) {
+			ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+			ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
 		}
 	}
 

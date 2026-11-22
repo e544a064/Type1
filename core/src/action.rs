@@ -62,6 +62,8 @@ pub enum Action {
 	Delete { word: bool },
 	/// Delete an exact number of characters (used when replacing a suggestion).
 	DeleteChars(u32),
+	/// Move the caret by `delta` characters (negative is left).
+	MoveCursor(i32),
 	/// Trigger an editor action (single-line fields only).
 	Ime(ImeActionKind),
 }
@@ -87,6 +89,11 @@ impl Action {
 				Action::DeleteChars(count) => {
 					out.push_str("{\"t\":\"delete\",\"n\":");
 					out.push_str(&count.to_string());
+					out.push('}');
+				}
+				Action::MoveCursor(delta) => {
+					out.push_str("{\"t\":\"cursor\",\"v\":");
+					out.push_str(&delta.to_string());
 					out.push('}');
 				}
 				Action::Ime(kind) => {
@@ -120,11 +127,12 @@ mod tests {
 		let json = Action::list_json(&[
 			Action::Commit("é".into()),
 			Action::Delete { word: true },
+			Action::MoveCursor(-2),
 			Action::Ime(ImeActionKind::Send),
 		]);
 		assert_eq!(
 			json,
-			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"ime","v":"send"}]"#
+			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"cursor","v":-2},{"t":"ime","v":"send"}]"#
 		);
 	}
 }

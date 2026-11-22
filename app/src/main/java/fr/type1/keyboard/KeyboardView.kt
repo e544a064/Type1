@@ -86,6 +86,10 @@ class KeyboardView(
 	private var downUtility = -1
 	private var altState: AltState? = null
 	private var longPressFired = false
+	private var spaceCursorEnabled = true
+	private var spaceDragging = false
+	private var spaceAnchorX = 0f
+	private var spaceMoved = false
 
 	private val backgroundPaint = Paint().apply {
 		color = context.getColor(R.color.keyboard_background)
@@ -170,6 +174,12 @@ class KeyboardView(
 		bottomInset = pixels
 		requestLayout()
 		invalidate()
+	}
+
+	/** Enable or disable moving the caret by dragging on the spacebar. */
+	fun setSpaceCursorEnabled(enabled: Boolean) {
+		spaceCursorEnabled = enabled
+		if (!enabled) spaceDragging = false
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -448,6 +458,14 @@ class KeyboardView(
 						if (downUtility >= 0) {
 							performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 							scheduleLongPress()
+							spaceDragging = (
+								spaceCursorEnabled
+								&& model?.keys?.getOrNull(downUtility)?.kind == "space"
+							)
+							if (spaceDragging) {
+								spaceAnchorX = event.x
+								spaceMoved = false
+							}
 						}
 						invalidate()
 					}
@@ -471,10 +489,14 @@ class KeyboardView(
 						}
 					}
 					Band.Utilities -> {
-						val index = hit(utilityRects, event.x)
-						if (index != pressedUtility) {
-							pressedUtility = index
-							invalidate()
+						if (spaceDragging) {
+							dragSpaceCursor(event.x)
+						} else {
+							val index = hit(utilityRects, event.x)
+							if (index != pressedUtility) {
+								pressedUtility = index
+								invalidate()
+							}
 						}
 					}
 					Band.Suggestions -> {
@@ -523,8 +545,14 @@ class KeyboardView(
 					Band.Letters -> if (!longPressFired && pressedLetter >= 0) {
 						model?.letters?.getOrNull(pressedLetter)?.let { emit(controller.press(it.id)) }
 					}
-					Band.Utilities -> if (!longPressFired && pressedUtility >= 0 && pressedUtility == downUtility) {
-						model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
+					Band.Utilities -> {
+						if (spaceDragging) {
+							if (!spaceMoved) {
+								model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
+							}
+						} else if (!longPressFired && pressedUtility >= 0 && pressedUtility == downUtility) {
+							model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
+						}
 					}
 					Band.None -> Unit
 				}
@@ -594,6 +622,25 @@ class KeyboardView(
 		refresh()
 	}
 
+	/** One caret step per 20 dp of horizontal travel on the spacebar. */
+	private fun dragSpaceCursor(x: Float) {
+		val step = dp(20f)
+		var delta = x - spaceAnchorX
+		while (abs(delta) >= step) {
+			val direction = if (delta > 0f) 1 else -1
+			spaceAnchorX += direction * step
+			listener?.onActions(
+				controller.press(if (direction > 0) "cursor_right" else "cursor_left")
+			)
+			if (!spaceMoved) {
+				spaceMoved = true
+				// The caret moved: suggestions for the old word are stale.
+				refresh()
+			}
+			delta = x - spaceAnchorX
+		}
+	}
+
 	private fun startRepeat() {
 		handler.post(repeatRunnable)
 	}
@@ -613,6 +660,9 @@ class KeyboardView(
 		altState = null
 		altRects.clear()
 		longPressFired = false
+		spaceDragging = false
+		spaceMoved = false
+		spaceAnchorX = 0f
 		invalidate()
 	}
 

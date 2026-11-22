@@ -11,6 +11,9 @@ sealed class KeyAction {
 
 	data class DeleteChars(val count: Int) : KeyAction()
 
+	/** Move the caret by [delta] characters; negative moves left. */
+	data class Cursor(val delta: Int) : KeyAction()
+
 	data class Ime(val action: String) : KeyAction()
 
 	companion object {
@@ -29,6 +32,7 @@ sealed class KeyAction {
 							out += DeleteWord(item.optBoolean("word", false))
 						}
 					}
+					"cursor" -> out += Cursor(item.optInt("v", 0))
 					"ime" -> out += Ime(item.optString("v", "none"))
 				}
 			}

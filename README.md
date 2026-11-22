@@ -39,6 +39,8 @@ release on the letter you want.
 - Backspace with hold-to-repeat; enter adapts to the editor action
   (`→`, `✓`, `🔍`, `➤`) and inserts a newline in multiline fields.
 - Drag along the letter line to correct a press before releasing.
+- Drag horizontally on the spacebar to move the caret; the setup screen has a
+  switch to turn this off.
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   just page, space, comma and enter.
 - Sounds, haptics, pressed-letter highlight.
@@ -190,6 +192,7 @@ untested.
 | --- | --- |
 | Tap a letter | Type it (respects shift / auto-caps) |
 | Drag along the letter line | Move the highlight, release to type |
+| Drag on the spacebar | Move the cursor left/right (disable in the app) |
 | Long-press a letter | Accent strip replaces the letter line; slide and release |
 | Tap a suggestion | Delete the typed word and insert the suggestion plus a space |
 | Hold ⌫ | Repeat delete |
