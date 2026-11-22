@@ -160,6 +160,10 @@ class KeyboardView(
 				val key = model?.keys?.getOrNull(downUtility) ?: return@Runnable
 				when {
 					key.kind == "backspace" -> handleBackspaceHold()
+					key.kind == "page" && showPageAltPopup(downUtility) -> {
+						longPressFired = true
+						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+					}
 					key.alts.isNotEmpty() && showUtilityAltPopup(downUtility) -> {
 						longPressFired = true
 						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -429,7 +433,9 @@ class KeyboardView(
 				continue
 			}
 
-			if (key.alts.isNotEmpty()) {
+			// The page key's alternates are digits for its long-press popup;
+			// showing all ten as a hint would be noise.
+			if (key.alts.isNotEmpty() && key.kind != "page") {
 				val hint = key.alts.joinToString(" ")
 				labelPaint.color = colors.muted
 				labelPaint.textAlign = Paint.Align.RIGHT
@@ -492,11 +498,23 @@ class KeyboardView(
 		return showAltEntries(entries, rect, baseIndex, utilityTop)
 	}
 
+	/** Long-press popup on the page key: type one digit without switching page. */
+	private fun showPageAltPopup(index: Int): Boolean {
+		val key = model?.keys?.getOrNull(index) ?: return false
+		val rect = utilityRects.getOrNull(index) ?: return false
+		if (key.alts.isEmpty()) return false
+		val entries = key.alts.map { AltEntry("sym:$it", it) }
+		// Anchor the first cell over the page key and start unselected, so a
+		// long press alone never types a digit.
+		return showAltEntries(entries, rect, 0, utilityTop, initialSelected = -1)
+	}
+
 	private fun showAltEntries(
 		entries: List<AltEntry>,
 		rect: RectF,
 		baseIndex: Int,
 		bandTop: Float,
+		initialSelected: Int = baseIndex,
 	): Boolean {
 		dismissAltPopup()
 
@@ -534,8 +552,8 @@ class KeyboardView(
 		altPopup = popup
 		altPopupView = popupView
 		altEntries = entries
-		altSelected = baseIndex
-		popupView.selected = baseIndex
+		altSelected = initialSelected
+		popupView.selected = initialSelected
 		altCellWidth = cellWidth
 		altPopupLeft = leftInView.toFloat()
 		return true
@@ -543,6 +561,9 @@ class KeyboardView(
 
 	private fun updateAltSelection(x: Float) {
 		if (altPopup == null || altEntries.isEmpty()) return
+		// The page-key popup starts unselected; ignore hand jitter until the
+		// finger really slides.
+		if (altSelected < 0 && abs(x - downX) < dp(ALT_SELECT_SLOP_DP)) return
 		val index = ((x - altPopupLeft) / altCellWidth).toInt()
 		.coerceIn(0, altEntries.size - 1)
 		if (index != altSelected) {
@@ -684,9 +705,15 @@ class KeyboardView(
 		}
 		if (altPopup != null) {
 			val entry = altEntries.getOrNull(altSelected)
+			// A page-key popup starts unselected: releasing without sliding
+			// keeps the normal page switch instead of typing a digit.
+			val switchPage = entry == null &&
+				band == Band.Utilities &&
+				model?.keys?.getOrNull(downUtility)?.kind == "page"
 			dismissAltPopup()
-			if (entry != null) {
-				emit(controller.press(entry.keyId))
+			when {
+				entry != null -> emit(controller.press(entry.keyId))
+				switchPage -> emit(controller.press("page"))
 			}
 			resetTouch()
 			return
@@ -965,5 +992,6 @@ class KeyboardView(
 		const val REPEAT_MS = 55L
 		const val ALT_CELL_DP = 40f
 		const val ALT_HEIGHT_DP = 44f
+		const val ALT_SELECT_SLOP_DP = 6f
 	}
 }

@@ -81,7 +81,9 @@ release on the letter you want.
 - Spacebar row height is adjustable (36–72 dp, 48 dp by default).
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   page, comma, space, period and enter. Long-press the period for `!`, `?` and
-  `:`; the alternates are shown greyed at the top of the key.
+  `:`; the alternates are shown greyed at the top of the key. Long-press the
+  page key for a popup with `0`–`9` and slide to type one digit without
+  switching page.
 - Vector icons for shift, backspace and enter (the enter icon follows the editor
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
@@ -251,7 +253,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 107 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 108 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
@@ -271,6 +273,7 @@ untested.
 | Move the caret into an existing word | Re-suggests corrections for that word; tap one to replace it |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `!`, `?` and `:`; slide and release |
+| Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |

@@ -746,6 +746,8 @@ fn render_exposes_three_bands() {
 	assert_eq!(json["letters"].as_array().unwrap().len(), 26);
 	assert_eq!(json["keys"].as_array().unwrap().len(), 5);
 	assert_eq!(json["keys"][0]["id"], "page");
+	assert_eq!(json["keys"][0]["alts"][0], "1");
+	assert_eq!(json["keys"][0]["alts"][9], "0");
 	assert_eq!(json["keys"][1]["id"], "comma");
 	assert_eq!(json["keys"][3]["id"], "dot");
 	assert_eq!(json["keys"][3]["alts"][0], "!");
@@ -773,6 +775,15 @@ fn dot_and_punctuation_alts_commit_at_the_boundary() {
 			]
 		);
 	}
+}
+
+#[test]
+fn digit_shortcut_commits_without_changing_page() {
+	let mut engine = plain();
+	engine.on_key("a");
+	assert_eq!(engine.on_key("sym:1"), vec![Action::Commit("1".into())]);
+	assert_eq!(engine.page(), Page::Letters);
+	assert_eq!(commits(&engine.on_key("b")), vec!["b"]);
 }
 
 #[test]

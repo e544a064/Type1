@@ -163,7 +163,8 @@ pub static UTILITIES: &[UtilityKey] = &[
 		weight: 1.00,
 		commit: "",
 		icon: "",
-		alts: &[],
+		// Long-press shortcut: one digit without leaving the current page.
+		alts: &["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
 	},
 	UtilityKey {
 		id: "comma",
@@ -303,6 +304,8 @@ mod tests {
 	fn utilities_are_stable() {
 		let ids: Vec<&str> = UTILITIES.iter().map(|u| u.id).collect();
 		assert_eq!(ids, vec!["page", "comma", "space", "dot", "enter"]);
+		let page = UTILITIES.iter().find(|u| u.id == "page").unwrap();
+		assert_eq!(page.alts, &["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]);
 		let dot = UTILITIES.iter().find(|u| u.id == "dot").unwrap();
 		assert_eq!(dot.alts, &["!", "?", ":"]);
 		let strip: Vec<&str> = STRIP.iter().map(|u| u.id).collect();
