@@ -389,6 +389,13 @@ impl Engine {
 		if best.score < correction::MIN_SCORE {
 			return None;
 		}
+		if length <= 2 {
+			if let Some(second) = candidates.get(1) {
+				if best.score - second.score < correction::SHORT_WORD_MARGIN {
+					return None;
+				}
+			}
+		}
 		let corrected = apply_case(&typed, &best.text);
 		if corrected == typed {
 			return None;

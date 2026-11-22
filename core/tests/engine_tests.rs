@@ -493,6 +493,87 @@ fn low_confidence_words_are_left_alone() {
 }
 
 #[test]
+fn corrects_a_transposition_instead_of_a_more_frequent_deletion() {
+	let mut engine = plain();
+	for key in ["t", "s", "e", "t"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("test".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn corrects_an_elision_with_a_typo_in_the_remainder() {
+	for typed in [["t", "a", "i", "m", "x"], ["t", "a", "i", "p", "e"]] {
+		let mut engine = plain();
+		for key in typed {
+			engine.on_key(key);
+		}
+		assert_eq!(
+			engine.on_key("space"),
+			vec![
+				Action::DeleteChars(5),
+				Action::Commit("t'aime".into()),
+				Action::Commit(" ".into()),
+			]
+		);
+	}
+}
+
+#[test]
+fn corrects_the_second_word_of_a_phrase() {
+	let mut engine = plain();
+	for key in ["j", "e"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	for key in ["t", "a", "i", "m", "x"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("t'aime".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn ambiguous_short_words_are_suggested_but_not_corrected() {
+	let mut engine = plain();
+	engine.on_key("u");
+	engine.on_key("e");
+	// Several two-letter words are one key away; do not guess.
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn short_word_suggestions_put_likely_words_first() {
+	let mut engine = plain();
+	engine.on_key("u");
+	engine.on_key("e");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions: Vec<&str> = json["suggestions"]
+	.as_array()
+	.unwrap()
+	.iter()
+	.map(|value| value.as_str().unwrap())
+	.collect();
+	let position = |word: &str| suggestions.iter().position(|s| *s == word);
+	let ne = position("ne").expect("ne in suggestions");
+	let eu = position("eu");
+	assert!(eu.is_none() || ne < eu.unwrap(), "suggestions: {suggestions:?}");
+}
+
+#[test]
 fn render_exposes_three_bands() {
 	let mut engine = plain();
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();

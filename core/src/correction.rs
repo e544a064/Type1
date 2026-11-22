@@ -12,10 +12,15 @@ use crate::layout;
 use crate::lexicon::fold;
 
 /// Minimum score a candidate needs before it may replace the typed word.
-pub const MIN_SCORE: f32 = -0.5;
-/// Weight of the word-frequency prior relative to the touch costs.
-const FREQ_WEIGHT: f32 = 0.1;
-const MAX_COST: f32 = 1.8;
+pub const MIN_SCORE: f32 = 0.5;
+/// Short tokens have many equally plausible neighbours (`ue` -> `je`, `une`,
+/// `ne`); only correct them when the best candidate clearly dominates.
+pub const SHORT_WORD_MARGIN: f32 = 0.75;
+/// Weight of the word-frequency prior relative to the touch costs. French
+/// function words are frequent enough that ranking must favour them over a
+/// merely cheaper edit (`ue` -> `ne` rather than `eu`).
+const FREQ_WEIGHT: f32 = 0.5;
+const MAX_COST: f32 = 1.55;
 const MAX_RESULTS: usize = 6;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
@@ -164,6 +169,35 @@ fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	}
 }
 
+/// `jusqua` -> `jusqu'à`: the remainder folds to the verb `a`, not `à`.
+fn elision_remainder(clitic: &str, word: &dictionary::Word) -> (&'static str, f32) {
+	if clitic == "jusqu" && word.text == "a" {
+		if let Some(grave) = dictionary::exact("à") {
+			return (grave.text, grave.log_freq);
+		}
+	}
+	(word.text, word.log_freq)
+}
+
+fn insert_elision(
+	found: &mut HashMap<String, Candidate>,
+	clitic: &str,
+	remainder: &str,
+	log_freq: f32,
+	penalty: f32,
+	cost: f32,
+) {
+	let text = format!("{clitic}'{remainder}");
+	insert(
+		found,
+		Candidate {
+			text,
+			cost,
+			score: log_freq * FREQ_WEIGHT - penalty - cost,
+		},
+	);
+}
+
 /// Candidate corrections for a typed token, best first. Empty when the token is
 /// already a known word, too short, or contains an apostrophe.
 pub fn candidates(typed: &str) -> Vec<Candidate> {
@@ -192,7 +226,8 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 		);
 	}
 
-	// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`.
+	// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
+	// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
 	for &(clitic, penalty) in CLITICS {
 		if !lower.starts_with(clitic) {
 			continue;
@@ -211,23 +246,38 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 		if !allowed {
 			continue;
 		}
-		if let Some(word) = dictionary::folded(&fold(rest)) {
-			let mut remainder = word.text;
-			let mut log_freq = word.log_freq;
-			// `jusqua` -> `jusqu'à`: the remainder folds to the verb `a`.
-			if clitic == "jusqu" && remainder == "a" {
-				if let Some(grave) = dictionary::exact("à") {
-					remainder = grave.text;
-					log_freq = grave.log_freq;
-				}
+
+		let folded_rest = fold(rest);
+		if let Some(word) = dictionary::folded(&folded_rest) {
+			let (remainder, log_freq) = elision_remainder(clitic, word);
+			insert_elision(&mut found, clitic, remainder, log_freq, penalty, 0.15);
+		}
+
+		// Short remainders are covered by the exact lookup above; scanning
+		// them for typos only invents forms like `j'air`.
+		if folded_rest.len() < 3 {
+			continue;
+		}
+		for word in dictionary::words() {
+			if word.folded.len() < 2 {
+				continue;
 			}
-			insert(
+			let Some(distance) =
+				distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
+			else {
+				continue;
+			};
+			if distance == 0.0 {
+				continue;
+			}
+			let (remainder, log_freq) = elision_remainder(clitic, word);
+			insert_elision(
 				&mut found,
-				Candidate {
-					text: format!("{clitic}'{remainder}"),
-					cost: 0.15,
-					score: log_freq * FREQ_WEIGHT - penalty,
-				},
+				clitic,
+				remainder,
+				log_freq,
+				penalty,
+				0.15 + distance,
 			);
 		}
 	}
@@ -280,6 +330,23 @@ mod tests {
 	#[test]
 	fn transposition() {
 		assert_eq!(best("tset").as_deref(), Some("test"));
+	}
+
+	#[test]
+	fn frequency_outranks_a_cheaper_rare_word() {
+		// `tapie` is one transposition away, but `t'aime` is the likely word.
+		assert_eq!(best("taipe").as_deref(), Some("t'aime"));
+		assert_eq!(best("taimx").as_deref(), Some("t'aime"));
+	}
+
+	#[test]
+	fn frequency_orders_short_neighbours() {
+		let list = candidates("ue");
+		let position = |word: &str| list.iter().position(|c| c.text == word);
+		let ne = position("ne").expect("ne");
+		let eu = position("eu").expect("eu");
+		assert!(ne < eu, "ne at {ne}, eu at {eu}");
+		assert!(ne < 3, "ne must be visible in the 3-slot strip");
 	}
 
 	#[test]

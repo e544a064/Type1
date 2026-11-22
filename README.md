@@ -32,13 +32,15 @@ release on the letter you want.
 - Autocorrection at word boundaries from a 20k frequency-ranked French
   dictionary with a layout-aware touch model: neighbouring-key slips,
   transpositions, missing accents (`ecole` → `école`) and elision
-  (`jai` → `j'ai`, `taime` → `t'aime`).
+  (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
+- The suggestion strip ranks by word frequency as well as key distance, so
+  `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
-- Conservative application: a confidence margin, no all-caps/mixed-case words,
-  no suggestions in password/email/URI/number fields or when the editor asks
-  for none.
+- Conservative application: a confidence margin (stricter for two-letter
+  tokens), no all-caps/mixed-case words, no suggestions in password/email/URI/
+  number fields or when the editor asks for none.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
