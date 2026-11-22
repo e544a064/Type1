@@ -153,25 +153,33 @@ impl Engine {
 		self.context = None;
 	}
 
-	/// The caret moved into existing text. `before` and `after` are the two
-	/// halves of the word around the caret, so suggestions can cover the whole
-	/// word even when the caret is in the middle.
+	/// The caret moved into existing text. `before` and `after` are the text
+	/// around the caret, so the word under the caret can be corrected as a
+	/// whole even when the caret is inside it. The sentence position is read
+	/// from the same text, so auto-capitalisation and French spacing stay
+	/// correct after a caret move or a backspace.
 	pub fn set_context_word(&mut self, before: &str, after: &str) {
 		self.selection_changed();
+		let prefix = trailing_word(before);
+		let suffix = leading_word(after);
+		let total = prefix.chars().count() + suffix.chars().count();
+		let sentence_start = starts_sentence(before);
 		self.word.clear();
-		self.word.push_str(before);
-		let total = before.chars().count() + after.chars().count();
+		self.word.push_str(&prefix);
 		self.context = if total >= 2 && self.suggestions_enabled {
 			Some(ContextWord {
-				before: before.to_string(),
-				after: after.to_string(),
+				before: prefix,
+				after: suffix,
 			})
 		} else {
 			None
 		};
 		self.suggestion_cache = None;
+		// Keep the real character before the caret: it decides the automatic
+		// space after punctuation even when no word sits there.
 		self.last_char = before.chars().last().or_else(|| after.chars().last());
-		self.at_start = false;
+		let word_start = self.word.is_empty();
+		self.at_start = sentence_start || (self.caps == CapsMode::Words && word_start);
 	}
 
 	/// Handle a key press. Returns the editor actions to apply, in order.
@@ -777,6 +785,63 @@ impl Engine {
 		out.push_str("]}");
 		out
 	}
+}
+
+fn is_word_char(c: char) -> bool {
+	c.is_alphabetic() || c == '\'' || c == '’'
+}
+
+/// Word-ending characters before the caret, used for context corrections.
+fn trailing_word(text: &str) -> String {
+	let mut chars: Vec<char> = text
+	.chars()
+	.rev()
+	.take_while(|c| is_word_char(*c))
+	.collect();
+	chars.reverse();
+	chars.into_iter().collect()
+}
+
+/// Word-starting characters after the caret.
+fn leading_word(text: &str) -> String {
+	text.chars().take_while(|c| is_word_char(*c)).collect()
+}
+
+fn is_closer(c: char) -> bool {
+	matches!(c, '"' | '\'' | ')' | ']' | '}' | '»' | '”' | '’')
+}
+
+/// True when the caret sits at the start of a sentence. Trailing spaces are
+/// ignored, and a newline or sentence-ending punctuation starts one even
+/// behind a closing quote or bracket.
+fn starts_sentence(text: &str) -> bool {
+	let chars: Vec<char> = text.chars().collect();
+	let mut i = chars.len();
+	let mut newline = false;
+	while i > 0 {
+		let c = chars[i - 1];
+		if c == '\n' || c == '\r' {
+			newline = true;
+			i -= 1;
+		} else if c == ' ' || c == '\t' || c == '\u{00A0}' || c == '\u{202F}' {
+			i -= 1;
+		} else {
+			break;
+		}
+	}
+	if i == 0 || newline {
+		return true;
+	}
+	if matches!(chars[i - 1], '.' | '!' | '?' | '…') {
+		return true;
+	}
+	if is_closer(chars[i - 1]) {
+		while i > 0 && (chars[i - 1].is_whitespace() || is_closer(chars[i - 1])) {
+			i -= 1;
+		}
+		return i == 0 || matches!(chars[i - 1], '.' | '!' | '?' | '…');
+	}
+	false
 }
 
 fn case_pattern(word: &str) -> CasePattern {

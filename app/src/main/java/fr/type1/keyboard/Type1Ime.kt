@@ -232,7 +232,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		syncContextFromEditor()
 	}
 
-	/** Read the word around the caret and hand it to the core. */
+	/** Read the text around the caret, its word and its sentence position. */
 	private fun syncContextFromEditor() {
 		val ic = currentInputConnection
 		if (ic == null) {
@@ -242,17 +242,9 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		}
 		val before = ic.getTextBeforeCursor(MAX_CONTEXT_CHARS, 0)?.toString().orEmpty()
 		val after = ic.getTextAfterCursor(MAX_CONTEXT_CHARS, 0)?.toString().orEmpty()
-		val prefix = before.takeLastWhile { it.isWordChar() }
-		val suffix = after.takeWhile { it.isWordChar() }
-		if (prefix.length + suffix.length < 2) {
-			controller.selectionChanged()
-		} else {
-			controller.syncContext(prefix, suffix)
-		}
+		controller.syncContext(before, after)
 		keyboardView?.refresh()
 	}
-
-	private fun Char.isWordChar(): Boolean = isLetter() || this == '\'' || this == '’'
 
 	private fun sendCursor(ic: InputConnection, delta: Int) {
 		if (delta == 0) return

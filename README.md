@@ -62,7 +62,10 @@ release on the letter you want.
   name/address/number fields or when the editor asks for none.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
-  `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
+  `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`), with sentence
+  case as the default for plain text. The caret's real position is re-read on
+  start, selection changes and after backspace, so a new sentence is capitalised
+  even when the space after the period was deleted.
 - French spacing: space before `? ! : ;`, automatic space after `. , ; : ! ?`
   when a new word starts. A stray space before `.` or `,` is removed, including
   the convenience space added by tapping a suggestion. Applying a suggestion or
@@ -248,7 +251,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 101 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 107 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

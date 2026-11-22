@@ -67,6 +67,65 @@ fn auto_capitalises_sentences() {
 }
 
 #[test]
+fn context_sync_restores_sentence_capitalisation() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	// The caret is after the space that follows a sentence.
+	engine.set_context_word("Bonjour. ", "");
+	assert_eq!(commits(&engine.on_key("v")), vec!["V"]);
+}
+
+#[test]
+fn context_sync_keeps_mid_sentence_text_lowercase() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	engine.set_context_word("Bonjour ", "");
+	assert_eq!(commits(&engine.on_key("v")), vec!["v"]);
+}
+
+#[test]
+fn context_sync_adds_the_space_after_a_period() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	engine.set_context_word("Bonjour.", "");
+	assert_eq!(
+		engine.on_key("v"),
+		vec![Action::Commit(" ".into()), Action::Commit("V".into())]
+	);
+}
+
+#[test]
+fn backspacing_the_space_after_a_period_keeps_auto_capitalisation() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	for key in ["b", "o", "n", "j", "o", "u", "r"] {
+		engine.on_key(key);
+	}
+	engine.on_key("dot");
+	engine.on_key("space");
+	engine.on_key("backspace");
+	// The IME re-reads the editor text after the delete.
+	engine.set_context_word("Bonjour.", "");
+	assert_eq!(commits(&engine.on_key("v")), vec![" ", "V"]);
+}
+
+#[test]
+fn context_sync_capitalises_after_a_newline() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	engine.set_context_word("Bonjour.\n", "");
+	assert_eq!(commits(&engine.on_key("v")), vec!["V"]);
+}
+
+#[test]
+fn context_sync_capitalises_behind_a_closing_quote() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	engine.set_context_word("« Bonjour. » ", "");
+	assert_eq!(commits(&engine.on_key("v")), vec!["V"]);
+}
+
+#[test]
 fn auto_spaces_after_punctuation() {
 	let mut engine = plain();
 	engine.on_key("a");

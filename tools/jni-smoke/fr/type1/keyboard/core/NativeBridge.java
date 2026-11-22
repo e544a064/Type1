@@ -67,6 +67,11 @@ public class NativeBridge {
 		System.out.println("recorrection: " + nativeRender(handle));
 		System.out.println("sug:0    -> " + nativeKey(handle, "sug:0"));
 
+		nativeReset(handle);
+		nativeSetInputType(handle, 0x0000_4001, 0);
+		nativeSyncContext(handle, "Bonjour. ", "");
+		System.out.println("caps     -> " + nativeKey(handle, "a"));
+
 		nativeDestroy(handle);
 		System.out.println("OK");
 	}

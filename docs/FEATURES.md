@@ -50,7 +50,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       a last-resort closest-word suggestion (`bodjmur` → `bonjour`)
 - [x] Re-suggest corrections when the caret moves back into an existing word
 - [ ] Next-word prediction
-- [x] Auto-capitalisation (sentences / words / characters)
+- [x] Auto-capitalisation (sentences / words / characters), including plain-text
+      fields that do not request a cap flag, and after caret moves or backspace
 - [x] Automatic spacing around French punctuation, including removing a stray
       space before `.`/`,` (also after a suggestion tap)
 - [ ] Spell checking
