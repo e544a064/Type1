@@ -575,7 +575,7 @@ fn rescues_a_completely_misspelled_long_word() {
 }
 
 #[test]
-fn short_near_key_words_are_offered_without_guessing() {
+fn short_near_key_words_are_offered_and_corrected() {
 	let mut engine = plain();
 	engine.on_key("p");
 	engine.on_key("q");
@@ -587,16 +587,47 @@ fn short_near_key_words_are_offered_without_guessing() {
 	.map(|value| value.as_str().unwrap())
 	.collect();
 	assert!(suggestions.contains(&"ma"), "suggestions: {suggestions:?}");
-	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(2),
+			Action::Commit("la".into()),
+			Action::Commit(" ".into()),
+		]
+	);
 }
 
 #[test]
-fn ambiguous_short_words_are_suggested_but_not_corrected() {
+fn rescues_an_elision_whose_clitic_is_a_neighbouring_key() {
+	let mut engine = plain();
+	for key in ["v", "q", "j", "m", "d"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "t'aime");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("t'aime".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn short_ambiguous_words_are_still_corrected() {
 	let mut engine = plain();
 	engine.on_key("u");
 	engine.on_key("e");
-	// Several two-letter words are one key away; do not guess.
-	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(2),
+			Action::Commit("je".into()),
+			Action::Commit(" ".into()),
+		]
+	);
 }
 
 #[test]

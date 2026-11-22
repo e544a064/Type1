@@ -35,11 +35,13 @@ release on the letter you want.
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
 - Narrow-key rescue: when every typed key is one key away from a word, the
   most frequent such word wins (`geqnvx` → `beauté`), even if the whole input
-  looked meaningless.
+  looked meaningless. The same applies to elisions whose clitic is also a
+  neighbouring key (`vqjmd` → `t'aime`).
 - The suggestion strip ranks by word frequency as well as key distance, so
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
-- Two-letter words are suggested (`pq` → `la`, `ma`, `là`) but not replaced
-  automatically: they are too ambiguous to guess without context.
+- Short words are corrected too, to the most likely candidate: `pq` → `la`
+  (with `ma` offered next in the strip). No input is left untouched just
+  because it is ambiguous.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.

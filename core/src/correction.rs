@@ -13,28 +13,27 @@ use crate::lexicon::fold;
 
 /// Minimum score a candidate needs before it may replace the typed word.
 pub const MIN_SCORE: f32 = 0.5;
-/// Short tokens have many equally plausible neighbours (`ue` -> `je`, `une`,
-/// `ne`); only correct them when the best candidate clearly dominates.
-pub const SHORT_WORD_MARGIN: f32 = 0.75;
 /// Weight of the word-frequency prior relative to the touch costs. French
 /// function words are frequent enough that ranking must favour them over a
 /// merely cheaper edit (`ue` -> `ne` rather than `eu`).
 const FREQ_WEIGHT: f32 = 0.5;
 const MAX_COST: f32 = 1.55;
-/// From four letters up, an input where every key is a neighbouring key is
+/// From three letters up, an input where every key is a neighbouring key is
 /// treated as a narrow-keyboard slip and corrected towards the most frequent
 /// word with that shape (`geqnvx` -> `beauté`).
-const AGGRESSIVE_AUTO_MIN_LEN: usize = 4;
+const AGGRESSIVE_AUTO_MIN_LEN: usize = 3;
 /// Minimum aggressive score before the rescue may replace the typed word.
 pub const AGGRESSIVE_MIN_SCORE: f32 = 0.5;
 /// Frequency dominates inside the aggressive candidate set: among words whose
 /// letters are all one key away, the common word is the likely one.
 const AGGRESSIVE_WEIGHT: f32 = 1.5;
 /// The top aggressive candidate must lead the runner-up by this much.
-pub const AGGRESSIVE_MARGIN: f32 = 0.5;
+pub const AGGRESSIVE_MARGIN: f32 = 0.25;
 /// A substituted letter must be this close to count as a neighbouring key.
 const NEIGHBOUR_COST: f32 = 1.5;
 const TRANSPOSE_COST: f32 = 0.6;
+/// Cost of inserting the elision apostrophe.
+const APOSTROPHE_COST: f32 = 0.15;
 const MAX_RESULTS: usize = 6;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
@@ -281,7 +280,14 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 		let folded_rest = fold(rest);
 		if let Some(word) = dictionary::folded(&folded_rest) {
 			let (remainder, log_freq) = elision_remainder(clitic, word);
-			insert_elision(&mut found, clitic, remainder, log_freq, penalty, 0.15);
+			insert_elision(
+				&mut found,
+				clitic,
+				remainder,
+				log_freq,
+				penalty,
+				APOSTROPHE_COST,
+			);
 		}
 
 		// Short remainders are covered by the exact lookup above; scanning
@@ -308,7 +314,7 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 				remainder,
 				log_freq,
 				penalty,
-				0.15 + distance,
+				APOSTROPHE_COST + distance,
 			);
 		}
 	}
@@ -382,19 +388,22 @@ fn sort_candidates(list: &mut [Candidate]) {
 /// Words where every typed letter is one key away from the intended one,
 /// ranked by frequency. This is the narrow-keyboard rescue: an input can be
 /// complete nonsense and still point at a common word.
-fn neighbour_candidates(typed: &str, weight: f32) -> Vec<Candidate> {
+fn add_neighbour_candidates(
+	typed: &str,
+	weight: f32,
+	found: &mut HashMap<String, Candidate>,
+) {
 	let lower = typed.to_lowercase();
 	let length = lower.chars().count();
 	if length < 2 || lower.contains('\'') {
-		return Vec::new();
+		return;
 	}
 	if dictionary::exact(&lower).is_some() {
-		return Vec::new();
+		return;
 	}
 
 	let folded_typed = fold(&lower);
 	let typed_bytes = folded_typed.as_bytes();
-	let mut found: HashMap<String, Candidate> = HashMap::new();
 	for word in dictionary::words() {
 		if word.folded.len() != typed_bytes.len() {
 			continue;
@@ -403,7 +412,7 @@ fn neighbour_candidates(typed: &str, weight: f32) -> Vec<Candidate> {
 			continue;
 		};
 		insert(
-			&mut found,
+			found,
 			Candidate {
 				text: word.text.to_string(),
 				cost: distance,
@@ -411,32 +420,89 @@ fn neighbour_candidates(typed: &str, weight: f32) -> Vec<Candidate> {
 			},
 		);
 	}
+}
 
+fn neighbour_candidates(typed: &str, weight: f32) -> Vec<Candidate> {
+	let mut found: HashMap<String, Candidate> = HashMap::new();
+	add_neighbour_candidates(typed, weight, &mut found);
 	let mut list: Vec<Candidate> = found.into_values().collect();
 	sort_candidates(&mut list);
 	list.truncate(MAX_RESULTS);
 	list
 }
 
-pub fn aggressive_candidates(typed: &str) -> Vec<Candidate> {
-	neighbour_candidates(typed, AGGRESSIVE_WEIGHT)
-}
-
-fn dominant(candidates: &[Candidate], length: usize) -> bool {
-	let Some(best) = candidates.first() else {
-		return false;
-	};
-	if best.score < MIN_SCORE {
-		return false;
+/// Elisions whose clitic and remainder are both one key away from the typed
+/// token, with the apostrophe missing: `vqjmd` -> `t'aime`.
+fn add_aggressive_elisions(typed: &str, found: &mut HashMap<String, Candidate>) {
+	let lower = typed.to_lowercase();
+	if lower.chars().count() < 3 || lower.contains('\'') {
+		return;
 	}
-	if length <= 2 {
-		if let Some(second) = candidates.get(1) {
-			if best.score - second.score < SHORT_WORD_MARGIN {
-				return false;
+	let folded = fold(&lower);
+	let bytes = folded.as_bytes();
+
+	for &(clitic, penalty) in CLITICS {
+		let clitic_len = clitic.len();
+		if bytes.len() <= clitic_len {
+			continue;
+		}
+		let Some(prefix_cost) = near_distance(&bytes[..clitic_len], clitic.as_bytes()) else {
+			continue;
+		};
+		let rest = &bytes[clitic_len..];
+		let shortest = if clitic_len >= 3 { 1 } else { 2 };
+		if rest.len() < shortest {
+			continue;
+		}
+		for word in dictionary::words() {
+			if word.folded.len() != rest.len() {
+				continue;
 			}
+			let allowed = if clitic == "qu" {
+				starts_with_vowel(word.text)
+			} else {
+				starts_with_vowel_or_h(word.text)
+			};
+			if !allowed {
+				continue;
+			}
+			let Some(rest_cost) = near_distance(rest, word.folded.as_bytes()) else {
+				continue;
+			};
+			let cost = prefix_cost + rest_cost + APOSTROPHE_COST;
+			insert(
+				found,
+				Candidate {
+					text: format!("{clitic}'{}", word.text),
+					cost,
+					score: word.log_freq * AGGRESSIVE_WEIGHT - cost - penalty,
+				},
+			);
 		}
 	}
-	true
+}
+
+pub fn aggressive_candidates(typed: &str) -> Vec<Candidate> {
+	let lower = typed.to_lowercase();
+	if lower.chars().count() < 3 || lower.contains('\'') {
+		return Vec::new();
+	}
+	if dictionary::exact(&lower).is_some() {
+		return Vec::new();
+	}
+	let mut found: HashMap<String, Candidate> = HashMap::new();
+	add_neighbour_candidates(&lower, AGGRESSIVE_WEIGHT, &mut found);
+	add_aggressive_elisions(&lower, &mut found);
+	let mut list: Vec<Candidate> = found.into_values().collect();
+	sort_candidates(&mut list);
+	list.truncate(MAX_RESULTS);
+	list
+}
+
+fn dominant(candidates: &[Candidate]) -> bool {
+	candidates
+	.first()
+	.is_some_and(|best| best.score >= MIN_SCORE)
 }
 
 fn merge_candidates(candidates: impl IntoIterator<Item = Candidate>) -> Vec<Candidate> {
@@ -461,25 +527,28 @@ pub fn suggest(typed: &str) -> Suggestion {
 	}
 
 	let normal = candidates(&lower);
-	if dominant(&normal, length) {
+	if dominant(&normal) {
 		return Suggestion {
 			candidates: normal,
 			apply: true,
 		};
 	}
 
-	// Two-letter words are too ambiguous to guess, but the strip should still
-	// show same-length near-key words (`pq` -> `la`, `ma`) next to the usual
-	// insertion/deletion candidates.
+	// Two-letter words are ambiguous, but leaving `pq` untouched is worse than
+	// picking the most frequent plausible word. Merge the same-length near-key
+	// candidates and apply the best one (`pq` -> `la`, with `ma` next).
 	if length == 2 {
 		let merged = merge_candidates(
 			normal
 			. into_iter()
 			. chain(neighbour_candidates(&lower, FREQ_WEIGHT)),
 		);
+		let apply = merged
+		.first()
+		.is_some_and(|best| best.score >= MIN_SCORE);
 		return Suggestion {
 			candidates: merged,
-			apply: false,
+			apply,
 		};
 	}
 
@@ -563,9 +632,17 @@ mod tests {
 	}
 
 	#[test]
-	fn short_words_are_suggested_but_not_auto_applied() {
+	fn aggressive_rescue_reaches_an_elision_with_a_typo_in_the_clitic() {
+		let suggestion = suggest("vqjmd");
+		assert!(suggestion.apply);
+		assert_eq!(suggestion.candidates[0].text, "t'aime");
+	}
+
+	#[test]
+	fn short_words_are_corrected_to_the_best_neighbour() {
 		let suggestion = suggest("pq");
-		assert!(!suggestion.apply);
+		assert!(suggestion.apply);
+		assert_eq!(suggestion.candidates[0].text, "la");
 		let texts: Vec<&str> = suggestion
 		.candidates
 		.iter()
