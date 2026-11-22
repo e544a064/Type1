@@ -34,7 +34,7 @@ const TRANSPOSE_COST: f32 = 0.6;
 /// Cost of inserting the elision apostrophe.
 const APOSTROPHE_COST: f32 = 0.15;
 /// Two-key candidates are shown but need more confidence before auto-apply.
-const TWO_KEY_MIN_SCORE: f32 = 5.0;
+const TWO_KEY_MIN_SCORE: f32 = 2.5;
 /// Very last resort: closest same-length word by weighted edit distance.
 const LAST_RESORT_MIN_LEN: usize = 4;
 const LAST_RESORT_TIE: f32 = 0.5;

@@ -120,6 +120,7 @@ fn named_regressions() {
 		("glnjojr", "bonjour"),
 		("bknjpur", "bonjour"),
 		("commant", "comment"),
+		("ckppsuv", "comment"),
 		("vqjmd", "t'aime"),
 		("geqnvx", "beauté"),
 		("secg", "sert"),
@@ -388,6 +389,18 @@ fn thousands_of_spelling_variants_are_suggested() {
 		.collect::<Vec<_>>()
 		. join("\n")
 	);
+}
+
+#[test]
+fn ambiguous_spelling_pairs_stay_suggestions() {
+	for word in ["avaiw", "veub"] {
+		let suggestion = correction::suggest(word);
+		assert!(!suggestion.apply, "{word} should stay a suggestion");
+		assert!(
+			!suggestion.candidates.is_empty(),
+			"{word} should still be suggested"
+		);
+	}
 }
 
 #[test]

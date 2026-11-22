@@ -107,7 +107,7 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the utility row height is a setting (36–72 dp, default 48),
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
-- `MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY` and
+- `MIN_SCORE`, `TWO_KEY_MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY` and
   `KNOWN_WORD_MARGIN` in `core/src/correction.rs`,
 - the dictionary in `core/data/fr.tsv` (see `core/data/NOTICE.md`).
 
@@ -241,7 +241,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 93 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 94 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
