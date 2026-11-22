@@ -48,6 +48,8 @@ release on the letter you want.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
   the same way (`pa` → `la`), while common words stay put.
+- Overlapping fast taps are supported: keys are sent in the order they went
+  down, even when several fingers are still held (`x` then `d` → `xd`).
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.

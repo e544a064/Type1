@@ -102,6 +102,7 @@ class KeyboardView(
 	private var selectSteps = 0
 	private var lastX = 0f
 	private var downX = 0f
+	private var activePointerId = -1
 	private var swipeStepDp = 20
 
 	private val backgroundPaint = Paint().apply {
@@ -580,84 +581,149 @@ class KeyboardView(
 		return size
 	}
 
+	private fun startPress(x: Float, y: Float) {
+		longPressFired = false
+		lastX = x
+		downX = x
+		band = bandAt(y)
+		when (band) {
+			Band.Suggestions -> {
+				pressedStrip = when {
+					stripLeft.contains(x, y) -> 0
+					stripRight.contains(x, y) -> 1
+					else -> -1
+				}
+				downStrip = pressedStrip
+				if (pressedStrip >= 0) {
+					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+					scheduleLongPress()
+				} else {
+					pressedSuggestion = hit(suggestionRects, x)
+				}
+				invalidate()
+			}
+			Band.Letters -> {
+				pressedLetter = hitLetter(x)
+				if (pressedLetter >= 0) {
+					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+					scheduleLongPress()
+				}
+				invalidate()
+			}
+			Band.Utilities -> {
+				downUtility = hit(utilityRects, x)
+				pressedUtility = downUtility
+				if (downUtility >= 0) {
+					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+					scheduleLongPress()
+					spaceDragging = (
+						spaceCursorEnabled
+						&& model?.keys?.getOrNull(downUtility)?.kind == "space"
+					)
+					if (spaceDragging) {
+						spaceAnchorX = x
+						spaceMoved = false
+					}
+				}
+				invalidate()
+			}
+			Band.None -> Unit
+		}
+	}
+
+	private fun finishPress() {
+		cancelTimers()
+		if (selecting) {
+			selecting = false
+			listener?.onActions(controller.press("delete_selection"))
+			refresh()
+			resetTouch()
+			return
+		}
+		if (altPopup != null) {
+			val entry = altEntries.getOrNull(altSelected)
+			dismissAltPopup()
+			if (entry != null) {
+				emit(controller.press("alt:${entry.commit}"))
+			}
+			resetTouch()
+			return
+		}
+
+		when (band) {
+			Band.Suggestions -> when {
+				pressedStrip >= 0 && !longPressFired -> model?.strip?.getOrNull(pressedStrip)?.let { emit(controller.press(it.id)) }
+				pressedSuggestion >= 0 -> emit(controller.press("$SUGGESTION_PREFIX$pressedSuggestion"))
+			}
+			Band.Letters -> if (!longPressFired && pressedLetter >= 0) {
+				model?.letters?.getOrNull(pressedLetter)?.let { emit(controller.press(it.id)) }
+			}
+			Band.Utilities -> {
+				if (spaceDragging) {
+					if (!spaceMoved) {
+						model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
+					}
+				} else if (!longPressFired && pressedUtility >= 0 && pressedUtility == downUtility) {
+					model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
+				}
+			}
+			Band.None -> Unit
+		}
+		resetTouch()
+	}
+
 	override fun onTouchEvent(event: MotionEvent): Boolean {
 		when (event.actionMasked) {
 			MotionEvent.ACTION_DOWN -> {
-				longPressFired = false
-				lastX = event.x
-				downX = event.x
-				band = bandAt(event.y)
-				when (band) {
-					Band.Suggestions -> {
-						pressedStrip = when {
-							stripLeft.contains(event.x, event.y) -> 0
-							stripRight.contains(event.x, event.y) -> 1
-							else -> -1
-						}
-						downStrip = pressedStrip
-						if (pressedStrip >= 0) {
-							performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-							scheduleLongPress()
-						} else {
-							pressedSuggestion = hit(suggestionRects, event.x)
-						}
-						invalidate()
-					}
-					Band.Letters -> {
-						pressedLetter = hitLetter(event.x)
-						if (pressedLetter >= 0) {
-							performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-							scheduleLongPress()
-						}
-						invalidate()
-					}
-					Band.Utilities -> {
-						downUtility = hit(utilityRects, event.x)
-						pressedUtility = downUtility
-						if (downUtility >= 0) {
-							performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-							scheduleLongPress()
-							spaceDragging = (
-								spaceCursorEnabled
-								&& model?.keys?.getOrNull(downUtility)?.kind == "space"
-							)
-							if (spaceDragging) {
-								spaceAnchorX = event.x
-								spaceMoved = false
-							}
-						}
-						invalidate()
-					}
-					Band.None -> Unit
-				}
+				cancelTimers()
+				resetTouch()
+				activePointerId = event.getPointerId(0)
+				startPress(event.x, event.y)
+				return true
+			}
+
+			MotionEvent.ACTION_POINTER_DOWN -> {
+				val index = event.actionIndex
+				// Commit the held key first: keys must reach the editor in the
+				// order they went down, even when several fingers overlap.
+				finishPress()
+				activePointerId = event.getPointerId(index)
+				startPress(event.getX(index), event.getY(index))
 				return true
 			}
 
 			MotionEvent.ACTION_MOVE -> {
-				lastX = event.x
+				val index = event.findPointerIndex(activePointerId)
+				if (index < 0) {
+					resetTouch()
+					return true
+				}
+				val x = event.getX(index)
+				val y = event.getY(index)
+				lastX = x
 				if (selecting) {
-					dragSelection(event.x)
+					dragSelection(x)
 					return true
 				}
 				if (altPopup != null) {
-					updateAltSelection(event.x)
+					updateAltSelection(x)
 					return true
 				}
 				when (band) {
 					Band.Letters -> {
-						val index = hitLetter(event.x)
-						if (index != pressedLetter) {
-							pressedLetter = index
+						val letter = hitLetter(x)
+						if (letter != pressedLetter) {
+							pressedLetter = letter
 							invalidate()
 						}
 					}
 					Band.Utilities -> {
 						if (spaceDragging) {
-							dragSpaceCursor(event.x)
+							dragSpaceCursor(x)
 						} else {
-							val index = hit(utilityRects, event.x)
-							if (index != pressedUtility) {
-								pressedUtility = index
+							val utility = hit(utilityRects, x)
+							if (utility != pressedUtility) {
+								pressedUtility = utility
 								invalidate()
 							}
 						}
@@ -665,8 +731,8 @@ class KeyboardView(
 					Band.Suggestions -> {
 						if (pressedStrip >= 0) {
 							val next = when {
-								stripLeft.contains(event.x, event.y) -> 0
-								stripRight.contains(event.x, event.y) -> 1
+								stripLeft.contains(x, y) -> 0
+								stripRight.contains(x, y) -> 1
 								else -> -1
 							}
 							if (next != pressedStrip) {
@@ -674,9 +740,9 @@ class KeyboardView(
 								invalidate()
 							}
 						} else {
-							val index = hit(suggestionRects, event.x)
-							if (index != pressedSuggestion) {
-								pressedSuggestion = index
+							val suggestion = hit(suggestionRects, x)
+							if (suggestion != pressedSuggestion) {
+								pressedSuggestion = suggestion
 								invalidate()
 							}
 						}
@@ -686,51 +752,23 @@ class KeyboardView(
 				return true
 			}
 
-			MotionEvent.ACTION_UP -> {
-				cancelTimers()
-				if (selecting) {
-					selecting = false
-					listener?.onActions(controller.press("delete_selection"))
-					refresh()
-					resetTouch()
-					return true
+			MotionEvent.ACTION_POINTER_UP -> {
+				val index = event.actionIndex
+				if (event.getPointerId(index) == activePointerId) {
+					finishPress()
 				}
-				if (altPopup != null) {
-					val entry = altEntries.getOrNull(altSelected)
-					dismissAltPopup()
-					if (entry != null) {
-						emit(controller.press("alt:${entry.commit}"))
-					}
-					resetTouch()
-					return true
-				}
+				return true
+			}
 
-				when (band) {
-					Band.Suggestions -> when {
-						pressedStrip >= 0 && !longPressFired -> model?.strip?.getOrNull(pressedStrip)?.let { emit(controller.press(it.id)) }
-						pressedSuggestion >= 0 -> emit(controller.press("$SUGGESTION_PREFIX$pressedSuggestion"))
-					}
-					Band.Letters -> if (!longPressFired && pressedLetter >= 0) {
-						model?.letters?.getOrNull(pressedLetter)?.let { emit(controller.press(it.id)) }
-					}
-					Band.Utilities -> {
-						if (spaceDragging) {
-							if (!spaceMoved) {
-								model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
-							}
-						} else if (!longPressFired && pressedUtility >= 0 && pressedUtility == downUtility) {
-							model?.keys?.getOrNull(pressedUtility)?.let { emit(controller.press(it.id)) }
-						}
-					}
-					Band.None -> Unit
-				}
-				resetTouch()
+			MotionEvent.ACTION_UP -> {
+				finishPress()
 				return true
 			}
 
 			MotionEvent.ACTION_CANCEL -> {
 				cancelTimers()
 				resetTouch()
+				return true
 			}
 		}
 		return true
@@ -846,6 +884,7 @@ class KeyboardView(
 
 	private fun resetTouch() {
 		band = Band.None
+		activePointerId = -1
 		pressedLetter = -1
 		pressedUtility = -1
 		pressedSuggestion = -1
