@@ -716,8 +716,24 @@ fn dot_and_punctuation_alts_commit_at_the_boundary() {
 }
 
 #[test]
-fn moving_back_into_a_word_offers_a_recorrection() {
-	let mut engine = plain();
+fn auto_corrects_the_capitalized_recorrection_example() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	for key in ["r", "o", "p", "p", "x", "j", "f"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(7),
+			Action::Commit("Comment".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn moving_back_into_a_word_offers_a_recorrection() {	let mut engine = plain();
 	engine.set_context_word("Ropp", "xjf");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
 	assert_eq!(json["suggestions"][0], "Comment");

@@ -121,6 +121,7 @@ fn named_regressions() {
 		("bknjpur", "bonjour"),
 		("commant", "comment"),
 		("ckppsuv", "comment"),
+		("roppxjf", "comment"),
 		("vqjmd", "t'aime"),
 		("geqnvx", "beauté"),
 		("secg", "sert"),
