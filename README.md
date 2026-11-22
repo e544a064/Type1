@@ -33,14 +33,19 @@ release on the letter you want.
   dictionary with a layout-aware touch model: neighbouring-key slips,
   transpositions, missing accents (`ecole` → `école`) and elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
+- Narrow-key rescue: when every typed key is one key away from a word, the
+  most frequent such word wins (`geqnvx` → `beauté`), even if the whole input
+  looked meaningless.
 - The suggestion strip ranks by word frequency as well as key distance, so
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
+- Two-letter words are suggested (`pq` → `la`, `ma`, `là`) but not replaced
+  automatically: they are too ambiguous to guess without context.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
 - Conservative application: a confidence margin (stricter for two-letter
   tokens), no all-caps/mixed-case words, no suggestions in password/email/URI/
-  number fields or when the editor asks for none.
+  name/address/number fields or when the editor asks for none.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
@@ -93,6 +98,8 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
 - `MIN_SCORE` and `FREQ_WEIGHT` in `core/src/correction.rs`,
+- `AGGRESSIVE_MIN_SCORE`, `AGGRESSIVE_WEIGHT` and `AGGRESSIVE_MARGIN` for the
+  narrow-key rescue,
 - the dictionary in `core/data/fr.tsv` (see `core/data/NOTICE.md`).
 
 ## Repository layout

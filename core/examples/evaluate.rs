@@ -5,7 +5,7 @@
 //!
 //!     cargo run --release --example evaluate
 
-use type1_core::correction::{self, MIN_SCORE};
+use type1_core::correction;
 use type1_core::dictionary;
 use type1_core::layout::LETTERS;
 
@@ -82,7 +82,8 @@ fn main() {
 			continue;
 		}
 		tested += 1;
-		let first = correction::candidates(&generated)
+		let first = correction::suggest(&generated)
+		.candidates
 		.first()
 		.map(|candidate| candidate.text.clone());
 		let clitic = matches!(
@@ -111,11 +112,7 @@ fn main() {
 	for _ in 0..random_samples {
 		let len = 5 + rng.below(4);
 		let text: String = (0..len).map(|_| alphabet[rng.below(alphabet.len())]).collect();
-		if correction::candidates(&text)
-		.first()
-		.map(|candidate| candidate.score >= MIN_SCORE)
-		.unwrap_or(false)
-		{
+		if correction::suggest(&text).apply {
 			random_hits += 1;
 		}
 	}

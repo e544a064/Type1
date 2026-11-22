@@ -21,6 +21,20 @@ pub const SHORT_WORD_MARGIN: f32 = 0.75;
 /// merely cheaper edit (`ue` -> `ne` rather than `eu`).
 const FREQ_WEIGHT: f32 = 0.5;
 const MAX_COST: f32 = 1.55;
+/// From four letters up, an input where every key is a neighbouring key is
+/// treated as a narrow-keyboard slip and corrected towards the most frequent
+/// word with that shape (`geqnvx` -> `beauté`).
+const AGGRESSIVE_AUTO_MIN_LEN: usize = 4;
+/// Minimum aggressive score before the rescue may replace the typed word.
+pub const AGGRESSIVE_MIN_SCORE: f32 = 0.5;
+/// Frequency dominates inside the aggressive candidate set: among words whose
+/// letters are all one key away, the common word is the likely one.
+const AGGRESSIVE_WEIGHT: f32 = 1.5;
+/// The top aggressive candidate must lead the runner-up by this much.
+pub const AGGRESSIVE_MARGIN: f32 = 0.5;
+/// A substituted letter must be this close to count as a neighbouring key.
+const NEIGHBOUR_COST: f32 = 1.5;
+const TRANSPOSE_COST: f32 = 0.6;
 const MAX_RESULTS: usize = 6;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
@@ -32,6 +46,23 @@ pub struct Candidate {
 	pub text: String,
 	pub cost: f32,
 	pub score: f32,
+}
+
+/// The candidates to show for a typed token, and whether the best one is
+/// trustworthy enough to replace the token automatically.
+#[derive(Clone, Debug)]
+pub struct Suggestion {
+	pub candidates: Vec<Candidate>,
+	pub apply: bool,
+}
+
+impl Suggestion {
+	pub fn empty() -> Self {
+		Suggestion {
+			candidates: Vec::new(),
+			apply: false,
+		}
+	}
 }
 
 fn positions() -> &'static HashMap<char, (f32, f32)> {
@@ -304,14 +335,173 @@ pub fn candidates(typed: &str) -> Vec<Candidate> {
 	}
 
 	let mut list: Vec<Candidate> = found.into_values().collect();
+	sort_candidates(&mut list);
+	list.truncate(MAX_RESULTS);
+	list
+}
+
+/// Same-length distance where every substituted letter has to be a
+/// neighbouring key (or an adjacent pair swapped). Returns `None` when the
+/// input cannot be explained that way.
+fn near_distance(a: &[u8], b: &[u8]) -> Option<f32> {
+	let n = a.len();
+	if n != b.len() || n > MAX_CHARS {
+		return None;
+	}
+	let costs = costs();
+	let mut dp = [f32::INFINITY; MAX_CHARS + 1];
+	dp[0] = 0.0;
+	for i in 1..=n {
+		let step = costs[char_index(a[i - 1])][char_index(b[i - 1])];
+		if step <= NEIGHBOUR_COST {
+			dp[i] = dp[i - 1] + step;
+		}
+		if i >= 2 && a[i - 1] == b[i - 2] && a[i - 2] == b[i - 1] {
+			let swapped = dp[i - 2] + TRANSPOSE_COST;
+			if swapped < dp[i] {
+				dp[i] = swapped;
+			}
+		}
+	}
+	if dp[n].is_finite() {
+		Some(dp[n])
+	} else {
+		None
+	}
+}
+
+fn sort_candidates(list: &mut [Candidate]) {
 	list.sort_by(|a, b| {
 		b.score
 		. partial_cmp(&a.score)
-		. unwrap_or(std::cmp::Ordering::Equal)
+		.unwrap_or(std::cmp::Ordering::Equal)
 		. then_with(|| a.text.cmp(&b.text))
 	});
+}
+
+/// Words where every typed letter is one key away from the intended one,
+/// ranked by frequency. This is the narrow-keyboard rescue: an input can be
+/// complete nonsense and still point at a common word.
+fn neighbour_candidates(typed: &str, weight: f32) -> Vec<Candidate> {
+	let lower = typed.to_lowercase();
+	let length = lower.chars().count();
+	if length < 2 || lower.contains('\'') {
+		return Vec::new();
+	}
+	if dictionary::exact(&lower).is_some() {
+		return Vec::new();
+	}
+
+	let folded_typed = fold(&lower);
+	let typed_bytes = folded_typed.as_bytes();
+	let mut found: HashMap<String, Candidate> = HashMap::new();
+	for word in dictionary::words() {
+		if word.folded.len() != typed_bytes.len() {
+			continue;
+		}
+		let Some(distance) = near_distance(typed_bytes, word.folded.as_bytes()) else {
+			continue;
+		};
+		insert(
+			&mut found,
+			Candidate {
+				text: word.text.to_string(),
+				cost: distance,
+				score: word.log_freq * weight - distance,
+			},
+		);
+	}
+
+	let mut list: Vec<Candidate> = found.into_values().collect();
+	sort_candidates(&mut list);
 	list.truncate(MAX_RESULTS);
 	list
+}
+
+pub fn aggressive_candidates(typed: &str) -> Vec<Candidate> {
+	neighbour_candidates(typed, AGGRESSIVE_WEIGHT)
+}
+
+fn dominant(candidates: &[Candidate], length: usize) -> bool {
+	let Some(best) = candidates.first() else {
+		return false;
+	};
+	if best.score < MIN_SCORE {
+		return false;
+	}
+	if length <= 2 {
+		if let Some(second) = candidates.get(1) {
+			if best.score - second.score < SHORT_WORD_MARGIN {
+				return false;
+			}
+		}
+	}
+	true
+}
+
+fn merge_candidates(candidates: impl IntoIterator<Item = Candidate>) -> Vec<Candidate> {
+	let mut found: HashMap<String, Candidate> = HashMap::new();
+	for candidate in candidates {
+		insert(&mut found, candidate);
+	}
+	let mut list: Vec<Candidate> = found.into_values().collect();
+	sort_candidates(&mut list);
+	list.truncate(MAX_RESULTS);
+	list
+}
+
+/// Candidates for the strip plus the auto-apply decision. Ordinary candidates
+/// win when they are confident; otherwise a token of four letters or more may
+/// fall back to the all-neighbouring-key rescue.
+pub fn suggest(typed: &str) -> Suggestion {
+	let lower = typed.to_lowercase();
+	let length = lower.chars().count();
+	if length < 2 || lower.contains('\'') || dictionary::exact(&lower).is_some() {
+		return Suggestion::empty();
+	}
+
+	let normal = candidates(&lower);
+	if dominant(&normal, length) {
+		return Suggestion {
+			candidates: normal,
+			apply: true,
+		};
+	}
+
+	// Two-letter words are too ambiguous to guess, but the strip should still
+	// show same-length near-key words (`pq` -> `la`, `ma`) next to the usual
+	// insertion/deletion candidates.
+	if length == 2 {
+		let merged = merge_candidates(
+			normal
+			. into_iter()
+			. chain(neighbour_candidates(&lower, FREQ_WEIGHT)),
+		);
+		return Suggestion {
+			candidates: merged,
+			apply: false,
+		};
+	}
+
+	if length >= 3 {
+		let aggressive = aggressive_candidates(&lower);
+		if let Some(best) = aggressive.first() {
+			let apply = length >= AGGRESSIVE_AUTO_MIN_LEN
+				&& best.score >= AGGRESSIVE_MIN_SCORE
+				&& aggressive.get(1).is_none_or(|second| {
+					best.score - second.score >= AGGRESSIVE_MARGIN
+				});
+			return Suggestion {
+				candidates: aggressive,
+				apply,
+			};
+		}
+	}
+
+	Suggestion {
+		candidates: normal,
+		apply: false,
+	}
 }
 
 #[cfg(test)]
@@ -347,6 +537,41 @@ mod tests {
 		let eu = position("eu").expect("eu");
 		assert!(ne < eu, "ne at {ne}, eu at {eu}");
 		assert!(ne < 3, "ne must be visible in the 3-slot strip");
+	}
+
+	#[test]
+	fn aggressive_rescue_finds_a_word_when_every_key_is_off() {
+		let suggestion = suggest("geqnvx");
+		assert!(suggestion.apply);
+		assert_eq!(suggestion.candidates[0].text, "beauté");
+	}
+
+	#[test]
+	fn aggressive_rescue_keeps_a_clear_transposition() {
+		let suggestion = suggest("tset");
+		assert!(suggestion.apply);
+		assert_eq!(suggestion.candidates[0].text, "test");
+	}
+
+	#[test]
+	fn normal_candidates_win_over_the_aggressive_rescue() {
+		// One transposition away from a rare word, but the elided common word
+		// is the better explanation.
+		let suggestion = suggest("taipe");
+		assert!(suggestion.apply);
+		assert_eq!(suggestion.candidates[0].text, "t'aime");
+	}
+
+	#[test]
+	fn short_words_are_suggested_but_not_auto_applied() {
+		let suggestion = suggest("pq");
+		assert!(!suggestion.apply);
+		let texts: Vec<&str> = suggestion
+		.candidates
+		.iter()
+		.map(|candidate| candidate.text.as_str())
+		.collect();
+		assert!(texts.contains(&"ma"), "got {texts:?}");
 	}
 
 	#[test]

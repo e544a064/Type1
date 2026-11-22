@@ -2,7 +2,7 @@
 //! current-word tracking, correction and suggestions.
 
 use crate::action::{Action, ImeActionKind};
-use crate::correction::{self, Candidate};
+use crate::correction::{self, Suggestion};
 use crate::json;
 use crate::layout::{Page, ShiftState, STRIP, UTILITIES};
 
@@ -53,7 +53,7 @@ pub struct Engine {
 	/// The current word was restored by an undo; do not correct it again until
 	/// the user edits it.
 	reverted: bool,
-	candidate_cache: Option<(String, Vec<Candidate>)>,
+	suggestion_cache: Option<(String, Suggestion)>,
 }
 
 impl Default for Engine {
@@ -78,7 +78,7 @@ impl Engine {
 			last_correction: None,
 			pending_boundary: None,
 			reverted: false,
-			candidate_cache: None,
+			suggestion_cache: None,
 		}
 	}
 
@@ -94,7 +94,7 @@ impl Engine {
 		self.last_correction = None;
 		self.pending_boundary = None;
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 	}
 
 	/// Configure from `EditorInfo`. Flags mirror the Android constants so the
@@ -102,8 +102,10 @@ impl Engine {
 	pub fn set_input_type(&mut self, input_type: i32, ime_options: i32) {
 		let class = input_type & 0x0000_000f;
 		let variation = input_type & 0x0000_0ff0;
-		let blocked_variation =
-			matches!(variation, 0x10 | 0x20 | 0x30 | 0x80 | 0x90 | 0xd0 | 0xe0);
+		let blocked_variation = matches!(
+			variation,
+			0x10 | 0x20 | 0x30 | 0x60 | 0x70 | 0x80 | 0x90 | 0xd0 | 0xe0
+		);
 		let no_suggestions = input_type & 0x0008_0000 != 0;
 
 		self.numeric = matches!(class, 0x2..=0x4);
@@ -234,7 +236,7 @@ impl Engine {
 			self.word.clear();
 			self.last_correction = None;
 		}
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		if let Some(c) = rendered.chars().last() {
 			self.note(c);
 		}
@@ -250,7 +252,7 @@ impl Engine {
 		self.word.push('\'');
 		self.last_char = Some('\'');
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		vec![Action::Commit("'".into())]
 	}
 
@@ -275,7 +277,7 @@ impl Engine {
 		self.last_correction = None;
 		self.pending_boundary = None;
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		out.push(Action::Ime(self.ime_action));
 		out
 	}
@@ -354,7 +356,7 @@ impl Engine {
 		}
 		self.word.clear();
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		out
 	}
 
@@ -384,25 +386,18 @@ impl Engine {
 			return None;
 		}
 
-		let candidates = self.candidates_for(&typed);
-		let best = candidates.first()?;
-		if best.score < correction::MIN_SCORE {
+		let suggestion = self.suggestion_for(&typed);
+		if !suggestion.apply {
 			return None;
 		}
-		if length <= 2 {
-			if let Some(second) = candidates.get(1) {
-				if best.score - second.score < correction::SHORT_WORD_MARGIN {
-					return None;
-				}
-			}
-		}
+		let best = suggestion.candidates.first()?;
 		let corrected = apply_case(&typed, &best.text);
 		if corrected == typed {
 			return None;
 		}
 
 		let mut alternatives = Vec::new();
-		for candidate in candidates.iter().skip(1) {
+		for candidate in suggestion.candidates.iter().skip(1) {
 			if alternatives.len() >= 2 {
 				break;
 			}
@@ -414,15 +409,15 @@ impl Engine {
 		Some((corrected, alternatives))
 	}
 
-	fn candidates_for(&mut self, typed: &str) -> Vec<Candidate> {
-		if let Some((cached, list)) = &self.candidate_cache {
+	fn suggestion_for(&mut self, typed: &str) -> Suggestion {
+		if let Some((cached, suggestion)) = &self.suggestion_cache {
 			if cached == typed {
-				return list.clone();
+				return suggestion.clone();
 			}
 		}
-		let list = correction::candidates(typed);
-		self.candidate_cache = Some((typed.to_string(), list.clone()));
-		list
+		let suggestion = correction::suggest(typed);
+		self.suggestion_cache = Some((typed.to_string(), suggestion.clone()));
+		suggestion
 	}
 
 	fn apply_suggestion(&mut self, raw_index: &str) -> Vec<Action> {
@@ -448,7 +443,7 @@ impl Engine {
 				out.push(Action::Commit(text.clone()));
 				self.note_text(&text);
 				self.word.clear();
-				self.candidate_cache = None;
+				self.suggestion_cache = None;
 				if chosen != record.original {
 					self.last_correction = Some(CorrectionRecord {
 						original: record.original,
@@ -471,7 +466,7 @@ impl Engine {
 		self.word.clear();
 		self.last_correction = None;
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		self.note(' ');
 		out
 	}
@@ -501,7 +496,7 @@ impl Engine {
 				self.last_char = self.word.chars().last();
 				self.at_start = false;
 				self.reverted = true;
-				self.candidate_cache = None;
+				self.suggestion_cache = None;
 				return out;
 			}
 		}
@@ -510,7 +505,7 @@ impl Engine {
 		self.last_char = None;
 		self.word.pop();
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 		vec![Action::Delete { word: false }]
 	}
 
@@ -529,8 +524,9 @@ impl Engine {
 			) {
 				return Vec::new();
 			}
-			let candidates = self.candidates_for(&typed);
-			return candidates
+			let suggestion = self.suggestion_for(&typed);
+			return suggestion
+			.candidates
 			.iter()
 			.take(STRIP_SUGGESTIONS)
 			.map(|candidate| apply_case(&typed, &candidate.text))
@@ -558,7 +554,7 @@ impl Engine {
 		self.last_correction = None;
 		self.pending_boundary = None;
 		self.reverted = false;
-		self.candidate_cache = None;
+		self.suggestion_cache = None;
 	}
 
 	fn note_text(&mut self, text: &str) {

@@ -450,6 +450,16 @@ fn web_email_fields_are_not_corrected() {
 }
 
 #[test]
+fn name_fields_are_not_rescued() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0000_0060, 0);
+	for key in ["g", "e", "q", "n", "v", "x"] {
+		engine.on_key(key);
+	}
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
 fn corrects_before_punctuation_without_doubling_the_boundary() {
 	let mut engine = plain();
 	for key in ["j", "a", "i"] {
@@ -544,6 +554,40 @@ fn corrects_the_second_word_of_a_phrase() {
 			Action::Commit(" ".into()),
 		]
 	);
+}
+
+#[test]
+fn rescues_a_completely_misspelled_long_word() {
+	let mut engine = plain();
+	for key in ["g", "e", "q", "n", "v", "x"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "beauté");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(6),
+			Action::Commit("beauté".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn short_near_key_words_are_offered_without_guessing() {
+	let mut engine = plain();
+	engine.on_key("p");
+	engine.on_key("q");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions: Vec<&str> = json["suggestions"]
+	.as_array()
+	.unwrap()
+	.iter()
+	.map(|value| value.as_str().unwrap())
+	.collect();
+	assert!(suggestions.contains(&"ma"), "suggestions: {suggestions:?}");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
 }
 
 #[test]
