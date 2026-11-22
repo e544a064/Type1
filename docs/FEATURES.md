@@ -47,7 +47,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 
 ## 5. Gestures
 - [x] Drag along the letter line to pick a letter before releasing
-- [x] Long-press alternates strip (slide to pick)
+- [x] Long-press accent popup above the key (slide to pick)
 - [ ] Glide typing adapted to one line
 - [ ] Swipe-up utilities panel
 

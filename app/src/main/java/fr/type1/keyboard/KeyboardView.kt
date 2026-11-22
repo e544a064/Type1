@@ -11,9 +11,11 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.widget.PopupWindow
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
 import fr.type1.keyboard.model.LetterKey
@@ -45,10 +47,6 @@ class KeyboardView(
 
 	private enum class Band { None, Suggestions, Letters, Utilities }
 
-	private class AltState(val alts: List<String>) {
-		var selected: Int = -1
-	}
-
 	private val handler = Handler(Looper.getMainLooper())
 	private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -76,7 +74,12 @@ class KeyboardView(
 	private val letterRects = ArrayList<RectF>()
 	private var letterTextSize = dp(16f)
 	private val utilityRects = ArrayList<RectF>()
-	private val altRects = ArrayList<RectF>()
+	private var altPopup: PopupWindow? = null
+	private var altPopupView: AltView? = null
+	private var altChars: List<String> = emptyList()
+	private var altSelected = -1
+	private var altPopupLeft = 0f
+	private var altCellWidth = 0f
 
 	private var band = Band.None
 	private var pressedLetter = -1
@@ -85,7 +88,6 @@ class KeyboardView(
 	private var pressedStrip = -1
 	private var downUtility = -1
 	private var downStrip = -1
-	private var altState: AltState? = null
 	private var longPressFired = false
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
@@ -131,9 +133,8 @@ class KeyboardView(
 				val letter = model?.letters?.getOrNull(pressedLetter) ?: return@Runnable
 				if (letter.alts.isNotEmpty()) {
 					longPressFired = true
-					altState = AltState(letter.alts)
-					altRects.clear()
-					invalidate()
+					showAltPopup(pressedLetter)
+					performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 				}
 			}
 			Band.Utilities -> {
@@ -163,8 +164,7 @@ class KeyboardView(
 	fun refresh() {
 		val next = controller.render()
 		model = next
-		altState = null
-		altRects.clear()
+		dismissAltPopup()
 		layoutBands(next)
 		invalidate()
 	}
@@ -274,13 +274,7 @@ class KeyboardView(
 		val row = model ?: return
 		drawSuggestionBand(canvas, row)
 		drawUtilities(canvas, row)
-
-		val alt = altState
-		if (alt != null) {
-			drawAlternates(canvas, alt)
-		} else {
-			drawLetters(canvas, row)
-		}
+		drawLetters(canvas, row)
 	}
 
 	private fun drawSuggestionBand(canvas: Canvas, row: RowModel) {
@@ -395,30 +389,100 @@ class KeyboardView(
 		}
 	}
 
-	private fun drawAlternates(canvas: Canvas, alt: AltState) {
-		if (altRects.size != alt.alts.size) {
-			layoutAlternates(alt.alts.size)
+	/** Floating accent bubble above the pressed key, like a key preview. */
+	private fun showAltPopup(index: Int) {
+		val letter = model?.letters?.getOrNull(index) ?: return
+		val rect = letterRects.getOrNull(index) ?: return
+		if (letter.alts.isEmpty()) return
+		dismissAltPopup()
+
+		val bubbleWidth = letter.alts.size * dp(ALT_CELL_DP) + dp(8f)
+		val bubbleHeight = dp(ALT_HEIGHT_DP)
+		val popupView = AltView(context, letter.alts)
+		val popup = PopupWindow(popupView, bubbleWidth.toInt(), bubbleHeight.toInt(), false)
+		popup.isTouchable = false
+		popup.isFocusable = false
+		popup.isOutsideTouchable = false
+		popup.setBackgroundDrawable(null)
+		popup.elevation = dp(8f)
+
+		val location = IntArray(2)
+		getLocationInWindow(location)
+		val maxX = location[0] + width - bubbleWidth.toInt()
+		val x = (location[0] + rect.centerX() - bubbleWidth / 2f).toInt()
+		.coerceIn(location[0], maxOf(location[0], maxX))
+		val y = (location[1] + letterTop - bubbleHeight - dp(6f)).toInt()
+
+		try {
+			popup.showAtLocation(this, Gravity.NO_GRAVITY, x, y)
+		} catch (_: Exception) {
+			return
 		}
-		for (i in alt.alts.indices) {
-			val rect = altRects.getOrNull(i) ?: continue
-			keyPaint.color = if (alt.selected == i) colors.accent else colors.key
-			canvas.drawRoundRect(rect, corner, corner, keyPaint)
-			labelPaint.color = colors.text
-			labelPaint.textSize = fitText(alt.alts[i], rect.width() - dp(6f), dp(22f), dp(10f))
-			canvas.drawText(alt.alts[i], rect.centerX(), baseline(rect), labelPaint)
+
+		altPopup = popup
+		altPopupView = popupView
+		altChars = letter.alts
+		altSelected = -1
+		altCellWidth = bubbleWidth / letter.alts.size
+		altPopupLeft = (x - location[0]).toFloat()
+	}
+
+	private fun updateAltSelection(x: Float) {
+		if (altPopup == null || altChars.isEmpty()) return
+		val index = ((x - altPopupLeft) / altCellWidth).toInt()
+		.coerceIn(0, altChars.size - 1)
+		if (index != altSelected) {
+			altSelected = index
+			altPopupView?.selected = index
+			performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 		}
 	}
 
-	private fun layoutAlternates(count: Int) {
-		altRects.clear()
-		if (count <= 0) return
-		val gap = dp(4f)
-		val available = width - padding * 2 - gap * (count - 1)
-		val each = available / count
-		var x = padding
-		repeat(count) {
-			altRects += RectF(x, letterTop, x + each, letterTop + letterHeight)
-			x += each + gap
+	private fun dismissAltPopup() {
+		altPopup?.dismiss()
+		altPopup = null
+		altPopupView = null
+		altChars = emptyList()
+		altSelected = -1
+	}
+
+	private inner class AltView(context: Context, private val alts: List<String>) : View(context) {
+		var selected = -1
+			set(value) {
+				field = value
+				invalidate()
+			}
+
+		private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+		private val popupTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+			typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+			textAlign = Paint.Align.CENTER
+		}
+
+		override fun onDraw(canvas: Canvas) {
+			bubblePaint.color = colors.key
+			canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), corner, corner, bubblePaint)
+
+			val cell = width.toFloat() / alts.size
+			for (i in alts.indices) {
+				val left = i * cell
+				if (i == selected) {
+					bubblePaint.color = colors.accent
+					canvas.drawRoundRect(
+						left + dp(2f),
+						dp(2f),
+						left + cell - dp(2f),
+						height - dp(2f),
+						corner,
+						corner,
+						bubblePaint,
+					)
+				}
+				popupTextPaint.color = if (i == selected) Color.WHITE else colors.text
+				popupTextPaint.textSize = height * 0.46f
+				val baseline = height / 2f - (popupTextPaint.ascent() + popupTextPaint.descent()) / 2f
+				canvas.drawText(alts[i], left + cell / 2f, baseline, popupTextPaint)
+			}
 		}
 	}
 
@@ -493,9 +557,8 @@ class KeyboardView(
 					dragSelection(event.x)
 					return true
 				}
-				val alt = altState
-				if (alt != null) {
-					updateAlternateSelection(alt, event.x)
+				if (altPopup != null) {
+					updateAltSelection(event.x)
 					return true
 				}
 				when (band) {
@@ -550,13 +613,16 @@ class KeyboardView(
 					resetTouch()
 					return true
 				}
-				val alt = altState
-				if (alt != null) {
-					val choice = alt.selected
-					altState = null
-					altRects.clear()
-					if (choice in alt.alts.indices) {
-						emit(controller.press("alt:${alt.alts[choice]}"))
+				if (altPopup != null) {
+					val choice = altSelected
+					val action = if (choice in altChars.indices) {
+						"alt:${altChars[choice]}"
+					} else {
+						null
+					}
+					dismissAltPopup()
+					if (action != null) {
+						emit(controller.press(action))
 					}
 					resetTouch()
 					return true
@@ -591,15 +657,6 @@ class KeyboardView(
 			}
 		}
 		return true
-	}
-
-	private fun updateAlternateSelection(alt: AltState, x: Float) {
-		val index = altRects.indexOfFirst { x >= it.left && x <= it.right }
-		if (index != alt.selected) {
-			alt.selected = index
-			if (index >= 0) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-			invalidate()
-		}
 	}
 
 	private fun bandAt(y: Float): Band = when {
@@ -715,8 +772,7 @@ class KeyboardView(
 		pressedStrip = -1
 		downUtility = -1
 		downStrip = -1
-		altState = null
-		altRects.clear()
+		dismissAltPopup()
 		longPressFired = false
 		spaceDragging = false
 		spaceMoved = false
@@ -737,6 +793,7 @@ class KeyboardView(
 
 	override fun onDetachedFromWindow() {
 		handler.removeCallbacksAndMessages(null)
+		dismissAltPopup()
 		super.onDetachedFromWindow()
 	}
 
@@ -745,5 +802,7 @@ class KeyboardView(
 	private companion object {
 		const val LONG_PRESS_MS = 320L
 		const val REPEAT_MS = 55L
+		const val ALT_CELL_DP = 40f
+		const val ALT_HEIGHT_DP = 44f
 	}
 }
