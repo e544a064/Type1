@@ -21,6 +21,8 @@ data class UtilityKey(
 	val active: Boolean,
 	/** Vector icon name, or "" to draw [label] as text. */
 	val icon: String,
+	/** Extra symbols offered by a long press. */
+	val alts: List<String> = emptyList(),
 )
 
 /** Suggestions are addressed as `sug:0`, `sug:1`, ... by the core. */
@@ -72,6 +74,12 @@ data class RowModel(
 			val keys = ArrayList<UtilityKey>(keysArray.length())
 			for (i in 0 until keysArray.length()) {
 				val key = keysArray.getJSONObject(i)
+				val altsArray = key.optJSONArray("alts")
+				val alts = if (altsArray == null) {
+					emptyList()
+				} else {
+					List(altsArray.length()) { altsArray.getString(it) }
+				}
 				keys += UtilityKey(
 					id = key.getString("id"),
 					label = key.optString("label"),
@@ -79,6 +87,7 @@ data class RowModel(
 					weight = key.optDouble("w", 1.0).toFloat(),
 					active = key.optBoolean("on", false),
 					icon = key.optString("icon", ""),
+					alts = alts,
 				)
 			}
 

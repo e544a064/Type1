@@ -12,7 +12,7 @@ iOS port later only needs a new UI + FFI shim.
 ├──────────────────────────────────────────────────────────────┤
 │ A q w Z s x E d c R f v T g b Y h n U j I k O l P m          │  56 dp
 ├──────────────────────────────────────────────────────────────┤
-│ 123          espace                    ,              ⏎      │  48 dp
+│ 123      ,        espace        .        ⏎                 │  48 dp
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,7 +71,7 @@ release on the letter you want.
   shared by the spacebar caret drag and the backspace selection.
 - Spacebar row height is adjustable (36–72 dp, 48 dp by default).
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
-  just page, space, comma and enter.
+  page, comma, space, period and enter. Long-press the period for `!` and `?`.
 - Vector icons for shift, backspace and enter (the enter icon follows the editor
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
@@ -241,7 +241,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 94 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 95 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
@@ -259,6 +259,7 @@ untested.
 | Drag along the letter line | Move the highlight, release to type |
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
+| Long-press `.` | Popup with `!` and `?`; slide and release |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |

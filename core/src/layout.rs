@@ -128,6 +128,8 @@ pub struct UtilityKey {
 	pub commit: &'static str,
 	/// Vector icon drawn instead of the label ("" means text).
 	pub icon: &'static str,
+	/// Extra symbols offered by a long press.
+	pub alts: &'static [&'static str],
 }
 
 /// Keys pinned to the ends of the suggestion strip.
@@ -139,6 +141,7 @@ pub static STRIP: &[UtilityKey] = &[
 		weight: 1.0,
 		commit: "",
 		icon: "shift",
+		alts: &[],
 	},
 	UtilityKey {
 		id: "backspace",
@@ -147,6 +150,7 @@ pub static STRIP: &[UtilityKey] = &[
 		weight: 1.0,
 		commit: "",
 		icon: "backspace",
+		alts: &[],
 	},
 ];
 
@@ -159,14 +163,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		weight: 1.00,
 		commit: "",
 		icon: "",
-	},
-	UtilityKey {
-		id: "space",
-		label: "espace",
-		kind: KeyKind::Space,
-		weight: 5.20,
-		commit: " ",
-		icon: "",
+		alts: &[],
 	},
 	UtilityKey {
 		id: "comma",
@@ -175,6 +172,25 @@ pub static UTILITIES: &[UtilityKey] = &[
 		weight: 0.90,
 		commit: ",",
 		icon: "",
+		alts: &[],
+	},
+	UtilityKey {
+		id: "space",
+		label: "espace",
+		kind: KeyKind::Space,
+		weight: 5.20,
+		commit: " ",
+		icon: "",
+		alts: &[],
+	},
+	UtilityKey {
+		id: "dot",
+		label: ".",
+		kind: KeyKind::Char,
+		weight: 0.90,
+		commit: ".",
+		icon: "",
+		alts: &["!", "?"],
 	},
 	UtilityKey {
 		id: "enter",
@@ -183,6 +199,7 @@ pub static UTILITIES: &[UtilityKey] = &[
 		weight: 1.25,
 		commit: "\n",
 		icon: "",
+		alts: &[],
 	},
 ];
 
@@ -285,7 +302,9 @@ mod tests {
 	#[test]
 	fn utilities_are_stable() {
 		let ids: Vec<&str> = UTILITIES.iter().map(|u| u.id).collect();
-		assert_eq!(ids, vec!["page", "space", "comma", "enter"]);
+		assert_eq!(ids, vec!["page", "comma", "space", "dot", "enter"]);
+		let dot = UTILITIES.iter().find(|u| u.id == "dot").unwrap();
+		assert_eq!(dot.alts, &["!", "?"]);
 		let strip: Vec<&str> = STRIP.iter().map(|u| u.id).collect();
 		assert_eq!(strip, vec!["shift", "backspace"]);
 	}

@@ -138,6 +138,10 @@ impl Engine {
 	/// Handle a key press. Returns the editor actions to apply, in order.
 	/// The UI always re-renders afterwards.
 	pub fn on_key(&mut self, id: &str) -> Vec<Action> {
+		if let Some(symbol) = id.strip_prefix("sym:") {
+			let space_before = matches!(symbol, "!" | "?" | ":" | ";");
+			return self.finish_word(symbol, space_before);
+		}
 		if let Some(alt) = id.strip_prefix("alt:") {
 			return self.commit(alt, true, false);
 		}
@@ -156,6 +160,7 @@ impl Engine {
 			}
 			"space" => self.finish_word(" ", false),
 			"comma" => self.finish_word(",", false),
+			"dot" => self.finish_word(".", false),
 			"backspace" => self.backspace(),
 			"cursor_left" => {
 				self.drop_word();
@@ -675,7 +680,14 @@ impl Engine {
 			json::string_into(&mut out, kind_id(key.kind));
 			out.push_str(",\"icon\":");
 			json::string_into(&mut out, icon);
-			out.push_str(",\"w\":");
+			out.push_str(",\"alts\":[");
+			for (i, alt) in key.alts.iter().enumerate() {
+				if i > 0 {
+					out.push(',');
+				}
+				json::string_into(&mut out, alt);
+			}
+			out.push_str("],\"w\":");
 			json::float_into(&mut out, key.weight);
 			out.push_str(",\"on\":");
 			json::bool_into(&mut out, false);

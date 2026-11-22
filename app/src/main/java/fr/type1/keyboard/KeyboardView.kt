@@ -48,7 +48,7 @@ class KeyboardView(
 
 	private enum class Band { None, Suggestions, Letters, Utilities }
 
-	private class AltEntry(val commit: String, val display: String)
+	private class AltEntry(val keyId: String, val display: String)
 
 	private val handler = Handler(Looper.getMainLooper())
 	private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -158,7 +158,13 @@ class KeyboardView(
 			}
 			Band.Utilities -> {
 				val key = model?.keys?.getOrNull(downUtility) ?: return@Runnable
-				if (key.kind == "backspace") handleBackspaceHold()
+				when {
+					key.kind == "backspace" -> handleBackspaceHold()
+					key.alts.isNotEmpty() && showUtilityAltPopup(downUtility) -> {
+						longPressFired = true
+						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+					}
+				}
 			}
 			Band.Suggestions -> {
 				val key = model?.strip?.getOrNull(downStrip) ?: return@Runnable
@@ -449,13 +455,40 @@ class KeyboardView(
 		val rect = letterRects.getOrNull(index) ?: return false
 
 		val entries = ArrayList<AltEntry>()
-		letters.getOrNull(index - 1)?.alts?.forEach { entries += AltEntry(it, it) }
+		letters.getOrNull(index - 1)?.alts?.forEach { entries += AltEntry("alt:$it", it) }
 		val baseIndex = entries.size
 		val baseLabel = if (model?.caps == true) letter.label else letter.label.lowercase()
-		entries += AltEntry(letter.id, baseLabel)
-		letter.alts.forEach { entries += AltEntry(it, it) }
-		letters.getOrNull(index + 1)?.alts?.forEach { entries += AltEntry(it, it) }
+		entries += AltEntry("alt:${letter.id}", baseLabel)
+		letter.alts.forEach { entries += AltEntry("alt:$it", it) }
+		letters.getOrNull(index + 1)?.alts?.forEach { entries += AltEntry("alt:$it", it) }
 		if (entries.size <= 1) return false
+		return showAltEntries(entries, rect, baseIndex, letterTop)
+	}
+
+	/** Long-press popup for a bottom-row key with symbols (the period). */
+	private fun showUtilityAltPopup(index: Int): Boolean {
+		val key = model?.keys?.getOrNull(index) ?: return false
+		val rect = utilityRects.getOrNull(index) ?: return false
+		if (key.alts.isEmpty()) return false
+
+		val entries = ArrayList<AltEntry>()
+		// Keep the key's own symbol between its alternates, so the finger
+		// starts on the symbol that was pressed.
+		entries += AltEntry("sym:${key.alts.first()}", key.alts.first())
+		val baseIndex = entries.size
+		entries += AltEntry("sym:${key.label}", key.label)
+		for (alt in key.alts.drop(1)) {
+			entries += AltEntry("sym:$alt", alt)
+		}
+		return showAltEntries(entries, rect, baseIndex, utilityTop)
+	}
+
+	private fun showAltEntries(
+		entries: List<AltEntry>,
+		rect: RectF,
+		baseIndex: Int,
+		bandTop: Float,
+	): Boolean {
 		dismissAltPopup()
 
 		val count = entries.size
@@ -481,7 +514,7 @@ class KeyboardView(
 		val leftInView = (rect.centerX() - baseCenter).toInt()
 		.coerceIn(0, maxOf(0, maxLeft))
 		val x = location[0] + leftInView
-		val y = (location[1] + letterTop - bubbleHeight - dp(6f)).toInt()
+		val y = (location[1] + bandTop - bubbleHeight - dp(6f)).toInt()
 
 		try {
 			popup.showAtLocation(this, Gravity.NO_GRAVITY, x, y)
@@ -644,7 +677,7 @@ class KeyboardView(
 			val entry = altEntries.getOrNull(altSelected)
 			dismissAltPopup()
 			if (entry != null) {
-				emit(controller.press("alt:${entry.commit}"))
+				emit(controller.press(entry.keyId))
 			}
 			resetTouch()
 			return

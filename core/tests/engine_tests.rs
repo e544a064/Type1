@@ -685,16 +685,38 @@ fn render_exposes_three_bands() {
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
 	assert_eq!(json["page"], "letters");
 	assert_eq!(json["letters"].as_array().unwrap().len(), 26);
-	assert_eq!(json["keys"].as_array().unwrap().len(), 4);
+	assert_eq!(json["keys"].as_array().unwrap().len(), 5);
 	assert_eq!(json["keys"][0]["id"], "page");
-	assert_eq!(json["keys"][3]["id"], "enter");
+	assert_eq!(json["keys"][1]["id"], "comma");
+	assert_eq!(json["keys"][3]["id"], "dot");
+	assert_eq!(json["keys"][3]["alts"][0], "!");
+	assert_eq!(json["keys"][3]["alts"][1], "?");
+	assert_eq!(json["keys"][4]["id"], "enter");
 	assert_eq!(json["strip"][0]["id"], "shift");
 	assert_eq!(json["strip"][1]["id"], "backspace");
 }
 
 #[test]
-fn symbol_row_is_valid_json_with_quotes() {
+fn dot_and_punctuation_alts_commit_at_the_boundary() {
 	let mut engine = plain();
+	engine.on_key("a");
+	assert_eq!(engine.on_key("dot"), vec![Action::Commit(".".into())]);
+
+	for symbol in ["!", "?"] {
+		let mut engine = plain();
+		engine.on_key("a");
+		assert_eq!(
+			engine.on_key(&format!("sym:{symbol}")),
+			vec![
+				Action::Commit(" ".into()),
+				Action::Commit(symbol.into()),
+			]
+		);
+	}
+}
+
+#[test]
+fn symbol_row_is_valid_json_with_quotes() {	let mut engine = plain();
 	engine.on_key("page");
 	engine.on_key("page");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
