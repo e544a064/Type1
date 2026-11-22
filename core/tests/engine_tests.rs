@@ -750,6 +750,42 @@ fn backspace_after_a_boundary_can_reopen_the_word() {
 }
 
 #[test]
+fn punctuation_after_a_suggestion_removes_the_auto_space() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![
+			Action::DeleteChars(3),
+			Action::Commit("j'ai ".into()),
+		]
+	);
+	assert_eq!(
+		engine.on_key("comma"),
+		vec![
+			Action::Delete { word: false },
+			Action::Commit(",".into()),
+		]
+	);
+}
+
+#[test]
+fn comma_removes_a_user_typed_space_too() {
+	let mut engine = plain();
+	engine.on_key("a");
+	engine.on_key("space");
+	assert_eq!(
+		engine.on_key("comma"),
+		vec![
+			Action::Delete { word: false },
+			Action::Commit(",".into()),
+		]
+	);
+}
+
+#[test]
 fn moving_back_into_a_word_offers_a_recorrection() {	let mut engine = plain();
 	engine.set_context_word("Ropp", "xjf");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();

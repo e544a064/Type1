@@ -50,7 +50,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Re-suggest corrections when the caret moves back into an existing word
 - [ ] Next-word prediction
 - [x] Auto-capitalisation (sentences / words / characters)
-- [x] Automatic spacing around French punctuation
+- [x] Automatic spacing around French punctuation, including removing a stray
+      space before `.`/`,` (also after a suggestion tap)
 - [ ] Spell checking
 - [ ] Personal dictionary
 - [ ] Multilingual typing

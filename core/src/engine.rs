@@ -331,6 +331,12 @@ impl Engine {
 	fn finish_word(&mut self, boundary: &str, space_before: bool) -> Vec<Action> {
 		debug_assert!(!boundary.is_empty());
 		let mut out = Vec::new();
+		// French typography never puts a space before a comma or a period.
+		// Remove one that is already there (including the space a suggestion
+		// added automatically) before committing the punctuation.
+		if matches!(boundary, "," | ".") && self.last_char == Some(' ') {
+			out.push(Action::Delete { word: false });
+		}
 		// After an undo the user's boundary is still in the editor, just after
 		// the caret. Reuse a kept space, or step over kept punctuation.
 		let pending = self.pending_boundary.take();
