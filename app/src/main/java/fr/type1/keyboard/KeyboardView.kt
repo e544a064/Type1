@@ -101,6 +101,7 @@ class KeyboardView(
 	private var selectAnchorX = 0f
 	private var selectSteps = 0
 	private var lastX = 0f
+	private var downX = 0f
 	private var swipeStepDp = 20
 
 	private val backgroundPaint = Paint().apply {
@@ -584,6 +585,7 @@ class KeyboardView(
 			MotionEvent.ACTION_DOWN -> {
 				longPressFired = false
 				lastX = event.x
+				downX = event.x
 				band = bandAt(event.y)
 				when (band) {
 					Band.Suggestions -> {
@@ -812,7 +814,10 @@ class KeyboardView(
 			BackspaceHold.Select -> {
 				longPressFired = true
 				selecting = true
-				selectAnchorX = lastX
+				// Count any movement already made during the hold: using only
+				// the position at long-press time made the first character
+				// need that extra travel before it appeared.
+				selectAnchorX = maxOf(downX, lastX)
 				selectSteps = 0
 				listener?.onActions(controller.press("start_selection"))
 				performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
