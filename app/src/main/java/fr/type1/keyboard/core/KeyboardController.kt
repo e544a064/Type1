@@ -20,6 +20,8 @@ class KeyboardController {
 
 	fun reset() = NativeBridge.nativeReset(handle)
 
+	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
+
 	fun render(): RowModel = RowModel.parse(NativeBridge.nativeRender(handle))
 
 	fun press(keyId: String): List<KeyAction> =

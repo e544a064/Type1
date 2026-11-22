@@ -59,6 +59,19 @@ pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeReset(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSelectionChanged(
+	_env: JNIEnv<'_>,
+	_this: JObject<'_>,
+	_handle: jlong,
+) {
+	let _ = catch_unwind(AssertUnwindSafe(|| {
+		if let Some(engine) = lock().as_mut() {
+			engine.selection_changed();
+		}
+	}));
+}
+
+#[no_mangle]
 pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSetInputType(
 	_env: JNIEnv<'_>,
 	_this: JObject<'_>,

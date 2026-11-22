@@ -7,8 +7,6 @@
 //! The bottom band holds the utility keys (page, shift, space, comma, delete,
 //! enter). The suggestion strip is rendered by the UI from the engine payload.
 
-use crate::lexicon;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyKind {
 	Char,
@@ -255,28 +253,6 @@ impl ShiftState {
 	}
 }
 
-/// Suggestions for the word currently being typed, already cased.
-pub fn suggestions_for(word: &str, limit: usize) -> Vec<String> {
-	if word.chars().count() < 2 {
-		return Vec::new();
-	}
-	let capitalized = word.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
-	lexicon::suggest(word, limit)
-	. into_iter()
-	. map(|candidate| {
-		if capitalized {
-			let mut chars = candidate.chars();
-			match chars.next() {
-				Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-				None => String::new(),
-			}
-		} else {
-			candidate.to_string()
-		}
-	})
-	. collect()
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -312,11 +288,5 @@ mod tests {
 		assert_eq!(ids, vec!["page", "space", "comma", "enter"]);
 		let strip: Vec<&str> = STRIP.iter().map(|u| u.id).collect();
 		assert_eq!(strip, vec!["shift", "backspace"]);
-	}
-
-	#[test]
-	fn suggestions_keep_capitalisation() {
-		let found = suggestions_for("Ec", 3);
-		assert!(found.iter().any(|w| w == "École"), "got {found:?}");
 	}
 }

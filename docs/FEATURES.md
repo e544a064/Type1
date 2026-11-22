@@ -34,9 +34,11 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [ ] Undo / redo
 
 ## 4. Suggestions & correction
-- [x] Suggestion strip above the letters (prefix lookup, embedded French lexicon)
-- [x] Accent-insensitive matching (`ecole` → `École`) and one-tap word replacement
-- [ ] Autocorrect with revert
+- [x] Suggestion strip above the letters showing correction candidates
+- [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
+- [x] Frequency-ranked 20k French dictionary with a layout-aware touch model
+- [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
+- [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`)
 - [ ] Next-word prediction
 - [x] Auto-capitalisation (sentences / words / characters)
 - [x] Automatic spacing around French punctuation

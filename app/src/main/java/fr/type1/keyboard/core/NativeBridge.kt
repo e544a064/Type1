@@ -19,6 +19,8 @@ internal object NativeBridge {
 
 	external fun nativeReset(handle: Long)
 
+	external fun nativeSelectionChanged(handle: Long)
+
 	external fun nativeSetInputType(handle: Long, inputType: Int, imeOptions: Int)
 
 	/** JSON row model: keys, weights, page, shift state. */

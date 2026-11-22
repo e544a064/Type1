@@ -23,6 +23,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	private var keyboardView: KeyboardView? = null
 	private var selectAnchor = -1
 	private var selectWidth = 0
+	private var lastActionAt = 0L
 
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
@@ -125,6 +126,28 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		} finally {
 			ic.endBatchEdit()
 		}
+		lastActionAt = SystemClock.uptimeMillis()
+	}
+
+	override fun onUpdateSelection(
+		oldSelStart: Int,
+		oldSelEnd: Int,
+		newSelStart: Int,
+		newSelEnd: Int,
+		candidatesStart: Int,
+		candidatesEnd: Int,
+	) {
+		super.onUpdateSelection(
+			oldSelStart,
+			oldSelEnd,
+			newSelStart,
+			newSelEnd,
+			candidatesStart,
+			candidatesEnd,
+		)
+		// Our own commits also update the selection; ignore those.
+		if (SystemClock.uptimeMillis() - lastActionAt < SELECTION_IGNORE_MS) return
+		controller.selectionChanged()
 	}
 
 	private fun sendCursor(ic: InputConnection, delta: Int) {
@@ -197,5 +220,6 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private companion object {
 		const val MAX_SELECTION_CHARS = 10_000
+		const val SELECTION_IGNORE_MS = 200L
 	}
 }

@@ -193,6 +193,15 @@ fn multiline_field_keeps_newline_even_with_action() {
 }
 
 #[test]
+fn newline_starts_a_new_sentence() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	assert_eq!(commits(&engine.on_key("a")), vec!["A"]);
+	engine.on_key("enter");
+	assert_eq!(commits(&engine.on_key("b")), vec!["B"]);
+}
+
+#[test]
 fn alternates_commit_accented_letters() {
 	let mut engine = plain();
 	assert_eq!(commits(&engine.on_key("alt:é")), vec!["é"]);
@@ -207,27 +216,31 @@ fn alternates_follow_shift() {
 }
 
 #[test]
-fn suggests_after_two_letters() {
+fn suggests_corrections_while_typing() {
 	let mut engine = plain();
+	engine.on_key("t");
+	engine.on_key("s");
 	engine.on_key("e");
-	engine.on_key("c");
+	engine.on_key("t");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
 	let suggestions = json["suggestions"].as_array().unwrap();
 	assert!(!suggestions.is_empty());
-	assert!(suggestions.iter().any(|s| s == "écouter"));
+	assert!(suggestions.iter().any(|s| s == "test"));
 }
 
 #[test]
 fn applying_a_suggestion_replaces_the_word() {
 	let mut engine = plain();
+	engine.on_key("t");
+	engine.on_key("s");
 	engine.on_key("e");
-	engine.on_key("c");
+	engine.on_key("t");
 	let actions = engine.on_key("sug:0");
 	assert_eq!(
 		actions,
 		vec![
-			Action::DeleteChars(2),
-			Action::Commit("écouter ".into())
+			Action::DeleteChars(4),
+			Action::Commit("test ".into())
 		]
 	);
 	// The word buffer is now empty: no suggestions until new letters arrive.
@@ -238,16 +251,250 @@ fn applying_a_suggestion_replaces_the_word() {
 #[test]
 fn suggestions_reset_after_space() {
 	let mut engine = plain();
+	engine.on_key("t");
 	engine.on_key("e");
-	engine.on_key("c");
+	engine.on_key("s");
+	engine.on_key("t");
 	engine.on_key("space");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
 	assert!(json["suggestions"].as_array().unwrap().is_empty());
 }
 
 #[test]
+fn corrects_on_space() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(3),
+			Action::Commit("j'ai".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn backspace_undoes_the_correction() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("jai ".into()),
+			Action::MoveCursor(-1),
+		]
+	);
+	// The word is open again, so its candidates are back.
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(!json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn space_after_undo_reuses_the_boundary_and_keeps_the_typed_word() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.on_key("backspace");
+	// No second space, and no second correction.
+	assert_eq!(engine.on_key("space"), vec![Action::MoveCursor(1)]);
+}
+
+#[test]
+fn comma_after_undo_replaces_the_kept_space() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.on_key("backspace");
+	assert_eq!(
+		engine.on_key("comma"),
+		vec![
+			Action::MoveCursor(1),
+			Action::DeleteChars(1),
+			Action::Commit(",".into()),
+		]
+	);
+}
+
+#[test]
+fn space_after_undo_of_a_comma_keeps_the_comma() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("comma");
+	engine.on_key("backspace");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![Action::MoveCursor(1), Action::Commit(" ".into())]
+	);
+}
+
+#[test]
+fn editing_after_undo_still_corrects_at_the_boundary() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.on_key("backspace");
+	engine.on_key("m");
+	engine.on_key("e");
+	// The correction happens before stepping over the kept space.
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("j'aime".into()),
+			Action::MoveCursor(1),
+		]
+	);
+}
+
+#[test]
+fn suggestions_after_a_correction_offer_the_original() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "jai");
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("jai ".into()),
+		]
+	);
+}
+
+#[test]
+fn correction_preserves_capitalisation() {
+	let mut engine = plain();
+	engine.on_key("shift");
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	let actions = engine.on_key("space");
+	assert_eq!(actions[1], Action::Commit("J'ai".into()));
+}
+
+#[test]
+fn all_caps_words_are_not_corrected() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0000_1000, 0);
+	engine.on_key("j");
+	engine.on_key("a");
+	engine.on_key("i");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn password_fields_are_not_corrected() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0000_0080, 0);
+	engine.on_key("j");
+	engine.on_key("a");
+	engine.on_key("i");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn typed_apostrophe_is_not_doubled() {
+	let mut engine = plain();
+	engine.on_key("j");
+	engine.on_key("page");
+	engine.on_key("page");
+	engine.on_key("apos");
+	engine.on_key("page");
+	engine.on_key("a");
+	engine.on_key("i");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn selection_change_cancels_the_undo() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.selection_changed();
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![Action::Delete { word: false }]
+	);
+}
+
+#[test]
+fn web_email_fields_are_not_corrected() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0000_00d0, 0);
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn corrects_before_punctuation_without_doubling_the_boundary() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("comma"),
+		vec![
+			Action::DeleteChars(3),
+			Action::Commit("j'ai".into()),
+			Action::Commit(",".into()),
+		]
+	);
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![
+			Action::DeleteChars(5),
+			Action::Commit("jai,".into()),
+			Action::MoveCursor(-1),
+		]
+	);
+}
+
+#[test]
+fn correction_is_skipped_when_the_editor_asks_for_none() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0008_0000, 0);
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn low_confidence_words_are_left_alone() {
+	let mut engine = plain();
+	for key in ["m", "m", "m"] {
+		engine.on_key(key);
+	}
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
 fn render_exposes_three_bands() {
-	let engine = plain();
+	let mut engine = plain();
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
 	assert_eq!(json["page"], "letters");
 	assert_eq!(json["letters"].as_array().unwrap().len(), 26);

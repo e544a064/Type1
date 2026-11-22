@@ -29,8 +29,16 @@ release on the letter you want.
 - All 26 letters on one line in AZERTY column order, row-based vertical offsets,
   uniform size and case (uppercase while shift/auto-caps is active).
 - Numbers and symbols take over the letter line (`123`, `#+=`).
-- Suggestion strip with accent-insensitive prefix lookup from an embedded French
-  lexicon: type `ecole`, get `École`, tap to replace the word in one action.
+- Autocorrection at word boundaries from a 20k frequency-ranked French
+  dictionary with a layout-aware touch model: neighbouring-key slips,
+  transpositions, missing accents (`ecole` → `école`) and elision
+  (`jai` → `j'ai`, `taime` → `t'aime`).
+- The suggestion strip shows correction candidates while typing and the
+  original + alternatives after a correction; the first backspace undoes the
+  correction, keeps the boundary you typed and reopens the word.
+- Conservative application: a confidence margin, no all-caps/mixed-case words,
+  no suggestions in password/email/URI/number fields or when the editor asks
+  for none.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
@@ -51,8 +59,9 @@ release on the letter you want.
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
 
-Not in the MVP: autocorrect, next-word prediction, glide typing, emoji panel,
-clipboard manager, voice input, themes, settings screen, physical keyboard.
+Not in the MVP: next-word prediction (context model), cursor-back re-suggestions,
+personal dictionary, dictionary imports, glide typing, emoji panel, clipboard
+manager, voice input, themes, physical keyboard.
 
 ## Why one line?
 
@@ -63,7 +72,8 @@ it workable. Three things compensate:
 
 - nearest-letter hit testing (the whole strip is one target area),
 - drag-to-correct: press, slide, release on the right letter,
-- suggestions that fix whole words at once (`ecole` → `École`).
+- autocorrection with layout-aware candidates (`dkre` → `dire`,
+  `ecole` → `école`).
 
 Layout is data, not code: `core/src/layout.rs` lists the letters in AZERTY
 column order with a `row` index (0 top, 1 home, 2 bottom). Change the order or
@@ -80,17 +90,23 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the utility row height is a setting (36–72 dp, default 48),
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
-- the `WORDS` list in `core/src/lexicon.rs`.
+- `MIN_SCORE` and `FREQ_WEIGHT` in `core/src/correction.rs`,
+- the dictionary in `core/data/fr.tsv` (see `core/data/NOTICE.md`).
 
 ## Repository layout
 
 ```
 core/                     Rust crate (no Android dependency)
   src/layout.rs           letters, row indices, utility keys
-  src/lexicon.rs          French word list, accent folding, suggestions
-  src/engine.rs           shift, caps, French spacing, word buffer, suggestions
+  src/dictionary.rs       frequency-ranked French dictionary (embedded data)
+  src/correction.rs       layout-aware candidates and scoring
+  src/lexicon.rs          accent folding
+  src/engine.rs           shift, caps, spacing, word buffer, correction, undo
   src/action.rs           actions emitted to the platform (commit/delete/ime)
-  src/ffi.rs              JNI surface (create/render/key/inputType/reset)
+  src/ffi.rs              JNI surface (create/render/key/inputType/selection)
+  data/fr.tsv             derived Lexique 3.83 list (20k forms)
+  data/NOTICE.md          dictionary licence and attribution
+  examples/evaluate.rs    dev-only correction evaluation
   tests/engine_tests.rs   behaviour tests (cargo test)
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
@@ -102,8 +118,20 @@ app/                      Android app (Kotlin, no AndroidX needed)
     model/RowModel.kt     JSON model (suggestions, letters, keys)
     model/KeyAction.kt    JSON action model
 scripts/build-rust.ps1    cross-compile the core into jniLibs
+scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 ```
+
+## Dictionary
+
+`core/data/fr.tsv` is derived from [Lexique 3.83](http://www.lexique.org)
+(CC BY-SA 4.0): the 20,000 most frequent lowercase forms, film and book
+frequencies summed per form and stored as hundredths of `ln(freq + 1)`. The
+setup screen shows the attribution and `core/data/NOTICE.md` carries the full
+notice. `cargo run --release --example evaluate` reports top-1 accuracy on
+synthetic typos and the random-string false-positive rate.
+`scripts/build-dictionary.ps1` regenerates the list from an extracted
+`Lexique383.tsv`.
 
 The contract between the two halves is JSON over JNI:
 
@@ -202,19 +230,20 @@ untested.
 | Drag along the letter line | Move the highlight, release to type |
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
-| Tap a suggestion | Delete the typed word and insert the suggestion plus a space |
+| Tap a suggestion | Replace the typed or corrected word with the candidate |
+| ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |
 | Page key (`123` / `#+=` / `ABC`) | Letters → numbers → symbols → letters |
 | Tap ⇧ once / twice | One capital / caps lock |
 
 ## Roadmap
 
-1. **Prediction** — frequency-ordered lexicon, next-word model, autocorrect with
-   undo, so the strip earns its space.
+1. **Prediction** — next-word model and cursor-back re-suggestions, so the strip
+   earns its space.
 2. **Typing comfort** — magnification popup above the strip, per-letter touch
    model, haptic strength setting.
-3. **French details** — smart accents on double-tap, elision (`l'`, `d'`, `j'`),
-   proper-noun capitalisation.
+3. **French details** — smart accents on double-tap, proper-noun
+   capitalisation.
 4. **Text tools** — clipboard panel, cursor arrows, word delete on long-press
    ⌫, double-space period.
 5. **Personalisation** — dictionary additions, themes, per-app page memory.

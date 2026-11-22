@@ -49,6 +49,16 @@ public class NativeBridge {
 		System.out.println("numbers  -> " + nativeKey(handle, "page"));
 		System.out.println("next row : " + nativeRender(handle));
 
+		nativeReset(handle);
+		nativeSetInputType(handle, 0x0000_4001, 0);
+		System.out.println("j        -> " + nativeKey(handle, "j"));
+		System.out.println("a        -> " + nativeKey(handle, "a"));
+		System.out.println("i        -> " + nativeKey(handle, "i"));
+		System.out.println("space    -> " + nativeKey(handle, "space"));
+		System.out.println("corrected: " + nativeRender(handle));
+		System.out.println("backspace-> " + nativeKey(handle, "backspace"));
+		System.out.println("reverted : " + nativeRender(handle));
+
 		nativeDestroy(handle);
 		System.out.println("OK");
 	}

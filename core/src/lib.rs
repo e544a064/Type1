@@ -8,6 +8,8 @@
 //! stays untouched.
 
 pub mod action;
+pub mod correction;
+pub mod dictionary;
 pub mod engine;
 pub mod json;
 pub mod layout;
