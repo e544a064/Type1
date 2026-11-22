@@ -24,6 +24,9 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	private var selectAnchor = -1
 	private var selectWidth = 0
 	private var lastActionAt = 0L
+	private var expectedSelStart = -1
+	private var expectedSelEnd = -1
+	private var allowNextSelection = false
 
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
@@ -43,6 +46,10 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
 		super.onStartInput(attribute, restarting)
+		expectedSelStart = -1
+		expectedSelEnd = -1
+		allowNextSelection = false
+		lastActionAt = 0L
 		controller.onStartInput(attribute)
 	}
 
@@ -58,11 +65,15 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		selectAnchor = -1
 		selectWidth = 0
 		keyboardView?.refresh()
+		syncContextFromEditor()
 	}
 
 	override fun onFinishInput() {
 		super.onFinishInput()
 		controller.reset()
+		expectedSelStart = -1
+		expectedSelEnd = -1
+		allowNextSelection = false
 		selectAnchor = -1
 		selectWidth = 0
 		keyboardView?.refresh()
@@ -106,6 +117,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	override fun onActions(actions: List<KeyAction>) {
 		val ic = currentInputConnection ?: return
+		var cursorMoved = false
 		// Keep replacement (delete + commit) atomic for the editor.
 		ic.beginBatchEdit()
 		try {
@@ -120,7 +132,10 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 						ic.deleteSurroundingText(action.before, action.after)
 						ic.commitText(action.text, 1)
 					}
-					is KeyAction.Cursor -> sendCursor(ic, action.delta)
+					is KeyAction.Cursor -> {
+						sendCursor(ic, action.delta)
+						cursorMoved = true
+					}
 					is KeyAction.StartSelection -> startSelection(ic)
 					is KeyAction.ExtendSelection -> extendSelection(ic, action.delta)
 					is KeyAction.DeleteSelection -> deleteSelection(ic)
@@ -129,6 +144,23 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			}
 		} finally {
 			ic.endBatchEdit()
+		}
+		if (cursorMoved) {
+			// The selection callback for a cursor move is a user-visible move:
+			// let it refresh the context word at the new caret.
+			expectedSelStart = -1
+			expectedSelEnd = -1
+			allowNextSelection = true
+		} else {
+			val before = ic.getTextBeforeCursor(MAX_SELECTION_CHARS, 0)
+			val cursor = if (before != null && before.length < MAX_SELECTION_CHARS) {
+				before.length
+			} else {
+				-1
+			}
+			expectedSelStart = cursor
+			expectedSelEnd = cursor
+			allowNextSelection = false
 		}
 		lastActionAt = SystemClock.uptimeMillis()
 	}
@@ -149,13 +181,30 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			candidatesStart,
 			candidatesEnd,
 		)
-		// Our own commits also update the selection; ignore those.
-		if (SystemClock.uptimeMillis() - lastActionAt < SELECTION_IGNORE_MS) return
+		// Ignore the callbacks produced by our own actions, but accept a real
+		// caret move immediately, even within the old time window.
+		if (allowNextSelection) {
+			allowNextSelection = false
+			expectedSelStart = -1
+			expectedSelEnd = -1
+		} else if (expectedSelStart >= 0) {
+			val selfInflicted = newSelStart == expectedSelStart && newSelEnd == expectedSelEnd
+			expectedSelStart = -1
+			expectedSelEnd = -1
+			if (selfInflicted) return
+		} else if (SystemClock.uptimeMillis() - lastActionAt < SELECTION_IGNORE_MS) {
+			return
+		}
 		if (newSelStart != newSelEnd) {
 			controller.selectionChanged()
 			keyboardView?.refresh()
 			return
 		}
+		syncContextFromEditor()
+	}
+
+	/** Read the word around the caret and hand it to the core. */
+	private fun syncContextFromEditor() {
 		val ic = currentInputConnection
 		if (ic == null) {
 			controller.selectionChanged()
