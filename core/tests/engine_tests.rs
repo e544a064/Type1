@@ -691,6 +691,7 @@ fn render_exposes_three_bands() {
 	assert_eq!(json["keys"][3]["id"], "dot");
 	assert_eq!(json["keys"][3]["alts"][0], "!");
 	assert_eq!(json["keys"][3]["alts"][1], "?");
+	assert_eq!(json["keys"][3]["alts"][2], ":");
 	assert_eq!(json["keys"][4]["id"], "enter");
 	assert_eq!(json["strip"][0]["id"], "shift");
 	assert_eq!(json["strip"][1]["id"], "backspace");
@@ -702,7 +703,7 @@ fn dot_and_punctuation_alts_commit_at_the_boundary() {
 	engine.on_key("a");
 	assert_eq!(engine.on_key("dot"), vec![Action::Commit(".".into())]);
 
-	for symbol in ["!", "?"] {
+	for symbol in ["!", "?", ":"] {
 		let mut engine = plain();
 		engine.on_key("a");
 		assert_eq!(

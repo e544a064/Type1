@@ -429,6 +429,15 @@ class KeyboardView(
 				continue
 			}
 
+			if (key.alts.isNotEmpty()) {
+				val hint = key.alts.joinToString(" ")
+				labelPaint.color = colors.muted
+				labelPaint.textAlign = Paint.Align.RIGHT
+				labelPaint.textSize = fitText(hint, rect.width() - dp(4f), dp(10f), dp(7f))
+				canvas.drawText(hint, rect.right - dp(3f), rect.top + labelPaint.textSize, labelPaint)
+				labelPaint.textAlign = Paint.Align.CENTER
+			}
+
 			labelPaint.color = when (key.kind) {
 				"space", "page" -> colors.muted
 				else -> colors.text
