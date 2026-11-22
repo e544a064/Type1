@@ -117,7 +117,10 @@ core/                     Rust crate (no Android dependency)
   data/fr.tsv             derived Lexique 3.83 list (20k forms)
   data/NOTICE.md          dictionary licence and attribution
   examples/evaluate.rs    dev-only correction evaluation
-  tests/engine_tests.rs   behaviour tests (cargo test)
+  examples/make_autocorrect_cases.rs  regenerate the bulk fixture
+  tests/engine_tests.rs   keyboard-engine behaviour tests
+  tests/autocorrect_tests.rs  bulk autocorrect regressions
+  tests/data/autocorrect_cases.tsv  2,500 generated typo cases
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -207,11 +210,17 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic
+# core logic, vault of 2,500 autocorrect cases and held-out accuracy floor
 cd core; cargo test
 
 # JNI contract: real JVM -> Rust -> JSON (uses the host build of the core)
 ./tools/jni-smoke/run.ps1
+```
+
+The bulk fixture is regenerated after tuning the corrector:
+
+```powershell
+cd core; cargo run --release --example make_autocorrect_cases
 ```
 
 `run.ps1` prints the row model and the actions for a few key presses. The Java
@@ -222,13 +231,12 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 32 tests passing.
+- Rust 1.101 (nightly), `cargo test`: 84 tests plus 2,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
 - `./gradlew lintDebug`: 0 errors (3 typo false positives on "Type1").
-- JNI smoke test: suggestions (`ec` → `Écouter`/`Écrire`/`École`) and
-  `⇧ ⌫ ⏎ é` round-trip correctly through the host JVM.
+- JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 
 No device was attached, so on-device behaviour (touch, IME lifecycle, sound) is
 untested.

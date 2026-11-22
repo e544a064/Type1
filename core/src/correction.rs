@@ -335,7 +335,7 @@ fn candidates_with(lower: &str, elisions: bool) -> Vec<Candidate> {
 				continue;
 			}
 			for word in dictionary::words() {
-				if word.folded.len() < 2 {
+				if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
 					continue;
 				}
 				if !elision_allowed(clitic, word) {
