@@ -733,6 +733,23 @@ fn auto_corrects_the_capitalized_recorrection_example() {
 }
 
 #[test]
+fn backspace_after_a_boundary_can_reopen_the_word() {
+	let mut engine = plain();
+	for key in ["v", "q", "v", "u", "s", "c", "a"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![Action::Delete { word: false }]
+	);
+	// The IME re-reads the word after the delete; suggestions must come back.
+	engine.set_context_word("vqvusca", "");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(!json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn moving_back_into_a_word_offers_a_recorrection() {	let mut engine = plain();
 	engine.set_context_word("Ropp", "xjf");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();

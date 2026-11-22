@@ -55,7 +55,8 @@ release on the letter you want.
   correction, keeps the boundary you typed and reopens the word.
 - Move the caret back into an existing word and the strip re-suggests
   corrections for it; tapping one replaces the whole word in place
-  (`Roppxjf` → `Comment`).
+  (`Roppxjf` → `Comment`). Backspacing over a finished word's boundary brings
+  its corrections back too, without moving the caret.
 - Conservative application: a confidence margin (stricter for two-letter
   tokens), no all-caps/mixed-case words, no suggestions in password/email/URI/
   name/address/number fields or when the editor asks for none.
@@ -244,7 +245,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 98 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 99 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

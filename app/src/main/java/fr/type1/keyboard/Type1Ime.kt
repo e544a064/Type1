@@ -118,13 +118,17 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onActions(actions: List<KeyAction>) {
 		val ic = currentInputConnection ?: return
 		var cursorMoved = false
+		var resyncContext = false
 		// Keep replacement (delete + commit) atomic for the editor.
 		ic.beginBatchEdit()
 		try {
 			for (action in actions) {
 				when (action) {
 					is KeyAction.Commit -> ic.commitText(action.text, 1)
-					is KeyAction.DeleteWord -> deleteWord(ic, action.word)
+					is KeyAction.DeleteWord -> {
+						deleteWord(ic, action.word)
+						resyncContext = true
+					}
 					is KeyAction.DeleteChars -> if (action.count > 0) {
 						ic.deleteSurroundingText(action.count, 0)
 					}
@@ -138,7 +142,10 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 					}
 					is KeyAction.StartSelection -> startSelection(ic)
 					is KeyAction.ExtendSelection -> extendSelection(ic, action.delta)
-					is KeyAction.DeleteSelection -> deleteSelection(ic)
+					is KeyAction.DeleteSelection -> {
+						deleteSelection(ic)
+						resyncContext = true
+					}
 					is KeyAction.Ime -> performEditorAction(ic, action.action)
 				}
 			}
@@ -163,6 +170,10 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			allowNextSelection = false
 		}
 		lastActionAt = SystemClock.uptimeMillis()
+		// Backspace can reveal the word that was just finished; re-read it so
+		// its corrections come back without moving the caret. Post it so a
+		// DEL key event has reached the editor before the text is read.
+		if (resyncContext) keyboardView?.post { syncContextFromEditor() }
 	}
 
 	override fun onUpdateSelection(
