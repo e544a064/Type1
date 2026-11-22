@@ -47,6 +47,8 @@ class KeyboardView(
 
 	private enum class Band { None, Suggestions, Letters, Utilities }
 
+	private class AltEntry(val commit: String, val display: String)
+
 	private val handler = Handler(Looper.getMainLooper())
 	private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -76,7 +78,7 @@ class KeyboardView(
 	private val utilityRects = ArrayList<RectF>()
 	private var altPopup: PopupWindow? = null
 	private var altPopupView: AltView? = null
-	private var altChars: List<String> = emptyList()
+	private var altEntries: List<AltEntry> = emptyList()
 	private var altSelected = -1
 	private var altPopupLeft = 0f
 	private var altCellWidth = 0f
@@ -130,10 +132,8 @@ class KeyboardView(
 	private val longPressRunnable = Runnable {
 		when (band) {
 			Band.Letters -> {
-				val letter = model?.letters?.getOrNull(pressedLetter) ?: return@Runnable
-				if (letter.alts.isNotEmpty()) {
+				if (showAltPopup(pressedLetter)) {
 					longPressFired = true
-					showAltPopup(pressedLetter)
 					performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 				}
 			}
@@ -389,16 +389,29 @@ class KeyboardView(
 		}
 	}
 
-	/** Floating accent bubble above the pressed key, like a key preview. */
-	private fun showAltPopup(index: Int) {
-		val letter = model?.letters?.getOrNull(index) ?: return
-		val rect = letterRects.getOrNull(index) ?: return
-		if (letter.alts.isEmpty()) return
+	/** Floating bubble with the accents of the pressed key and its neighbours. */
+	private fun showAltPopup(index: Int): Boolean {
+		val letters = model?.letters ?: return false
+		val letter = letters.getOrNull(index) ?: return false
+		val rect = letterRects.getOrNull(index) ?: return false
+
+		val entries = ArrayList<AltEntry>()
+		letters.getOrNull(index - 1)?.alts?.forEach { entries += AltEntry(it, it) }
+		val baseIndex = entries.size
+		val baseLabel = if (model?.caps == true) letter.label else letter.label.lowercase()
+		entries += AltEntry(letter.id, baseLabel)
+		letter.alts.forEach { entries += AltEntry(it, it) }
+		letters.getOrNull(index + 1)?.alts?.forEach { entries += AltEntry(it, it) }
+		if (entries.size <= 1) return false
 		dismissAltPopup()
 
-		val bubbleWidth = letter.alts.size * dp(ALT_CELL_DP) + dp(8f)
+		val count = entries.size
+		val desiredWidth = count * dp(ALT_CELL_DP) + dp(8f)
+		val bubbleWidth = min(desiredWidth, width - dp(8f))
 		val bubbleHeight = dp(ALT_HEIGHT_DP)
-		val popupView = AltView(context, letter.alts)
+		val cellWidth = bubbleWidth / count
+
+		val popupView = AltView(context, entries)
 		val popup = PopupWindow(popupView, bubbleWidth.toInt(), bubbleHeight.toInt(), false)
 		popup.isTouchable = false
 		popup.isFocusable = false
@@ -408,29 +421,35 @@ class KeyboardView(
 
 		val location = IntArray(2)
 		getLocationInWindow(location)
-		val maxX = location[0] + width - bubbleWidth.toInt()
-		val x = (location[0] + rect.centerX() - bubbleWidth / 2f).toInt()
-		.coerceIn(location[0], maxOf(location[0], maxX))
+		// Center the pressed key's cell over the key, not the whole bubble, so
+		// the finger starts on its own character.
+		val baseCenter = (baseIndex + 0.5f) * cellWidth
+		val maxLeft = (width - bubbleWidth).toInt()
+		val leftInView = (rect.centerX() - baseCenter).toInt()
+		.coerceIn(0, maxOf(0, maxLeft))
+		val x = location[0] + leftInView
 		val y = (location[1] + letterTop - bubbleHeight - dp(6f)).toInt()
 
 		try {
 			popup.showAtLocation(this, Gravity.NO_GRAVITY, x, y)
 		} catch (_: Exception) {
-			return
+			return false
 		}
 
 		altPopup = popup
 		altPopupView = popupView
-		altChars = letter.alts
-		altSelected = -1
-		altCellWidth = bubbleWidth / letter.alts.size
-		altPopupLeft = (x - location[0]).toFloat()
+		altEntries = entries
+		altSelected = baseIndex
+		popupView.selected = baseIndex
+		altCellWidth = cellWidth
+		altPopupLeft = leftInView.toFloat()
+		return true
 	}
 
 	private fun updateAltSelection(x: Float) {
-		if (altPopup == null || altChars.isEmpty()) return
+		if (altPopup == null || altEntries.isEmpty()) return
 		val index = ((x - altPopupLeft) / altCellWidth).toInt()
-		.coerceIn(0, altChars.size - 1)
+		.coerceIn(0, altEntries.size - 1)
 		if (index != altSelected) {
 			altSelected = index
 			altPopupView?.selected = index
@@ -442,11 +461,11 @@ class KeyboardView(
 		altPopup?.dismiss()
 		altPopup = null
 		altPopupView = null
-		altChars = emptyList()
+		altEntries = emptyList()
 		altSelected = -1
 	}
 
-	private inner class AltView(context: Context, private val alts: List<String>) : View(context) {
+	private inner class AltView(context: Context, private val entries: List<AltEntry>) : View(context) {
 		var selected = -1
 			set(value) {
 				field = value
@@ -463,8 +482,8 @@ class KeyboardView(
 			bubblePaint.color = colors.key
 			canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), corner, corner, bubblePaint)
 
-			val cell = width.toFloat() / alts.size
-			for (i in alts.indices) {
+			val cell = width.toFloat() / entries.size
+			for (i in entries.indices) {
 				val left = i * cell
 				if (i == selected) {
 					bubblePaint.color = colors.accent
@@ -479,10 +498,20 @@ class KeyboardView(
 					)
 				}
 				popupTextPaint.color = if (i == selected) Color.WHITE else colors.text
-				popupTextPaint.textSize = height * 0.46f
+				popupTextPaint.textSize = fitPopupText(entries[i].display, cell - dp(4f))
 				val baseline = height / 2f - (popupTextPaint.ascent() + popupTextPaint.descent()) / 2f
-				canvas.drawText(alts[i], left + cell / 2f, baseline, popupTextPaint)
+				canvas.drawText(entries[i].display, left + cell / 2f, baseline, popupTextPaint)
 			}
+		}
+
+		private fun fitPopupText(text: String, maxWidth: Float): Float {
+			var size = height * 0.46f
+			popupTextPaint.textSize = size
+			while (size > dp(9f) && popupTextPaint.measureText(text) > maxWidth) {
+				size -= 0.5f
+				popupTextPaint.textSize = size
+			}
+			return size
 		}
 	}
 
@@ -614,15 +643,10 @@ class KeyboardView(
 					return true
 				}
 				if (altPopup != null) {
-					val choice = altSelected
-					val action = if (choice in altChars.indices) {
-						"alt:${altChars[choice]}"
-					} else {
-						null
-					}
+					val entry = altEntries.getOrNull(altSelected)
 					dismissAltPopup()
-					if (action != null) {
-						emit(controller.press(action))
+					if (entry != null) {
+						emit(controller.press("alt:${entry.commit}"))
 					}
 					resetTouch()
 					return true

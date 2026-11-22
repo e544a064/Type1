@@ -196,7 +196,7 @@ untested.
 | Tap a letter | Type it (respects shift / auto-caps) |
 | Drag along the letter line | Move the highlight, release to type |
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
-| Long-press a letter | Popup appears above the key; slide and release |
+| Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Tap a suggestion | Delete the typed word and insert the suggestion plus a space |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |
 | Page key (`123` / `#+=` / `ABC`) | Letters → numbers → symbols → letters |
