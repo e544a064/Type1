@@ -40,6 +40,9 @@ release on the letter you want.
 - One-letter spelling variants are considered even when the letter is far from
   the key pressed: `commant` offers `comment` (frequency) and `collant`
   (two-key slip), both in the strip.
+- Very last resort: when nothing is one or two keys away and no spelling
+  variant fits, the closest same-length dictionary word is offered
+  (`bodjmur` → `bonjour`). That tier is suggestion-only, never auto-applied.
 - The suggestion strip ranks by word frequency as well as key distance, so
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
@@ -236,7 +239,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 90 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 93 tests plus 6,500 fixture cases.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

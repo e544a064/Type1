@@ -35,6 +35,9 @@ const TRANSPOSE_COST: f32 = 0.6;
 const APOSTROPHE_COST: f32 = 0.15;
 /// Two-key candidates are shown but need more confidence before auto-apply.
 const TWO_KEY_MIN_SCORE: f32 = 5.0;
+/// Very last resort: closest same-length word by weighted edit distance.
+const LAST_RESORT_MIN_LEN: usize = 4;
+const LAST_RESORT_TIE: f32 = 0.5;
 const MAX_RESULTS: usize = 6;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
@@ -45,7 +48,8 @@ const OTHER: usize = 26;
 pub struct Candidate {
 	pub text: String,
 	pub score: f32,
-	/// 1 for a one-key slip, 2 for a farther slip or spelling variant.
+	/// 1 for a one-key slip, 2 for a farther slip or spelling variant,
+	/// 3 for the closest word by edit distance when nothing else matches.
 	pub tier: u8,
 }
 
@@ -455,6 +459,58 @@ fn candidate_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
 	keyboard_distance(a, b).or_else(|| spelling_distance(a, b).map(|distance| (distance, 2)))
 }
 
+/// Very last resort: the same-length dictionary word with the smallest
+/// weighted edit distance. Only used when no tier-1/2 candidate exists.
+fn last_resort_candidates(lower: &str) -> Vec<Candidate> {
+	let folded = fold(lower);
+	let typed_bytes = folded.as_bytes();
+	let length = typed_bytes.len();
+	if length < LAST_RESORT_MIN_LEN {
+		return Vec::new();
+	}
+	let max = length as f32 * 2.6;
+
+	let mut best = f32::INFINITY;
+	let mut matches: Vec<(&dictionary::Word, f32)> = Vec::new();
+	for word in dictionary::words() {
+		if word.folded.len() != length {
+			continue;
+		}
+		let Some(distance) = distance(typed_bytes, word.folded.as_bytes(), max) else {
+			continue;
+		};
+		if distance < best {
+			best = distance;
+			matches.clear();
+		}
+		if distance <= best + LAST_RESORT_TIE {
+			matches.push((word, distance));
+		}
+	}
+	matches.retain(|(_, distance)| *distance <= best + LAST_RESORT_TIE);
+	matches.sort_by(|a, b| {
+		a.1
+		. partial_cmp(&b.1)
+		.unwrap_or(std::cmp::Ordering::Equal)
+		. then_with(|| {
+			b.0.log_freq
+			. partial_cmp(&a.0.log_freq)
+			.unwrap_or(std::cmp::Ordering::Equal)
+		})
+		. then_with(|| a.0.text.cmp(b.0.text))
+	});
+
+	matches
+	.into_iter()
+	.take(MAX_RESULTS)
+	.map(|(word, distance)| Candidate {
+		text: word.text.to_string(),
+		score: -distance + word.log_freq * 0.001,
+		tier: 3,
+	})
+	.collect()
+}
+
 fn sort_candidates(list: &mut [Candidate]) {
 	list.sort_by(|a, b| {
 		a.tier
@@ -563,6 +619,9 @@ pub fn suggest(typed: &str) -> Suggestion {
 
 	let mut list: Vec<Candidate> = found.into_values().collect();
 	sort_candidates(&mut list);
+	if list.is_empty() {
+		list = last_resort_candidates(&lower);
+	}
 
 	let Some(best) = list.first() else {
 		return Suggestion::empty();
@@ -580,12 +639,11 @@ pub fn suggest(typed: &str) -> Suggestion {
 	let Some(best) = list.first() else {
 		return Suggestion::empty();
 	};
-	let threshold = if best.tier == 1 {
-		MIN_SCORE
-	} else {
-		TWO_KEY_MIN_SCORE
+	let mut apply = match best.tier {
+		1 => best.score >= MIN_SCORE,
+		2 => best.score >= TWO_KEY_MIN_SCORE,
+		_ => false,
 	};
-	let mut apply = best.score >= threshold;
 	if let Some(typed_score) = typed_score {
 		apply = apply && best.score - typed_score >= KNOWN_WORD_MARGIN;
 	}

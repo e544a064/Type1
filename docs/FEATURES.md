@@ -41,8 +41,10 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with
       typos inside the elided word (`taimx` → `t'aime`) and grammar-aware
       validation (`j'aime`, not `t'est`)
-- [x] Narrow-key rescue for fully garbled tokens (`geqnvx` → `beauté`) and
-      elisions with a mistyped clitic (`vqjmd` → `t'aime`)
+- [x] Narrow-key rescue for fully garbled tokens (`geqnvx` → `beauté`),
+      elisions with a mistyped clitic (`vqjmd` → `t'aime`), two-key slips
+      (`bknjpur` → `bonjour`), spelling variants (`commant` → `comment`) and
+      a last-resort closest-word suggestion (`bodjmur` → `bonjour`)
 - [ ] Next-word prediction
 - [x] Auto-capitalisation (sentences / words / characters)
 - [x] Automatic spacing around French punctuation

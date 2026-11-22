@@ -391,6 +391,40 @@ fn thousands_of_spelling_variants_are_suggested() {
 }
 
 #[test]
+fn very_last_resort_finds_the_closest_word() {
+	let suggestion = correction::suggest("bodjmur");
+	assert!(!suggestion.apply);
+	assert_eq!(suggestion.candidates[0].text, "bonjour");
+	assert_eq!(suggestion.candidates[0].tier, 3);
+}
+
+#[test]
+fn last_resort_does_not_run_when_closer_rules_match() {
+	let suggestion = correction::suggest("emps");
+	assert!(
+		suggestion.candidates.iter().all(|candidate| candidate.tier < 3),
+		"unexpected last-resort candidates: {:?}",
+		suggestion
+		.candidates
+		.iter()
+		.map(|candidate| (candidate.text.as_str(), candidate.tier))
+		.collect::<Vec<_>>()
+	);
+}
+
+#[test]
+fn very_last_resort_is_offered_but_not_applied() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT, 0);
+	for key in ["b", "o", "d", "j", "m", "u", "r"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "bonjour");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
 fn held_out_neighbour_typos_stay_above_the_floor() {
 	let order: Vec<char> = LETTERS
 	.iter()
