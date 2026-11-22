@@ -55,13 +55,14 @@ fn cases() -> Vec<(&'static str, &'static str)> {
 	.collect()
 }
 
-fn best(typed: &str) -> (bool, Option<String>) {
+fn best(typed: &str) -> (bool, Option<String>, u8) {
 	let suggestion = correction::suggest(typed);
-	let best = suggestion
-	.candidates
-	.first()
-	.map(|candidate| candidate.text.clone());
-	(suggestion.apply, best)
+	let best = suggestion.candidates.first();
+	(
+		suggestion.apply,
+		best.map(|candidate| candidate.text.clone()),
+		best.map(|candidate| candidate.tier).unwrap_or(0),
+	)
 }
 
 #[test]
@@ -70,14 +71,23 @@ fn thousands_of_typos_reach_the_intended_word() {
 	assert!(cases.len() >= 2_000, "only {} cases", cases.len());
 
 	let mut failures = Vec::new();
+	let mut two_key = 0usize;
 	for (typed, expected) in &cases {
-		let (apply, best) = best(typed);
+		let (apply, best, tier) = best(typed);
+		if tier == 2 {
+			two_key += 1;
+		}
 		if !apply || best.as_deref() != Some(expected) {
 			failures.push(format!(
 				"{typed} -> {best:?} (apply {apply}), want {expected}"
 			));
 		}
 	}
+	assert!(
+		two_key >= 25,
+		"fixture only has {two_key} two-key cases ({} total)",
+		cases.len()
+	);
 	assert!(
 		failures.is_empty(),
 		"{} / {} fixture cases failed:\n{}",
@@ -96,6 +106,7 @@ fn thousands_of_typos_reach_the_intended_word() {
 fn named_regressions() {
 	let cases = [
 		("glnjojr", "bonjour"),
+		("bknjpur", "bonjour"),
 		("vqjmd", "t'aime"),
 		("geqnvx", "beauté"),
 		("secg", "sert"),
@@ -127,7 +138,7 @@ fn named_regressions() {
 			);
 			continue;
 		}
-		let (apply, best) = best(typed);
+		let (apply, best, _) = best(typed);
 		assert!(apply, "{typed} was not applied (best {best:?})");
 		assert_eq!(best.as_deref(), Some(expected), "{typed}");
 	}
@@ -210,6 +221,49 @@ fn sentence_initial_common_words_stay_put() {
 }
 
 #[test]
+fn one_key_candidates_rank_before_two_key_candidates() {
+	let suggestion = correction::suggest("emps");
+	assert!(suggestion.apply);
+	assert_eq!(suggestion.candidates[0].text, "temps");
+	assert_eq!(suggestion.candidates[0].tier, 1);
+	assert!(
+		suggestion.candidates.iter().any(|candidate| candidate.tier == 2),
+		"expected a two-key candidate too"
+	);
+	assert!(
+		suggestion
+		.candidates
+		.windows(2)
+		.all(|pair| pair[0].tier <= pair[1].tier),
+		"tiers are out of order: {:?}",
+		suggestion
+		.candidates
+		.iter()
+		.map(|candidate| (candidate.text.as_str(), candidate.tier))
+		.collect::<Vec<_>>()
+	);
+}
+
+#[test]
+fn two_key_typo_is_suggested_and_applied() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT, 0);
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "bonjour");
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(7),
+			Action::Commit("bonjour".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
 fn held_out_neighbour_typos_stay_above_the_floor() {
 	let order: Vec<char> = LETTERS
 	.iter()
@@ -241,7 +295,7 @@ fn held_out_neighbour_typos_stay_above_the_floor() {
 			continue;
 		}
 		total += 1;
-		let (apply, best) = best(&typed);
+		let (apply, best, _) = best(&typed);
 		if best.as_deref() == Some(word) {
 			top1 += 1;
 			if apply {

@@ -62,6 +62,27 @@ fn substitute(word: &str, count: usize, rng: &mut Rng, order: &[char]) -> String
 	chars.into_iter().collect()
 }
 
+fn far_neighbour(c: char, rng: &mut Rng, order: &[char]) -> char {
+	let Some(index) = order.iter().position(|&x| x == c) else {
+		return c;
+	};
+	let next = if rng.below(2) == 0 {
+		(index + 2).min(order.len() - 1)
+	} else {
+		index.saturating_sub(2)
+	};
+	order[next]
+}
+
+fn substitute_far(word: &str, count: usize, rng: &mut Rng, order: &[char]) -> String {
+	let mut chars: Vec<char> = word.chars().collect();
+	for _ in 0..count {
+		let i = rng.below(chars.len());
+		chars[i] = far_neighbour(chars[i], rng, order);
+	}
+	chars.into_iter().collect()
+}
+
 fn transpose(word: &str, rng: &mut Rng) -> String {
 	let mut chars: Vec<char> = word.chars().collect();
 	if chars.len() < 2 {
@@ -118,6 +139,7 @@ fn main() {
 		}
 		let variants = [
 			substitute(word, 1, &mut rng, &order),
+			substitute_far(word, 1, &mut rng, &order),
 			substitute(word, 2, &mut rng, &order),
 			substitute(word, 3, &mut rng, &order),
 			transpose(word, &mut rng),

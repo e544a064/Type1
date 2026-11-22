@@ -26,9 +26,13 @@ const KNOWN_WORD_MARGIN: f32 = 2.0;
 const AGGRESSIVE_MARGIN: f32 = 0.25;
 /// A substituted letter must be this close to count as a neighbouring key.
 const NEIGHBOUR_COST: f32 = 1.5;
+/// A second ring around the intended key, used when nothing closer exists.
+const TWO_KEY_COST: f32 = 2.3;
 const TRANSPOSE_COST: f32 = 0.6;
 /// Cost of inserting the elision apostrophe.
 const APOSTROPHE_COST: f32 = 0.15;
+/// Two-key candidates are shown but need more confidence before auto-apply.
+const TWO_KEY_MIN_SCORE: f32 = 5.0;
 const MAX_RESULTS: usize = 6;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
@@ -39,6 +43,8 @@ const OTHER: usize = 26;
 pub struct Candidate {
 	pub text: String,
 	pub score: f32,
+	/// 1 for a one-key slip, 2 for a two-key slip.
+	pub tier: u8,
 }
 
 /// The candidates to show for a typed token, and whether the best one is
@@ -220,7 +226,10 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 
 fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	match found.get(&candidate.text) {
-		Some(existing) if existing.score >= candidate.score => {}
+		Some(existing)
+			if existing.tier < candidate.tier
+				|| (existing.tier == candidate.tier
+					&& existing.score >= candidate.score) => {}
 		_ => {
 			found.insert(candidate.text.clone(), candidate);
 		}
@@ -244,6 +253,7 @@ fn insert_elision(
 	log_freq: f32,
 	penalty: f32,
 	cost: f32,
+	tier: u8,
 ) {
 	let text = format!("{clitic}'{remainder}");
 	insert(
@@ -251,6 +261,7 @@ fn insert_elision(
 		Candidate {
 			text,
 			score: log_freq * AGGRESSIVE_WEIGHT - penalty - cost,
+			tier,
 		},
 	);
 }
@@ -279,6 +290,7 @@ fn candidates_inner(lower: &str) -> Vec<Candidate> {
 			Candidate {
 				text: word.text.to_string(),
 				score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
+				tier: 1,
 			},
 		);
 	}
@@ -307,6 +319,7 @@ fn candidates_inner(lower: &str) -> Vec<Candidate> {
 					log_freq,
 					penalty,
 					APOSTROPHE_COST,
+					1,
 				);
 			}
 		}
@@ -339,6 +352,7 @@ fn candidates_inner(lower: &str) -> Vec<Candidate> {
 				log_freq,
 				penalty,
 				APOSTROPHE_COST + distance,
+				1,
 			);
 		}
 	}
@@ -361,6 +375,7 @@ fn candidates_inner(lower: &str) -> Vec<Candidate> {
 					score: word.log_freq * AGGRESSIVE_WEIGHT
 						- cost
 						- LENGTH_PENALTY * length_diff,
+					tier: 1,
 				},
 			);
 		}
@@ -372,10 +387,10 @@ fn candidates_inner(lower: &str) -> Vec<Candidate> {
 	list
 }
 
-/// Same-length distance where every substituted letter has to be a
-/// neighbouring key (or an adjacent pair swapped). Returns `None` when the
-/// input cannot be explained that way.
-fn near_distance(a: &[u8], b: &[u8]) -> Option<f32> {
+/// Same-length distance where every substituted letter has to be within
+/// `limit` of the intended key (or an adjacent pair swapped). Returns `None`
+/// when the input cannot be explained that way.
+fn near_distance(a: &[u8], b: &[u8], limit: f32) -> Option<f32> {
 	let n = a.len();
 	if n != b.len() || n > MAX_CHARS {
 		return None;
@@ -385,7 +400,7 @@ fn near_distance(a: &[u8], b: &[u8]) -> Option<f32> {
 	dp[0] = 0.0;
 	for i in 1..=n {
 		let step = costs[char_index(a[i - 1])][char_index(b[i - 1])];
-		if step <= NEIGHBOUR_COST {
+		if step <= limit {
 			dp[i] = dp[i - 1] + step;
 		}
 		if i >= 2 && a[i - 1] == b[i - 2] && a[i - 2] == b[i - 1] {
@@ -402,18 +417,27 @@ fn near_distance(a: &[u8], b: &[u8]) -> Option<f32> {
 	}
 }
 
+/// The nearest explanation, with a tier: 1 when every key is one step away,
+/// 2 when the narrow-keyboard rescue needs the second ring.
+fn neighbour_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
+	if let Some(distance) = near_distance(a, b, NEIGHBOUR_COST) {
+		return Some((distance, 1));
+	}
+	near_distance(a, b, TWO_KEY_COST).map(|distance| (distance, 2))
+}
+
 fn sort_candidates(list: &mut [Candidate]) {
 	list.sort_by(|a, b| {
-		b.score
-		. partial_cmp(&a.score)
-		.unwrap_or(std::cmp::Ordering::Equal)
+		a.tier
+		. cmp(&b.tier)
+		. then_with(|| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
 		. then_with(|| a.text.cmp(&b.text))
 	});
 }
 
-/// Words where every typed letter is one key away from the intended one,
-/// ranked by frequency. This is the narrow-keyboard rescue: an input can be
-/// complete nonsense and still point at a common word.
+/// Words where every typed letter is one or two keys away from the intended
+/// one, ranked by frequency. This is the narrow-keyboard rescue: an input can
+/// be complete nonsense and still point at a common word.
 fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>) {
 	let folded_typed = fold(lower);
 	let typed_bytes = folded_typed.as_bytes();
@@ -421,7 +445,8 @@ fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>)
 		if word.folded.len() != typed_bytes.len() {
 			continue;
 		}
-		let Some(distance) = near_distance(typed_bytes, word.folded.as_bytes()) else {
+		let Some((distance, tier)) = neighbour_distance(typed_bytes, word.folded.as_bytes())
+		else {
 			continue;
 		};
 		insert(
@@ -429,13 +454,14 @@ fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>)
 			Candidate {
 				text: word.text.to_string(),
 				score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
+				tier,
 			},
 		);
 	}
 }
 
-/// Elisions whose clitic and remainder are both one key away from the typed
-/// token, with the apostrophe missing: `vqjmd` -> `t'aime`.
+/// Elisions whose clitic and remainder are both key slips, with the apostrophe
+/// missing: `vqjmd` -> `t'aime`.
 fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) {
 	let folded = fold(lower);
 	let bytes = folded.as_bytes();
@@ -445,7 +471,9 @@ fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) 
 		if bytes.len() <= clitic_len {
 			continue;
 		}
-		let Some(prefix_cost) = near_distance(&bytes[..clitic_len], clitic.as_bytes()) else {
+		let Some((prefix_cost, prefix_tier)) =
+			neighbour_distance(&bytes[..clitic_len], clitic.as_bytes())
+		else {
 			continue;
 		};
 		let rest = &bytes[clitic_len..];
@@ -457,12 +485,14 @@ fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) 
 			if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
 				continue;
 			}
-			let Some(rest_cost) = near_distance(rest, word.folded.as_bytes()) else {
+			let Some((rest_cost, rest_tier)) = neighbour_distance(rest, word.folded.as_bytes())
+			else {
 				continue;
 			};
 			let cost = prefix_cost + rest_cost + APOSTROPHE_COST;
 			let (remainder, log_freq) = elision_remainder(clitic, word);
-			insert_elision(found, clitic, remainder, log_freq, penalty, cost);
+			let tier = prefix_tier.max(rest_tier);
+			insert_elision(found, clitic, remainder, log_freq, penalty, cost, tier);
 		}
 	}
 }
@@ -486,6 +516,7 @@ pub fn suggest(typed: &str) -> Suggestion {
 			Candidate {
 				text: word.text.to_string(),
 				score,
+				tier: 1,
 			},
 		);
 		score
@@ -520,12 +551,18 @@ pub fn suggest(typed: &str) -> Suggestion {
 	let Some(best) = list.first() else {
 		return Suggestion::empty();
 	};
-	let mut apply = best.score >= MIN_SCORE;
+	let threshold = if best.tier == 1 {
+		MIN_SCORE
+	} else {
+		TWO_KEY_MIN_SCORE
+	};
+	let mut apply = best.score >= threshold;
 	if let Some(typed_score) = typed_score {
 		apply = apply && best.score - typed_score >= KNOWN_WORD_MARGIN;
 	}
 	if apply {
-		if let Some(second) = list.get(1) {
+		let runner_up = list.iter().skip(1).find(|candidate| candidate.tier == best.tier);
+		if let Some(second) = runner_up {
 			if best.score - second.score < AGGRESSIVE_MARGIN {
 				apply = false;
 			}

@@ -33,10 +33,10 @@ release on the letter you want.
   dictionary with a layout-aware touch model: neighbouring-key slips,
   transpositions, missing accents (`ecole` → `école`) and elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
-- Narrow-key rescue: when every typed key is one key away from a word, the
-  most frequent such word wins (`geqnvx` → `beauté`), even if the whole input
-  looked meaningless. The same applies to elisions whose clitic is also a
-  neighbouring key (`vqjmd` → `t'aime`).
+- Narrow-key rescue: when every typed key is one or two keys away from a
+  word, the most frequent such word is offered (`geqnvx` → `beauté`,
+  `vqjmd` → `t'aime`, `bknjpur` → `bonjour`). One-key candidates always rank
+  first: `emps` shows `temps` before the two-key `elle`.
 - The suggestion strip ranks by word frequency as well as key distance, so
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
