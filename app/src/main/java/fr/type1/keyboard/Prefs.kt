@@ -2,10 +2,14 @@ package fr.type1.keyboard
 
 import android.content.Context
 
+/** What a long press on the backspace key does. */
+enum class BackspaceHold { None, Repeat, Select }
+
 /** Small preference store shared by the IME and the setup screen. */
 object Prefs {
 	private const val PREFS = "type1"
 	private const val SPACE_CURSOR = "space_cursor"
+	private const val BACKSPACE_HOLD = "backspace_hold"
 
 	/** Drag horizontally on the spacebar to move the caret. Enabled by default. */
 	fun spaceCursor(context: Context): Boolean = (
@@ -17,6 +21,24 @@ object Prefs {
 		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 		. edit()
 		. putBoolean(SPACE_CURSOR, enabled)
+		. apply()
+	}
+
+	/** Long-press behaviour of the backspace key. Selects text by default. */
+	fun backspaceHold(context: Context): BackspaceHold {
+		val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+		. getString(BACKSPACE_HOLD, null)
+		return when (stored) {
+			BackspaceHold.None.name -> BackspaceHold.None
+			BackspaceHold.Repeat.name -> BackspaceHold.Repeat
+			else -> BackspaceHold.Select
+		}
+	}
+
+	fun setBackspaceHold(context: Context, mode: BackspaceHold) {
+		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+		. edit()
+		. putString(BACKSPACE_HOLD, mode.name)
 		. apply()
 	}
 }

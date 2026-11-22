@@ -24,7 +24,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [ ] IME picker key (globe)
 
 ## 3. Text editing
-- [x] Backspace with repeat (suggestion strip, right end)
+- [x] Backspace with a configurable long-press (repeat, swipe-to-size selection, nothing)
 - [x] Word delete in the core (not bound to a gesture yet)
 - [x] Swipe on the spacebar to move the cursor (switch in the setup screen)
 - [ ] Select word / line / all

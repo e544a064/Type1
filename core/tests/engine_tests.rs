@@ -152,6 +152,27 @@ fn cursor_moves_clear_the_word() {
 }
 
 #[test]
+fn selection_actions_are_reported() {
+	let mut engine = plain();
+	assert_eq!(
+		engine.on_key("start_selection"),
+		vec![Action::StartSelection]
+	);
+	assert_eq!(
+		engine.on_key("select_left"),
+		vec![Action::ExtendSelection(-1)]
+	);
+	assert_eq!(
+		engine.on_key("select_right"),
+		vec![Action::ExtendSelection(1)]
+	);
+	assert_eq!(
+		engine.on_key("delete_selection"),
+		vec![Action::DeleteSelection]
+	);
+}
+
+#[test]
 fn enter_commits_newline_by_default() {
 	let mut engine = plain();
 	assert_eq!(engine.on_key("enter"), vec![Action::Commit("\n".into())]);

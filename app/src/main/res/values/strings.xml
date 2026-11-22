@@ -12,4 +12,8 @@
 	<string name="setup_hint">Appuyez longuement sur une lettre pour les accents. Glissez le long de la ligne de lettres pour corriger avant de relâcher.</string>
 	<string name="setup_demo_hint">Essayez le clavier ici…</string>
 	<string name="setup_space_cursor">Glisser sur l\'espace pour déplacer le curseur</string>
+	<string name="setup_backspace_hold">Appui long sur ⌫</string>
+	<string name="backspace_hold_none">Ne rien faire</string>
+	<string name="backspace_hold_repeat">Répéter l\'effacement</string>
+	<string name="backspace_hold_select">Sélectionner en glissant vers la gauche</string>
 </resources>

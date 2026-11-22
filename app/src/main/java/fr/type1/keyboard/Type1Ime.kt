@@ -2,6 +2,7 @@ package fr.type1.keyboard
 
 import android.inputmethodservice.InputMethodService
 import android.os.Build
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
@@ -20,11 +21,14 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private val controller = KeyboardController()
 	private var keyboardView: KeyboardView? = null
+	private var selectAnchor = -1
+	private var selectWidth = 0
 
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
 		view.listener = this
 		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
+		view.setBackspaceHold(Prefs.backspaceHold(this))
 		view.setOnApplyWindowInsetsListener { _, insets ->
 			view.setBottomInset(navigationBarHeight(insets))
 			insets
@@ -45,12 +49,17 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		// window directly as well.
 		applyNavigationInset()
 		keyboardView?.setSpaceCursorEnabled(Prefs.spaceCursor(this))
+		keyboardView?.setBackspaceHold(Prefs.backspaceHold(this))
+		selectAnchor = -1
+		selectWidth = 0
 		keyboardView?.refresh()
 	}
 
 	override fun onFinishInput() {
 		super.onFinishInput()
 		controller.reset()
+		selectAnchor = -1
+		selectWidth = 0
 		keyboardView?.refresh()
 	}
 
@@ -103,6 +112,9 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 						ic.deleteSurroundingText(action.count, 0)
 					}
 					is KeyAction.Cursor -> sendCursor(ic, action.delta)
+					is KeyAction.StartSelection -> startSelection(ic)
+					is KeyAction.ExtendSelection -> extendSelection(ic, action.delta)
+					is KeyAction.DeleteSelection -> deleteSelection(ic)
 					is KeyAction.Ime -> performEditorAction(ic, action.action)
 				}
 			}
@@ -120,6 +132,36 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		}
 	}
 
+	private fun startSelection(ic: InputConnection) {
+		val before = ic.getTextBeforeCursor(MAX_SELECTION_CHARS, 0)
+		selectAnchor = if (before != null && before.length < MAX_SELECTION_CHARS) {
+			before.length
+		} else {
+			-1
+		}
+		selectWidth = 0
+		if (selectAnchor >= 0) {
+			ic.setSelection(selectAnchor, selectAnchor)
+		}
+	}
+
+	private fun extendSelection(ic: InputConnection, delta: Int) {
+		if (selectAnchor < 0) return
+		val target = (selectWidth - delta).coerceIn(0, selectAnchor)
+		if (target == selectWidth) return
+		selectWidth = if (ic.setSelection(selectAnchor - target, selectAnchor)) target else 0
+	}
+
+	private fun deleteSelection(ic: InputConnection) {
+		if (selectWidth > 0) {
+			val now = SystemClock.uptimeMillis()
+			ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0, 0))
+			ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL, 0, 0))
+		}
+		selectAnchor = -1
+		selectWidth = 0
+	}
+
 	private fun deleteWord(ic: InputConnection, word: Boolean) {
 		if (!word) {
 			ic.deleteSurroundingText(1, 0)
@@ -133,8 +175,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		if (count > 0) ic.deleteSurroundingText(count, 0) else ic.deleteSurroundingText(1, 0)
 	}
 
-	private fun performEditorAction(ic: InputConnection, action: String) {
-		val id = when (action) {
+	private fun performEditorAction(ic: InputConnection, action: String) {		val id = when (action) {
 			"go" -> EditorInfo.IME_ACTION_GO
 			"search" -> EditorInfo.IME_ACTION_SEARCH
 			"send" -> EditorInfo.IME_ACTION_SEND
@@ -148,5 +189,9 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		} else {
 			ic.performEditorAction(id)
 		}
+	}
+
+	private companion object {
+		const val MAX_SELECTION_CHARS = 10_000
 	}
 }

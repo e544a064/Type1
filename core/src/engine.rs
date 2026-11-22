@@ -124,6 +124,26 @@ impl Engine {
 				self.last_char = None;
 				vec![Action::MoveCursor(1)]
 			}
+			"select_left" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::ExtendSelection(-1)]
+			}
+			"select_right" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::ExtendSelection(1)]
+			}
+			"start_selection" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::StartSelection]
+			}
+			"delete_selection" => {
+				self.word.clear();
+				self.last_char = None;
+				vec![Action::DeleteSelection]
+			}
 			"enter" => {
 				self.word.clear();
 				if self.multiline || self.ime_action == ImeActionKind::None {

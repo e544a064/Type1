@@ -36,7 +36,8 @@ release on the letter you want.
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`).
 - French spacing: space before `? ! : ;`, automatic space after `. , ; : ! ?`
   when a new word starts.
-- Backspace with hold-to-repeat; enter adapts to the editor action
+- Backspace with a configurable long-press (repeat, swipe to size a selection,
+  or nothing); enter adapts to the editor action
   (`→`, `✓`, `🔍`, `➤`) and inserts a newline in multiline fields.
 - Drag along the letter line to correct a press before releasing.
 - Drag horizontally on the spacebar to move the caret; the setup screen has a
@@ -195,10 +196,9 @@ untested.
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
 | Long-press a letter | Accent strip replaces the letter line; slide and release |
 | Tap a suggestion | Delete the typed word and insert the suggestion plus a space |
-| Hold ⌫ | Repeat delete |
+| Hold ⌫ | Depends on the setting: repeat delete, swipe to size a selection then delete, or nothing |
 | Page key (`123` / `#+=` / `ABC`) | Letters → numbers → symbols → letters |
 | Tap ⇧ once / twice | One capital / caps lock |
-| `▾` / `⌨` | Hide the keyboard / switch keyboard |
 
 ## Roadmap
 

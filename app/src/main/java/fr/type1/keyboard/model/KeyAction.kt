@@ -14,6 +14,13 @@ sealed class KeyAction {
 	/** Move the caret by [delta] characters; negative moves left. */
 	data class Cursor(val delta: Int) : KeyAction()
 
+	/** Extend the selection by [delta] characters; negative extends left. */
+	data class ExtendSelection(val delta: Int) : KeyAction()
+
+	object StartSelection : KeyAction()
+
+	object DeleteSelection : KeyAction()
+
 	data class Ime(val action: String) : KeyAction()
 
 	companion object {
@@ -33,6 +40,9 @@ sealed class KeyAction {
 						}
 					}
 					"cursor" -> out += Cursor(item.optInt("v", 0))
+					"select" -> out += ExtendSelection(item.optInt("v", 0))
+					"startSelection" -> out += StartSelection
+					"deleteSelection" -> out += DeleteSelection
 					"ime" -> out += Ime(item.optString("v", "none"))
 				}
 			}

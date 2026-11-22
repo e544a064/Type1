@@ -64,6 +64,12 @@ pub enum Action {
 	DeleteChars(u32),
 	/// Move the caret by `delta` characters (negative is left).
 	MoveCursor(i32),
+	/// Start a zero-width selection at the caret.
+	StartSelection,
+	/// Extend the selection by `delta` characters (negative is left).
+	ExtendSelection(i32),
+	/// Delete the current selection.
+	DeleteSelection,
 	/// Trigger an editor action (single-line fields only).
 	Ime(ImeActionKind),
 }
@@ -95,6 +101,17 @@ impl Action {
 					out.push_str("{\"t\":\"cursor\",\"v\":");
 					out.push_str(&delta.to_string());
 					out.push('}');
+				}
+				Action::ExtendSelection(delta) => {
+					out.push_str("{\"t\":\"select\",\"v\":");
+					out.push_str(&delta.to_string());
+					out.push('}');
+				}
+				Action::StartSelection => {
+					out.push_str("{\"t\":\"startSelection\"}");
+				}
+				Action::DeleteSelection => {
+					out.push_str("{\"t\":\"deleteSelection\"}");
 				}
 				Action::Ime(kind) => {
 					out.push_str("{\"t\":\"ime\",\"v\":");
@@ -128,11 +145,14 @@ mod tests {
 			Action::Commit("é".into()),
 			Action::Delete { word: true },
 			Action::MoveCursor(-2),
+			Action::StartSelection,
+			Action::ExtendSelection(-1),
+			Action::DeleteSelection,
 			Action::Ime(ImeActionKind::Send),
 		]);
 		assert_eq!(
 			json,
-			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"cursor","v":-2},{"t":"ime","v":"send"}]"#
+			r#"[{"t":"commit","v":"é"},{"t":"delete","word":true},{"t":"cursor","v":-2},{"t":"startSelection"},{"t":"select","v":-1},{"t":"deleteSelection"},{"t":"ime","v":"send"}]"#
 		);
 	}
 }

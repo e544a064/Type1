@@ -84,12 +84,18 @@ class KeyboardView(
 	private var pressedSuggestion = -1
 	private var pressedStrip = -1
 	private var downUtility = -1
+	private var downStrip = -1
 	private var altState: AltState? = null
 	private var longPressFired = false
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
 	private var spaceAnchorX = 0f
 	private var spaceMoved = false
+	private var backspaceHold = BackspaceHold.Select
+	private var selecting = false
+	private var selectAnchorX = 0f
+	private var selectSteps = 0
+	private var lastX = 0f
 
 	private val backgroundPaint = Paint().apply {
 		color = context.getColor(R.color.keyboard_background)
@@ -130,18 +136,12 @@ class KeyboardView(
 				}
 			}
 			Band.Utilities -> {
-				val key = model?.keys?.getOrNull(pressedUtility) ?: return@Runnable
-				if (key.kind == "backspace") {
-					longPressFired = true
-					startRepeat()
-				}
+				val key = model?.keys?.getOrNull(downUtility) ?: return@Runnable
+				if (key.kind == "backspace") handleBackspaceHold()
 			}
 			Band.Suggestions -> {
-				val key = model?.strip?.getOrNull(pressedStrip) ?: return@Runnable
-				if (key.kind == "backspace") {
-					longPressFired = true
-					startRepeat()
-				}
+				val key = model?.strip?.getOrNull(downStrip) ?: return@Runnable
+				if (key.kind == "backspace") handleBackspaceHold()
 			}
 			else -> Unit
 		}
@@ -180,6 +180,11 @@ class KeyboardView(
 	fun setSpaceCursorEnabled(enabled: Boolean) {
 		spaceCursorEnabled = enabled
 		if (!enabled) spaceDragging = false
+	}
+
+	/** Choose what a long press on the backspace key does. */
+	fun setBackspaceHold(mode: BackspaceHold) {
+		backspaceHold = mode
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -428,6 +433,7 @@ class KeyboardView(
 		when (event.actionMasked) {
 			MotionEvent.ACTION_DOWN -> {
 				longPressFired = false
+				lastX = event.x
 				band = bandAt(event.y)
 				when (band) {
 					Band.Suggestions -> {
@@ -436,6 +442,7 @@ class KeyboardView(
 							stripRight.contains(event.x, event.y) -> 1
 							else -> -1
 						}
+						downStrip = pressedStrip
 						if (pressedStrip >= 0) {
 							performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 							scheduleLongPress()
@@ -475,6 +482,11 @@ class KeyboardView(
 			}
 
 			MotionEvent.ACTION_MOVE -> {
+				lastX = event.x
+				if (selecting) {
+					dragSelection(event.x)
+					return true
+				}
 				val alt = altState
 				if (alt != null) {
 					updateAlternateSelection(alt, event.x)
@@ -525,6 +537,13 @@ class KeyboardView(
 
 			MotionEvent.ACTION_UP -> {
 				cancelTimers()
+				if (selecting) {
+					selecting = false
+					listener?.onActions(controller.press("delete_selection"))
+					refresh()
+					resetTouch()
+					return true
+				}
 				val alt = altState
 				if (alt != null) {
 					val choice = alt.selected
@@ -645,6 +664,38 @@ class KeyboardView(
 		handler.post(repeatRunnable)
 	}
 
+	private fun handleBackspaceHold() {
+		when (backspaceHold) {
+			BackspaceHold.None -> Unit
+			BackspaceHold.Repeat -> {
+				longPressFired = true
+				startRepeat()
+			}
+			BackspaceHold.Select -> {
+				longPressFired = true
+				selecting = true
+				selectAnchorX = lastX
+				selectSteps = 0
+				listener?.onActions(controller.press("start_selection"))
+				performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+			}
+		}
+	}
+
+	/** One character of selection per 20 dp between the finger and the anchor. */
+	private fun dragSelection(x: Float) {
+		val step = dp(20f)
+		val target = maxOf(0, ((selectAnchorX - x) / step).toInt())
+		while (selectSteps < target) {
+			selectSteps++
+			listener?.onActions(controller.press("select_left"))
+		}
+		while (selectSteps > target) {
+			selectSteps--
+			listener?.onActions(controller.press("select_right"))
+		}
+	}
+
 	private fun cancelTimers() {
 		handler.removeCallbacks(longPressRunnable)
 		handler.removeCallbacks(repeatRunnable)
@@ -657,12 +708,16 @@ class KeyboardView(
 		pressedSuggestion = -1
 		pressedStrip = -1
 		downUtility = -1
+		downStrip = -1
 		altState = null
 		altRects.clear()
 		longPressFired = false
 		spaceDragging = false
 		spaceMoved = false
 		spaceAnchorX = 0f
+		selecting = false
+		selectSteps = 0
+		selectAnchorX = 0f
 		invalidate()
 	}
 
