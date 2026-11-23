@@ -19,13 +19,15 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Hold-to-repeat backspace
 - [x] Comma left of the spacebar, period on its right with `!`/`?` on long-press
 - [ ] Key preview bubble
-- [ ] Other layouts (QWERTY, QWERTZ, BÉPO)
+- [~] Other layouts: user profiles pick a layout and languages; QWERTY data pending
 - [ ] Landscape-specific tuning
 
 ## 2. Modes & switching (critical for a one-row keyboard)
 - [x] Page key: letters → numbers → symbols → letters
 - [x] Shift and backspace occupy the suggestion strip's ends; the bottom row is page, comma, space, period, enter
-- [ ] Language/layout switching key
+- [x] Profiles page: create, edit, delete and select profiles from a layout
+      dropdown and language toggles
+- [x] Long-press comma to switch the active profile (planet popup, 2+ profiles)
 - [ ] Remember last page per app
 - [ ] IME picker key (globe)
 
@@ -45,7 +47,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Per-field correction memory: moving back into a changed word re-opens
       the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
-- [x] Frequency-ranked 20k French dictionary with a layout-aware touch model
+- [x] Per-language dictionaries (French today) with a profile-scoped corrector
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with
       typos inside the elided word (`taimx` → `t'aime`) and grammar-aware
@@ -63,7 +65,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       space before `.`/`,` (also after a suggestion tap)
 - [ ] Spell checking
 - [ ] Personal dictionary
-- [ ] Multilingual typing
+- [~] Multilingual typing: profiles can list several languages; English/Korean
+      dictionaries and mixed-language ranking are still pending
 - [ ] Double-space period
 - [ ] Grammar/style hints
 
@@ -114,4 +117,5 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Editor actions from `imeOptions`
 - [x] No fullscreen extraction
 - [ ] Physical keyboard passthrough
-- [ ] Settings screen beyond onboarding
+- [~] Settings: profiles page plus the onboarding screen; other options are
+      still inline in onboarding

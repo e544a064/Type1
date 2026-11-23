@@ -12,11 +12,15 @@ pub mod correction;
 pub mod dictionary;
 pub mod engine;
 pub mod json;
+pub mod language;
 pub mod layout;
 pub mod lexicon;
+pub mod profile;
 
 mod ffi;
 
 pub use action::{Action, ImeActionKind};
 pub use engine::{CapsMode, Engine};
-pub use layout::{Page, ShiftState};
+pub use language::Language;
+pub use layout::{Layout, Page, ShiftState};
+pub use profile::{Profile, SpacingRules};

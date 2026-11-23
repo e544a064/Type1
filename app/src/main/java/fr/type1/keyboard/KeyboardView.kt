@@ -20,6 +20,7 @@ import android.widget.PopupWindow
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
 import fr.type1.keyboard.model.LetterKey
+import fr.type1.keyboard.model.ProfileChoice
 import fr.type1.keyboard.model.RowModel
 import fr.type1.keyboard.model.SUGGESTION_PREFIX
 import fr.type1.keyboard.model.UtilityKey
@@ -42,13 +43,18 @@ class KeyboardView(
 
 	interface Listener {
 		fun onActions(actions: List<KeyAction>)
+		fun onSwitchProfile(profileId: String)
 	}
 
 	var listener: Listener? = null
 
 	private enum class Band { None, Suggestions, Letters, Utilities }
 
-	private class AltEntry(val keyId: String, val display: String)
+	private class AltEntry(
+		val keyId: String,
+		val display: String,
+		val icon: String = "",
+	)
 
 	private val handler = Handler(Looper.getMainLooper())
 	private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -93,6 +99,7 @@ class KeyboardView(
 	private var downStrip = -1
 	private var downBackspace = false
 	private var longPressFired = false
+	private var profileChoices: List<ProfileChoice> = emptyList()
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
 	private var spaceAnchorX = 0f
@@ -137,6 +144,7 @@ class KeyboardView(
 		add("check", R.drawable.ic_check)
 		add("search", R.drawable.ic_search)
 		add("send", R.drawable.ic_send)
+		add("planet", R.drawable.ic_planet)
 		map
 	}
 
@@ -162,6 +170,14 @@ class KeyboardView(
 				when {
 					key.isBackspace() -> handleBackspaceHold()
 					key.kind == "page" && showPageAltPopup(downUtility) -> {
+						longPressFired = true
+						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+					}
+					(
+						key.id == "comma"
+						&& profileChoices.size >= 2
+						&& showProfilePopup(downUtility)
+					) -> {
 						longPressFired = true
 						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 					}
@@ -216,6 +232,11 @@ class KeyboardView(
 	/** Choose what a long press on the backspace key does. */
 	fun setBackspaceHold(mode: BackspaceHold) {
 		backspaceHold = mode
+	}
+
+	/** Profiles offered by the comma long-press switcher. */
+	fun setProfileChoices(choices: List<ProfileChoice>) {
+		profileChoices = choices
 	}
 
 	private fun UtilityKey?.isBackspace(): Boolean = this?.kind == "backspace"
@@ -512,17 +533,36 @@ class KeyboardView(
 		return showAltEntries(entries, rect, 0, utilityTop, initialSelected = -1)
 	}
 
+	/** Long-press on the comma: switch to another configured profile. */
+	private fun showProfilePopup(index: Int): Boolean {
+		val rect = utilityRects.getOrNull(index) ?: return false
+		if (profileChoices.size < 2) return false
+		val entries = profileChoices.map {
+			AltEntry("$PROFILE_PREFIX${it.id}", it.label, "planet")
+		}
+		// Start unselected so a long press alone never switches profile.
+		return showAltEntries(
+			entries,
+			rect,
+			0,
+			utilityTop,
+			initialSelected = -1,
+			cellDp = PROFILE_CELL_DP,
+		)
+	}
+
 	private fun showAltEntries(
 		entries: List<AltEntry>,
 		rect: RectF,
 		baseIndex: Int,
 		bandTop: Float,
 		initialSelected: Int = baseIndex,
+		cellDp: Float = ALT_CELL_DP,
 	): Boolean {
 		dismissAltPopup()
 
 		val count = entries.size
-		val desiredWidth = count * dp(ALT_CELL_DP) + dp(8f)
+		val desiredWidth = count * dp(cellDp) + dp(8f)
 		val bubbleWidth = min(desiredWidth, width - dp(8f))
 		val bubbleHeight = dp(ALT_HEIGHT_DP)
 		val cellWidth = bubbleWidth / count
@@ -620,10 +660,31 @@ class KeyboardView(
 						bubblePaint,
 					)
 				}
+				val entry = entries[i]
 				popupTextPaint.color = if (i == selected) Color.WHITE else colors.text
-				popupTextPaint.textSize = fitPopupText(entries[i].display, cell - dp(4f))
-				val baseline = height / 2f - (popupTextPaint.ascent() + popupTextPaint.descent()) / 2f
-				canvas.drawText(entries[i].display, left + cell / 2f, baseline, popupTextPaint)
+				var textLeft = left + dp(2f)
+				val textRight = left + cell - dp(2f)
+				if (entry.icon.isNotEmpty()) {
+					val iconSize = min(cell, height.toFloat()) * 0.48f
+					val iconLeft = left + dp(4f)
+					val iconTop = (height - iconSize) / 2f
+					iconDrawables[entry.icon]?.let { drawable ->
+						drawable.setBounds(
+							iconLeft.toInt(),
+							iconTop.toInt(),
+							(iconLeft + iconSize).toInt(),
+							(iconTop + iconSize).toInt(),
+						)
+						drawable.setTint(popupTextPaint.color)
+						drawable.draw(canvas)
+						textLeft = iconLeft + iconSize + dp(2f)
+					}
+				}
+				if (textRight > textLeft) {
+					popupTextPaint.textSize = fitPopupText(entry.display, textRight - textLeft)
+					val baseline = height / 2f - (popupTextPaint.ascent() + popupTextPaint.descent()) / 2f
+					canvas.drawText(entry.display, (textLeft + textRight) / 2f, baseline, popupTextPaint)
+				}
 			}
 		}
 
@@ -721,8 +782,12 @@ class KeyboardView(
 				&& band == Band.Utilities
 				&& model?.keys?.getOrNull(downUtility)?.kind == "page"
 			)
+			val profileId = entry?.keyId?.takeIf { it.startsWith(PROFILE_PREFIX) }
 			dismissAltPopup()
 			when {
+				profileId != null -> listener?.onSwitchProfile(
+					profileId.removePrefix(PROFILE_PREFIX),
+				)
 				entry != null -> emit(controller.press(entry.keyId))
 				switchPage -> emit(controller.press("page"))
 			}
@@ -1021,5 +1086,7 @@ class KeyboardView(
 		const val ALT_CELL_DP = 40f
 		const val ALT_HEIGHT_DP = 44f
 		const val ALT_SELECT_SLOP_DP = 6f
+		const val PROFILE_CELL_DP = 150f
+		const val PROFILE_PREFIX = "profile:"
 	}
 }

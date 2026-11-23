@@ -7,6 +7,8 @@
 //! The bottom band holds the utility keys (page, shift, space, comma, delete,
 //! enter). The suggestion strip is rendered by the UI from the engine payload.
 
+use crate::json;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyKind {
 	Char,
@@ -220,14 +222,6 @@ impl Page {
 		}
 	}
 
-	pub fn chars(self) -> &'static [Letter] {
-		match self {
-			Page::Letters => LETTERS,
-			Page::Numbers => NUMBERS,
-			Page::Symbols => SYMBOLS,
-		}
-	}
-
 	pub fn id(self) -> &'static str {
 		match self {
 			Page::Letters => "letters",
@@ -244,6 +238,62 @@ impl Page {
 			Page::Symbols => "ABC",
 		}
 	}
+}
+
+#[derive(Debug)]
+pub struct Layout {
+	pub id: &'static str,
+	pub label: &'static str,
+	pub letters: &'static [Letter],
+	pub numbers: &'static [Letter],
+	pub symbols: &'static [Letter],
+	pub strip: &'static [UtilityKey],
+	pub utilities: &'static [UtilityKey],
+}
+
+impl Layout {
+	pub fn chars(&self, page: Page) -> &'static [Letter] {
+		match page {
+			Page::Letters => self.letters,
+			Page::Numbers => self.numbers,
+			Page::Symbols => self.symbols,
+		}
+	}
+}
+
+/// The current AZERTY layout. Other layouts can reuse the same pages or define
+/// their own and be picked by a keyboard profile.
+pub static AZERTY: Layout = Layout {
+	id: "azerty",
+	label: "AZERTY",
+	letters: LETTERS,
+	numbers: NUMBERS,
+	symbols: SYMBOLS,
+	strip: STRIP,
+	utilities: UTILITIES,
+};
+
+/// Layouts offered when creating a keyboard profile.
+pub static LAYOUTS: &[&Layout] = &[&AZERTY];
+
+pub fn find(id: &str) -> Option<&'static Layout> {
+	LAYOUTS.iter().copied().find(|layout| layout.id == id)
+}
+
+pub fn catalog_json() -> String {
+	let mut out = String::from("[");
+	for (index, layout) in LAYOUTS.iter().enumerate() {
+		if index > 0 {
+			out.push(',');
+		}
+		out.push_str("{\"id\":");
+		json::string_into(&mut out, layout.id);
+		out.push_str(",\"label\":");
+		json::string_into(&mut out, layout.label);
+		out.push('}');
+	}
+	out.push(']');
+	out
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -28,6 +28,12 @@ release on the letter you want.
 
 - All 26 letters on one line in AZERTY column order, row-based vertical offsets,
   uniform size and case (uppercase while shift/auto-caps is active).
+- Profiles pair a layout with one or more languages. They are created in
+  **Profils de clavier** (setup → Gérer les profils): the layout comes from a
+  dropdown and the languages are toggles. The list starts empty, and the
+  keyboard falls back to `AZERTY · Français` until a profile exists.
+- Long-press `,` when at least two profiles exist to switch the active one from
+  a popup with a planet icon per profile.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from a 20k frequency-ranked French
   dictionary with a layout-aware touch model: neighbouring-key slips,
@@ -115,9 +121,12 @@ it workable. Three things compensate:
 - autocorrection with layout-aware candidates (`dkre` → `dire`,
   `ecole` → `école`).
 
-Layout is data, not code: `core/src/layout.rs` lists the letters in AZERTY
-column order with a `row` index (0 top, 1 home, 2 bottom). Change the order or
-the offsets there and the UI follows.
+Layout and language are data, not code: `core/src/layout.rs` lists the letters
+in AZERTY column order with a `row` index (0 top, 1 home, 2 bottom), each
+language owns its dictionary in `core/src/language.rs`, and
+`core/src/profile.rs` combines one layout with a set of languages at runtime.
+The core exposes layouts and languages separately; the user's profiles are
+stored in preferences, so no combination list is hard-coded.
 
 ## Sizing
 
@@ -130,21 +139,24 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the utility row height is a setting (36–72 dp, default 48),
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
+- the active languages and layout in `core/src/profile.rs`,
 - `MIN_SCORE`, `TWO_KEY_MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY` and
   `KNOWN_WORD_MARGIN` in `core/src/correction.rs`,
-- the dictionary in `core/data/fr.tsv` (see `core/data/NOTICE.md`).
+- the dictionaries in `core/data/` (see `core/data/NOTICE.md`).
 
 ## Repository layout
 
 ```
 core/                     Rust crate (no Android dependency)
-  src/layout.rs           letters, row indices, utility keys
-  src/dictionary.rs       frequency-ranked French dictionary (embedded data)
-  src/correction.rs       layout-aware candidates and scoring
+  src/layout.rs           layouts and their letter/number/symbol pages
+  src/language.rs         language definitions and dictionaries
+  src/dictionary.rs       lazily loaded per-language word lists
+  src/correction.rs       profile-scoped candidates and scoring
+  src/profile.rs          runtime layout + language configuration
   src/lexicon.rs          accent folding
   src/engine.rs           shift, caps, spacing, word buffer, correction, undo
   src/action.rs           actions emitted to the platform (commit/delete/ime)
-  src/ffi.rs              JNI surface (create/render/key/inputType/selection)
+  src/ffi.rs              JNI surface (create/render/key/inputType/layouts/languages/profile)
   data/fr.tsv             derived Lexique 3.83 list (20k forms)
   data/NOTICE.md          dictionary licence and attribution
   examples/evaluate.rs    dev-only correction evaluation
@@ -158,11 +170,13 @@ app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
     KeyboardView.kt       three bands + touch handling
-    SetupActivity.kt      enable/pick the keyboard
+    SetupActivity.kt      enable/pick the keyboard, open the profiles page
+    ProfilesActivity.kt   create/edit/delete and select profiles
     core/NativeBridge.kt  external fun declarations
     core/KeyboardController.kt
     model/RowModel.kt     JSON model (suggestions, letters, keys)
     model/KeyAction.kt    JSON action model
+    model/KeyboardProfile.kt  user profile and its JSON storage
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
@@ -271,7 +285,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 154 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 159 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
@@ -293,6 +307,7 @@ untested.
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `!`, `?` and `:`; slide and release |
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
+| Long-press `,` (2+ profiles) | Popup with a planet icon per profile; slide and release to switch |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe left to size a selection then delete, or nothing. In Select mode a clear leftward swipe starts selecting immediately. |

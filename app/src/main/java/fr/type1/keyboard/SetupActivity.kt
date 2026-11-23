@@ -13,6 +13,7 @@ import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
+import fr.type1.keyboard.core.KeyboardController
 
 /** Onboarding: enable the IME, then pick it. */
 class SetupActivity : Activity() {
@@ -28,6 +29,10 @@ class SetupActivity : Activity() {
 		findViewById<Button>(R.id.selectButton).setOnClickListener {
 			val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
 			imm.showInputMethodPicker()
+		}
+
+		findViewById<Button>(R.id.profilesButton).setOnClickListener {
+			startActivity(Intent(this, ProfilesActivity::class.java))
 		}
 
 		val spaceCursor = findViewById<Switch>(R.id.spaceCursorSwitch)
@@ -92,5 +97,19 @@ class SetupActivity : Activity() {
 
 			override fun onStopTrackingTouch(bar: SeekBar?) = Unit
 		})
+	}
+
+	override fun onResume() {
+		super.onResume()
+		val profile = Prefs.activeProfile(this)
+		val summary = findViewById<TextView>(R.id.activeProfileValue)
+		summary.text = if (profile == null) {
+			getString(R.string.setup_profiles_none)
+		} else {
+			profile.label(
+				KeyboardController.layouts(),
+				KeyboardController.languages(),
+			)
+		}
 	}
 }

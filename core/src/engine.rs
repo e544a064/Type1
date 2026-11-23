@@ -4,9 +4,10 @@
 use std::collections::VecDeque;
 
 use crate::action::{Action, ImeActionKind};
-use crate::correction::{self, Suggestion};
+use crate::correction::Suggestion;
 use crate::json;
-use crate::layout::{Page, ShiftState, STRIP, UTILITIES};
+use crate::layout::{Letter, Page, ShiftState};
+use crate::profile::Profile;
 
 const STRIP_SUGGESTIONS: usize = 3;
 const MAX_STRIP_SUGGESTIONS: usize = 6;
@@ -130,6 +131,7 @@ fn entry_bytes(entry: &MemoryEntry) -> usize {
 
 #[derive(Debug)]
 pub struct Engine {
+	profile: Profile,
 	page: Page,
 	shift: ShiftState,
 	caps: CapsMode,
@@ -168,6 +170,7 @@ impl Default for Engine {
 impl Engine {
 	pub fn new() -> Self {
 		Engine {
+			profile: Profile::default_profile(),
 			page: Page::Letters,
 			shift: ShiftState::Off,
 			caps: CapsMode::Sentences,
@@ -190,6 +193,38 @@ impl Engine {
 
 	pub fn page(&self) -> Page {
 		self.page
+	}
+
+	pub fn profile(&self) -> &Profile {
+		&self.profile
+	}
+
+	fn page_letters(&self) -> &'static [Letter] {
+		self.profile.layout.chars(self.page)
+	}
+
+	/// Switch the active layout/language profile and start from a clean state.
+	pub fn set_profile(&mut self, profile: Profile) {
+		if self.profile.same_as(&profile) {
+			return;
+		}
+		self.profile = profile;
+		self.page = Page::Letters;
+		self.reset();
+	}
+
+	pub fn set_profile_ids(&mut self, layout_id: &str, language_ids: &[&str]) -> bool {
+		let Some(profile) = Profile::from_ids(layout_id, language_ids) else {
+			return false;
+		};
+		self.set_profile(profile);
+		true
+	}
+
+	/// Return to the built-in layout and languages when no user profile is
+	/// configured.
+	pub fn set_default_profile(&mut self) {
+		self.set_profile(Profile::default_profile());
 	}
 
 	/// Forget a pending correction and the guards that belong to it.
@@ -329,7 +364,7 @@ impl Engine {
 			self.context = None;
 		}
 		if let Some(symbol) = id.strip_prefix("sym:") {
-			let space_before = matches!(symbol, "!" | "?" | ":" | ";");
+			let space_before = self.profile.spacing.space_before(symbol);
 			return self.finish_word(symbol, space_before);
 		}
 		if let Some(alt) = id.strip_prefix("alt:") {
@@ -377,10 +412,10 @@ impl Engine {
 				vec![Action::DeleteSelection]
 			}
 			"enter" => self.enter(),
-			_ => match self.page.chars().iter().find(|letter| letter.id == id) {
+			_ => match self.page_letters().iter().find(|letter| letter.id == id) {
 				Some(letter) if letter.id == "apos" => self.commit_apostrophe(),
 				Some(letter) if !letter.letter && self.page == Page::Symbols => {
-					let space_before = matches!(letter.commit, "?" | "!" | ":" | ";");
+					let space_before = self.profile.spacing.space_before(letter.commit);
 					self.finish_word(letter.commit, space_before)
 				}
 				Some(letter) => self.commit(letter.commit, letter.letter, false),
@@ -617,7 +652,7 @@ impl Engine {
 				return suggestion.clone();
 			}
 		}
-		let suggestion = correction::suggest(typed);
+		let suggestion = self.profile.suggest(typed);
 		self.suggestion_cache = Some((typed.to_string(), suggestion.clone()));
 		suggestion
 	}
@@ -932,14 +967,14 @@ impl Engine {
 			json::string_into(&mut out, suggestion);
 		}
 		out.push_str("],\"letters\":[");
-		for (i, letter) in self.page.chars().iter().enumerate() {
+		for (i, letter) in self.page_letters().iter().enumerate() {
 			if i > 0 {
 				out.push(',');
 			}
 			letter_json(&mut out, letter);
 		}
 		out.push_str("],\"strip\":[");
-		for (i, key) in STRIP.iter().enumerate() {
+		for (i, key) in self.profile.layout.strip.iter().enumerate() {
 			if i > 0 {
 				out.push(',');
 			}
@@ -957,7 +992,7 @@ impl Engine {
 			out.push('}');
 		}
 		out.push_str("],\"keys\":[");
-		for (i, key) in UTILITIES.iter().enumerate() {
+		for (i, key) in self.profile.layout.utilities.iter().enumerate() {
 			if i > 0 {
 				out.push(',');
 			}

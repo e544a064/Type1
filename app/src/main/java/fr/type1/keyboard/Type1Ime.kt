@@ -1,5 +1,6 @@
 package fr.type1.keyboard
 
+import android.content.SharedPreferences
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.SystemClock
@@ -11,6 +12,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
+import fr.type1.keyboard.model.ProfileChoice
 import kotlin.math.abs
 
 /**
@@ -27,6 +29,25 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	private var expectedSelStart = -1
 	private var expectedSelEnd = -1
 	private var allowNextSelection = false
+	private val profileListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+		if (key == Prefs.PROFILES || key == Prefs.ACTIVE_PROFILE) {
+			keyboardView?.post {
+				applyProfile()
+				updateProfileChoices()
+				syncContextFromEditor()
+			}
+		}
+	}
+
+	override fun onCreate() {
+		super.onCreate()
+		Prefs.preferences(this).registerOnSharedPreferenceChangeListener(profileListener)
+	}
+
+	override fun onDestroy() {
+		Prefs.preferences(this).unregisterOnSharedPreferenceChangeListener(profileListener)
+		super.onDestroy()
+	}
 
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
@@ -35,11 +56,13 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		view.setBackspaceHold(Prefs.backspaceHold(this))
 		view.setSwipeSensitivity(Prefs.swipeSensitivity(this))
 		view.setUtilityRowHeight(Prefs.utilityRowHeight(this))
+		applyProfile()
 		view.setOnApplyWindowInsetsListener { _, insets ->
 			view.setBottomInset(navigationBarHeight(insets))
 			insets
 		}
 		keyboardView = view
+		updateProfileChoices()
 		view.refresh()
 		return view
 	}
@@ -64,10 +87,48 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		keyboardView?.setUtilityRowHeight(Prefs.utilityRowHeight(this))
 		selectAnchor = -1
 		selectWidth = 0
+		applyProfile()
+		updateProfileChoices()
 		// Some editors set imeOptions just before the view appears.
 		if (info != null) controller.setImeOptions(info.imeOptions)
 		keyboardView?.refresh()
 		syncContextFromEditor()
+	}
+
+	/** Apply the active profile, or the built-in one when none is configured. */
+	private fun applyProfile() {
+		val profiles = Prefs.profiles(this)
+		val activeId = Prefs.activeProfileId(this)
+		val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
+		if (profile == null) {
+			controller.setDefaultProfile()
+		} else {
+			if (profile.id != activeId) {
+				Prefs.setActiveProfileId(this, profile.id)
+			}
+			// A stored layout or language may disappear across versions.
+			if (!controller.setProfile(profile.layoutId, profile.languageIds)) {
+				controller.setDefaultProfile()
+			}
+		}
+	}
+
+	/** Publish the profiles offered by the comma long-press switcher. */
+	private fun updateProfileChoices() {
+		val profiles = Prefs.profiles(this)
+		val layouts = KeyboardController.layouts()
+		val languages = KeyboardController.languages()
+		keyboardView?.setProfileChoices(
+			profiles.map {
+				ProfileChoice(it.id, it.label(layouts, languages))
+			},
+		)
+	}
+
+	override fun onSwitchProfile(profileId: String) {
+		// The preference listener reconfigures the engine and refreshes the
+		// keyboard when the active profile changes.
+		Prefs.setActiveProfileId(this, profileId)
 	}
 
 	override fun onFinishInput() {

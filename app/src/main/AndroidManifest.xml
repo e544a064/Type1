@@ -18,6 +18,11 @@
 			</intent-filter>
 		</activity>
 
+		<activity
+			android:name=".ProfilesActivity"
+			android:exported="false"
+			android:label="@string/profiles_title" />
+
 		<service
 			android:name=".Type1Ime"
 			android:exported="true"

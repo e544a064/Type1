@@ -23,6 +23,14 @@ public class NativeBridge {
 
 	public static native void nativeSetImeOptions(long handle, int imeOptions);
 
+	public static native String nativeLayouts();
+
+	public static native String nativeLanguages();
+
+	public static native boolean nativeSetProfile(long handle, String layoutId, String languages);
+
+	public static native void nativeSetDefaultProfile(long handle);
+
 	public static native String nativeRender(long handle);
 
 	public static native String nativeKey(long handle, String key);
@@ -78,6 +86,11 @@ public class NativeBridge {
 		nativeSetInputType(handle, 0x0000_0001, 0);
 		nativeSetImeOptions(handle, 0x0000_0003);
 		System.out.println("search   -> " + nativeKey(handle, "enter"));
+		System.out.println("layouts  -> " + nativeLayouts());
+		System.out.println("langs    -> " + nativeLanguages());
+		System.out.println("profile  -> " + nativeSetProfile(handle, "azerty", "fr"));
+		nativeSetDefaultProfile(handle);
+		System.out.println("default  -> " + nativeRender(handle));
 
 		nativeDestroy(handle);
 		System.out.println("OK");

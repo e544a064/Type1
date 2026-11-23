@@ -5,11 +5,12 @@
 //! the physical keys, `P(intended)` from the word frequency.
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
 
-use crate::dictionary;
+use crate::dictionary::{self, Word};
+use crate::language::Language;
 use crate::layout;
 use crate::lexicon::fold;
+use crate::profile::Profile;
 
 /// Minimum score a candidate needs before it may replace the typed word.
 const MIN_SCORE: f32 = 0.5;
@@ -77,79 +78,122 @@ fn char_index(byte: u8) -> usize {
 	}
 }
 
-/// Pairwise substitution costs, precomputed once from the key positions.
-fn costs() -> &'static [[f32; OTHER + 1]; OTHER + 1] {
-	static COSTS: OnceLock<[[f32; OTHER + 1]; OTHER + 1]> = OnceLock::new();
-	COSTS.get_or_init(|| {
-		let mut positions: [Option<(f32, f32)>; 26] = [None; 26];
-		for (index, letter) in layout::LETTERS.iter().enumerate() {
-			if let Some(c) = letter.id.chars().next() {
-				positions[(c as u8 - b'a') as usize] =
-					Some((index as f32, letter.row as f32 * 0.55));
-			}
-		}
+type CostTable = [[f32; OTHER + 1]; OTHER + 1];
 
-		let mut table = [[1.5f32; OTHER + 1]; OTHER + 1];
-		table[OTHER][OTHER] = 0.0;
-		for (a, row) in table.iter_mut().enumerate().take(26) {
-			for (b, slot) in row.iter_mut().enumerate().take(26) {
-				if let (Some((x1, y1)), Some((x2, y2))) = (positions[a], positions[b]) {
-					let dx = x1 - x2;
-					let dy = y1 - y2;
-					*slot = (dx * dx + dy * dy).sqrt().min(2.6);
-				}
-			}
-		}
-		table
-	})
+/// Correction model for one keyboard profile: its key geometry and all of its
+/// language dictionaries.
+#[derive(Debug)]
+pub struct Corrector {
+	costs: CostTable,
+	languages: Vec<&'static Language>,
+	elisions: bool,
 }
 
-/// Weighted Damerau-Levenshtein distance, abandoned as soon as every path is
-/// more expensive than `max`. Operates on folded (ASCII) bytes.
-fn distance(a: &[u8], b: &[u8], max: f32) -> Option<f32> {
-	let n = a.len();
-	let m = b.len();
-	if n.abs_diff(m) > 2 || n > MAX_CHARS || m > MAX_CHARS {
-		return None;
+impl Corrector {
+	pub fn new(profile: &Profile) -> Self {
+		Corrector {
+			costs: cost_table(profile.layout.letters),
+			languages: profile.languages.clone(),
+			elisions: profile
+			. languages
+			. iter()
+			. any(|language| language.elisions),
+		}
 	}
 
-	let costs = costs();
-	let mut prev2 = [f32::INFINITY; MAX_CHARS + 1];
-	let mut prev = [0.0f32; MAX_CHARS + 1];
-	let mut cur = [0.0f32; MAX_CHARS + 1];
-	for (j, slot) in prev.iter_mut().enumerate().take(m + 1) {
-		*slot = j as f32;
+	fn words(&self) -> impl Iterator<Item = &'static Word> + '_ {
+		self.languages
+		. iter()
+		. flat_map(|language| language.dictionary.words().iter())
 	}
 
-	for i in 1..=n {
-		cur[0] = i as f32;
-		let mut row_min = cur[0];
-		let ai = char_index(a[i - 1]);
-		for j in 1..=m {
-			let mut best = (prev[j - 1] + costs[ai][char_index(b[j - 1])])
-			. min(prev[j] + 1.0)
-			. min(cur[j - 1] + 1.0);
-			if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
-				let transposed = prev2[j - 2] + 0.6;
-				if transposed < best {
-					best = transposed;
-				}
-			}
-			cur[j] = best;
-			if best < row_min {
-				row_min = best;
+	fn exact(&self, word: &str) -> Option<&'static Word> {
+		self.languages
+		. iter()
+		. filter_map(|language| language.dictionary.exact(word))
+		. max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
+	}
+
+	fn folded(&self, form: &str) -> Option<&'static Word> {
+		self.languages
+		. iter()
+		. filter_map(|language| language.dictionary.folded(form))
+		. max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
+	}
+}
+
+/// Pairwise substitution costs for one layout.
+fn cost_table(letters: &[layout::Letter]) -> CostTable {
+	let mut positions: [Option<(f32, f32)>; 26] = [None; 26];
+	for (index, letter) in letters.iter().enumerate() {
+		if let Some(c) = letter.id.chars().next() {
+			positions[(c as u8 - b'a') as usize] =
+				Some((index as f32, letter.row as f32 * 0.55));
+		}
+	}
+
+	let mut table = [[1.5f32; OTHER + 1]; OTHER + 1];
+	table[OTHER][OTHER] = 0.0;
+	for (a, row) in table.iter_mut().enumerate().take(26) {
+		for (b, slot) in row.iter_mut().enumerate().take(26) {
+			if let (Some((x1, y1)), Some((x2, y2))) = (positions[a], positions[b]) {
+				let dx = x1 - x2;
+				let dy = y1 - y2;
+				*slot = (dx * dx + dy * dy).sqrt().min(2.6);
 			}
 		}
-		if row_min > max {
+	}
+	table
+}
+
+impl Corrector {
+	/// Weighted Damerau-Levenshtein distance, abandoned as soon as every path is
+	/// more expensive than `max`. Operates on folded (ASCII) bytes.
+	fn distance(&self, a: &[u8], b: &[u8], max: f32) -> Option<f32> {
+		let n = a.len();
+		let m = b.len();
+		if n.abs_diff(m) > 2 || n > MAX_CHARS || m > MAX_CHARS {
 			return None;
 		}
-		prev2 = prev;
-		prev = cur;
-	}
-	if prev[m] <= max {
-		Some(prev[m])
-	} else {
-		None
+
+		let costs = &self.costs;
+		let mut prev2 = [f32::INFINITY; MAX_CHARS + 1];
+		let mut prev = [0.0f32; MAX_CHARS + 1];
+		let mut cur = [0.0f32; MAX_CHARS + 1];
+		for (j, slot) in prev.iter_mut().enumerate().take(m + 1) {
+			*slot = j as f32;
+		}
+
+		for i in 1..=n {
+			cur[0] = i as f32;
+			let mut row_min = cur[0];
+			let ai = char_index(a[i - 1]);
+			for j in 1..=m {
+				let mut best = (prev[j - 1] + costs[ai][char_index(b[j - 1])])
+				. min(prev[j] + 1.0)
+				. min(cur[j - 1] + 1.0);
+				if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+					let transposed = prev2[j - 2] + 0.6;
+					if transposed < best {
+						best = transposed;
+					}
+				}
+				cur[j] = best;
+				if best < row_min {
+					row_min = best;
+				}
+			}
+			if row_min > max {
+				return None;
+			}
+			prev2 = prev;
+			prev = cur;
+		}
+		if prev[m] <= max {
+			Some(prev[m])
+		} else {
+			None
+		}
 	}
 }
 
@@ -243,9 +287,13 @@ fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 }
 
 /// `jusqua` -> `jusqu'à`: the remainder folds to the verb `a`, not `à`.
-fn elision_remainder(clitic: &str, word: &dictionary::Word) -> (&'static str, f32) {
+fn elision_remainder(
+	clitic: &str,
+	word: &dictionary::Word,
+	dictionary: &dictionary::Dictionary,
+) -> (&'static str, f32) {
 	if clitic == "jusqu" && word.text == "a" {
-		if let Some(grave) = dictionary::exact("à") {
+		if let Some(grave) = dictionary.exact("à") {
 			return (grave.text, grave.log_freq);
 		}
 	}
@@ -275,240 +323,265 @@ fn insert_elision(
 /// Candidate corrections for a typed token, best first. Empty when the token is
 /// already a known word, too short, or contains an apostrophe.
 pub fn candidates(typed: &str) -> Vec<Candidate> {
-	let lower = typed.to_lowercase();
-	if lower.chars().count() < 2 || lower.contains('\'') || dictionary::exact(&lower).is_some() {
-		return Vec::new();
-	}
-	candidates_inner(&lower)
+	crate::profile::default_profile()
+	. corrector()
+	. candidates(typed)
 }
 
-fn candidates_inner(lower: &str) -> Vec<Candidate> {
-	debug_assert!(lower.chars().count() >= 2 && !lower.contains('\''));
-	let folded_typed = fold(lower);
-	let typed_bytes = folded_typed.as_bytes();
-	let mut found: HashMap<String, Candidate> = HashMap::new();
-
-	// Missing accents only (`ecole` -> `école`).
-	if let Some(word) = dictionary::folded(&folded_typed) {
-		let cost = 0.25;
-		insert(
-			&mut found,
-			Candidate {
-				text: word.text.to_string(),
-				score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
-				tier: 1,
-			},
-		);
+impl Corrector {
+	pub(crate) fn candidates(&self, typed: &str) -> Vec<Candidate> {
+		let lower = typed.to_lowercase();
+		if lower.chars().count() < 2 || lower.contains('\'') || self.exact(&lower).is_some() {
+			return Vec::new();
+		}
+		self.candidates_inner(&lower)
 	}
 
-	// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
-	// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
-	for &(clitic, penalty) in CLITICS {
-		if !lower.starts_with(clitic) {
-			continue;
-		}
-		let rest = &lower[clitic.len()..];
-		// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
-		let shortest = if clitic.len() >= 3 { 1 } else { 2 };
-		if rest.chars().count() < shortest {
-			continue;
-		}
+	fn candidates_inner(&self, lower: &str) -> Vec<Candidate> {
+		debug_assert!(lower.chars().count() >= 2 && !lower.contains('\''));
+		let folded_typed = fold(lower);
+		let typed_bytes = folded_typed.as_bytes();
+		let mut found: HashMap<String, Candidate> = HashMap::new();
 
-		let folded_rest = fold(rest);
-		if let Some(word) = dictionary::folded(&folded_rest) {
-			if elision_allowed(clitic, word) {
-				let (remainder, log_freq) = elision_remainder(clitic, word);
-				insert_elision(
-					&mut found,
-					clitic,
-					remainder,
-					log_freq,
-					penalty,
-					APOSTROPHE_COST,
-					1,
-				);
-			}
-		}
-
-		// Short remainders are covered by the exact lookup above; scanning
-		// them for typos only invents forms like `j'air`.
-		if folded_rest.len() < 3 {
-			continue;
-		}
-		for word in dictionary::words() {
-			if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
-				continue;
-			}
-			if !elision_allowed(clitic, word) {
-				continue;
-			}
-			let Some(distance) =
-				distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
-			else {
-				continue;
-			};
-			if distance == 0.0 {
-				continue;
-			}
-			let (remainder, log_freq) = elision_remainder(clitic, word);
-			insert_elision(
-				&mut found,
-				clitic,
-				remainder,
-				log_freq,
-				penalty,
-				APOSTROPHE_COST + distance,
-				1,
-			);
-		}
-	}
-
-	// Typographical and neighbouring-key errors.
-	for word in dictionary::words() {
-		let word_bytes = word.folded.as_bytes();
-		if word_bytes.len() < 2 {
-			continue;
-		}
-		if let Some(cost) = distance(typed_bytes, word_bytes, MAX_COST) {
-			if cost == 0.0 {
-				continue;
-			}
-			let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
+		// Missing accents only (`ecole` -> `école`).
+		if let Some(word) = self.folded(&folded_typed) {
+			let cost = 0.25;
 			insert(
 				&mut found,
 				Candidate {
 					text: word.text.to_string(),
-					score: word.log_freq * AGGRESSIVE_WEIGHT
-						- cost
-						- LENGTH_PENALTY * length_diff,
+					score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
 					tier: 1,
 				},
 			);
 		}
-	}
 
-	let mut list: Vec<Candidate> = found.into_values().collect();
-	sort_candidates(&mut list);
-	list.truncate(MAX_RESULTS);
-	list
-}
+		// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
+		// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
+		if self.elisions {
+			for language in self
+			. languages
+			. iter()
+			. copied()
+			. filter(|language| language.elisions)
+			{
+				for &(clitic, penalty) in CLITICS {
+					if !lower.starts_with(clitic) {
+						continue;
+					}
+					let rest = &lower[clitic.len()..];
+					// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
+					let shortest = if clitic.len() >= 3 { 1 } else { 2 };
+					if rest.chars().count() < shortest {
+						continue;
+					}
 
-/// Same-length distance where every substituted letter has to be within
-/// `limit` of the intended key (or an adjacent pair swapped). Returns `None`
-/// when the input cannot be explained that way.
-fn near_distance(a: &[u8], b: &[u8], limit: f32) -> Option<f32> {
-	let n = a.len();
-	if n != b.len() || n > MAX_CHARS {
-		return None;
-	}
-	let costs = costs();
-	let mut dp = [f32::INFINITY; MAX_CHARS + 1];
-	dp[0] = 0.0;
-	for i in 1..=n {
-		let step = costs[char_index(a[i - 1])][char_index(b[i - 1])];
-		if step <= limit {
-			dp[i] = dp[i - 1] + step;
-		}
-		if i >= 2 && a[i - 1] == b[i - 2] && a[i - 2] == b[i - 1] {
-			let swapped = dp[i - 2] + TRANSPOSE_COST;
-			if swapped < dp[i] {
-				dp[i] = swapped;
+					let folded_rest = fold(rest);
+					if let Some(word) = language.dictionary.folded(&folded_rest) {
+						if elision_allowed(clitic, word) {
+							let (remainder, log_freq) =
+								elision_remainder(clitic, word, language.dictionary);
+							insert_elision(
+								&mut found,
+								clitic,
+								remainder,
+								log_freq,
+								penalty,
+								APOSTROPHE_COST,
+								1,
+							);
+						}
+					}
+
+					// Short remainders are covered by the exact lookup above; scanning
+					// them for typos only invents forms like `j'air`.
+					if folded_rest.len() < 3 {
+						continue;
+					}
+					for word in language.dictionary.words() {
+						if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
+							continue;
+						}
+						if !elision_allowed(clitic, word) {
+							continue;
+						}
+						let Some(distance) =
+							self.distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
+						else {
+							continue;
+						};
+						if distance == 0.0 {
+							continue;
+						}
+						let (remainder, log_freq) =
+							elision_remainder(clitic, word, language.dictionary);
+						insert_elision(
+							&mut found,
+							clitic,
+							remainder,
+							log_freq,
+							penalty,
+							APOSTROPHE_COST + distance,
+							1,
+						);
+					}
+				}
 			}
 		}
-	}
-	if dp[n].is_finite() {
-		Some(dp[n])
-	} else {
-		None
-	}
-}
 
-/// One arbitrary letter changed, with the rest identical. Covers spelling
-/// variants that are nowhere near on the keyboard (`commant` -> `comment`).
-fn spelling_distance(a: &[u8], b: &[u8]) -> Option<f32> {
-	if a.len() != b.len() || a.len() < 4 {
-		return None;
-	}
-	let mut differences = 0;
-	for (&x, &y) in a.iter().zip(b) {
-		if x != y {
-			differences += 1;
-			if differences > 1 {
-				return None;
+		// Typographical and neighbouring-key errors.
+		for word in self.words() {
+			let word_bytes = word.folded.as_bytes();
+			if word_bytes.len() < 2 {
+				continue;
+			}
+			if let Some(cost) = self.distance(typed_bytes, word_bytes, MAX_COST) {
+				if cost == 0.0 {
+					continue;
+				}
+				let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
+				insert(
+					&mut found,
+					Candidate {
+						text: word.text.to_string(),
+						score: word.log_freq * AGGRESSIVE_WEIGHT
+							- cost
+							- LENGTH_PENALTY * length_diff,
+						tier: 1,
+					},
+				);
 			}
 		}
-	}
-	if differences == 1 {
-		Some(SPELLING_COST)
-	} else {
-		None
+
+		let mut list: Vec<Candidate> = found.into_values().collect();
+		sort_candidates(&mut list);
+		list.truncate(MAX_RESULTS);
+		list
 	}
 }
 
-/// Key-slip distance only: one-key ring, then the two-key ring.
-fn keyboard_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
-	if let Some(distance) = near_distance(a, b, NEIGHBOUR_COST) {
-		return Some((distance, 1));
+impl Corrector {
+	/// Same-length distance where every substituted letter has to be within
+	/// `limit` of the intended key (or an adjacent pair swapped). Returns `None`
+	/// when the input cannot be explained that way.
+	fn near_distance(&self, a: &[u8], b: &[u8], limit: f32) -> Option<f32> {
+		let n = a.len();
+		if n != b.len() || n > MAX_CHARS {
+			return None;
+		}
+		let costs = &self.costs;
+		let mut dp = [f32::INFINITY; MAX_CHARS + 1];
+		dp[0] = 0.0;
+		for i in 1..=n {
+			let step = costs[char_index(a[i - 1])][char_index(b[i - 1])];
+			if step <= limit {
+				dp[i] = dp[i - 1] + step;
+			}
+			if i >= 2 && a[i - 1] == b[i - 2] && a[i - 2] == b[i - 1] {
+				let swapped = dp[i - 2] + TRANSPOSE_COST;
+				if swapped < dp[i] {
+					dp[i] = swapped;
+				}
+			}
+		}
+		if dp[n].is_finite() {
+			Some(dp[n])
+		} else {
+			None
+		}
 	}
-	near_distance(a, b, TWO_KEY_COST).map(|distance| (distance, 2))
+
+	/// One arbitrary letter changed, with the rest identical. Covers spelling
+	/// variants that are nowhere near on the keyboard (`commant` -> `comment`).
+	fn spelling_distance(a: &[u8], b: &[u8]) -> Option<f32> {
+		if a.len() != b.len() || a.len() < 4 {
+			return None;
+		}
+		let mut differences = 0;
+		for (&x, &y) in a.iter().zip(b) {
+			if x != y {
+				differences += 1;
+				if differences > 1 {
+					return None;
+				}
+			}
+		}
+		if differences == 1 {
+			Some(SPELLING_COST)
+		} else {
+			None
+		}
+	}
+
+	/// Key-slip distance only: one-key ring, then the two-key ring.
+	fn keyboard_distance(&self, a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
+		if let Some(distance) = self.near_distance(a, b, NEIGHBOUR_COST) {
+			return Some((distance, 1));
+		}
+		self.near_distance(a, b, TWO_KEY_COST)
+		. map(|distance| (distance, 2))
+	}
+
+	/// Closest explanation, with a tier: 1 for one-key slips, 2 for the second
+	/// key ring or a one-letter spelling variant.
+	fn candidate_distance(&self, a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
+		self.keyboard_distance(a, b)
+		. or_else(|| Self::spelling_distance(a, b).map(|distance| (distance, 2)))
+	}
 }
 
-/// Closest explanation, with a tier: 1 for one-key slips, 2 for the second key
-/// ring or a one-letter spelling variant.
-fn candidate_distance(a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
-	keyboard_distance(a, b).or_else(|| spelling_distance(a, b).map(|distance| (distance, 2)))
-}
+impl Corrector {
+	/// Very last resort: the same-length dictionary word with the smallest
+	/// weighted edit distance. Only used when no tier-1/2 candidate exists.
+	fn last_resort_candidates(&self, lower: &str) -> Vec<Candidate> {
+		let folded = fold(lower);
+		let typed_bytes = folded.as_bytes();
+		let length = typed_bytes.len();
+		if length < LAST_RESORT_MIN_LEN {
+			return Vec::new();
+		}
+		let max = length as f32 * 2.6;
 
-/// Very last resort: the same-length dictionary word with the smallest
-/// weighted edit distance. Only used when no tier-1/2 candidate exists.
-fn last_resort_candidates(lower: &str) -> Vec<Candidate> {
-	let folded = fold(lower);
-	let typed_bytes = folded.as_bytes();
-	let length = typed_bytes.len();
-	if length < LAST_RESORT_MIN_LEN {
-		return Vec::new();
-	}
-	let max = length as f32 * 2.6;
+		let mut best = f32::INFINITY;
+		let mut matches: Vec<(&dictionary::Word, f32)> = Vec::new();
+		for word in self.words() {
+			if word.folded.len() != length {
+				continue;
+			}
+			let Some(distance) = self.distance(typed_bytes, word.folded.as_bytes(), max) else {
+				continue;
+			};
+			if distance < best {
+				best = distance;
+				matches.clear();
+			}
+			if distance <= best + LAST_RESORT_TIE {
+				matches.push((word, distance));
+			}
+		}
+		matches.retain(|(_, distance)| *distance <= best + LAST_RESORT_TIE);
+		matches.sort_by(|a, b| {
+			a.1
+			. partial_cmp(&b.1)
+			. unwrap_or(std::cmp::Ordering::Equal)
+			. then_with(|| {
+				b.0.log_freq
+				. partial_cmp(&a.0.log_freq)
+				. unwrap_or(std::cmp::Ordering::Equal)
+			})
+			. then_with(|| a.0.text.cmp(b.0.text))
+		});
 
-	let mut best = f32::INFINITY;
-	let mut matches: Vec<(&dictionary::Word, f32)> = Vec::new();
-	for word in dictionary::words() {
-		if word.folded.len() != length {
-			continue;
-		}
-		let Some(distance) = distance(typed_bytes, word.folded.as_bytes(), max) else {
-			continue;
-		};
-		if distance < best {
-			best = distance;
-			matches.clear();
-		}
-		if distance <= best + LAST_RESORT_TIE {
-			matches.push((word, distance));
-		}
-	}
-	matches.retain(|(_, distance)| *distance <= best + LAST_RESORT_TIE);
-	matches.sort_by(|a, b| {
-		a.1
-		. partial_cmp(&b.1)
-		.unwrap_or(std::cmp::Ordering::Equal)
-		. then_with(|| {
-			b.0.log_freq
-			. partial_cmp(&a.0.log_freq)
-			.unwrap_or(std::cmp::Ordering::Equal)
+		matches
+		. into_iter()
+		. take(MAX_RESULTS)
+		. map(|(word, distance)| Candidate {
+			text: word.text.to_string(),
+			score: -distance + word.log_freq * 0.001,
+			tier: 3,
 		})
-		. then_with(|| a.0.text.cmp(b.0.text))
-	});
-
-	matches
-	.into_iter()
-	.take(MAX_RESULTS)
-	.map(|(word, distance)| Candidate {
-		text: word.text.to_string(),
-		score: -distance + word.log_freq * 0.001,
-		tier: 3,
-	})
-	.collect()
+		. collect()
+	}
 }
 
 fn sort_candidates(list: &mut [Candidate]) {
@@ -520,144 +593,168 @@ fn sort_candidates(list: &mut [Candidate]) {
 	});
 }
 
-/// Words where every typed letter is one or two keys away from the intended
-/// one, ranked by frequency. This is the narrow-keyboard rescue: an input can
-/// be complete nonsense and still point at a common word.
-fn add_neighbour_candidates(lower: &str, found: &mut HashMap<String, Candidate>) {
-	let folded_typed = fold(lower);
-	let typed_bytes = folded_typed.as_bytes();
-	for word in dictionary::words() {
-		if word.folded.len() != typed_bytes.len() {
-			continue;
-		}
-		let Some((distance, tier)) = candidate_distance(typed_bytes, word.folded.as_bytes())
-		else {
-			continue;
-		};
-		insert(
-			found,
-			Candidate {
-				text: word.text.to_string(),
-				score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
-				tier,
-			},
-		);
-	}
-}
-
-/// Elisions whose clitic and remainder are both key slips, with the apostrophe
-/// missing: `vqjmd` -> `t'aime`.
-fn add_aggressive_elisions(lower: &str, found: &mut HashMap<String, Candidate>) {
-	let folded = fold(lower);
-	let bytes = folded.as_bytes();
-
-	for &(clitic, penalty) in CLITICS {
-		let clitic_len = clitic.len();
-		if bytes.len() <= clitic_len {
-			continue;
-		}
-		let Some((prefix_cost, prefix_tier)) =
-			keyboard_distance(&bytes[..clitic_len], clitic.as_bytes())
-		else {
-			continue;
-		};
-		let rest = &bytes[clitic_len..];
-		let shortest = if clitic_len >= 3 { 1 } else { 2 };
-		if rest.len() < shortest {
-			continue;
-		}
-		for word in dictionary::words() {
-			if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
+impl Corrector {
+	/// Words where every typed letter is one or two keys away from the intended
+	/// one, ranked by frequency. This is the narrow-keyboard rescue: an input can
+	/// be complete nonsense and still point at a common word.
+	fn add_neighbour_candidates(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
+		let folded_typed = fold(lower);
+		let typed_bytes = folded_typed.as_bytes();
+		for word in self.words() {
+			if word.folded.len() != typed_bytes.len() {
 				continue;
 			}
-			let Some((rest_cost, rest_tier)) = keyboard_distance(rest, word.folded.as_bytes())
+			let Some((distance, tier)) =
+				self.candidate_distance(typed_bytes, word.folded.as_bytes())
 			else {
 				continue;
 			};
-			let cost = prefix_cost + rest_cost + APOSTROPHE_COST;
-			let (remainder, log_freq) = elision_remainder(clitic, word);
-			let tier = prefix_tier.max(rest_tier);
-			insert_elision(found, clitic, remainder, log_freq, penalty, cost, tier);
+			insert(
+				found,
+				Candidate {
+					text: word.text.to_string(),
+					score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
+					tier,
+				},
+			);
+		}
+	}
+
+	/// Elisions whose clitic and remainder are both key slips, with the apostrophe
+	/// missing: `vqjmd` -> `t'aime`.
+	fn add_aggressive_elisions(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
+		if !self.elisions {
+			return;
+		}
+		let folded = fold(lower);
+		let bytes = folded.as_bytes();
+
+		for language in self
+		. languages
+		. iter()
+		. copied()
+		. filter(|language| language.elisions)
+		{
+			for &(clitic, penalty) in CLITICS {
+				let clitic_len = clitic.len();
+				if bytes.len() <= clitic_len {
+					continue;
+				}
+				let Some((prefix_cost, prefix_tier)) =
+					self.keyboard_distance(&bytes[..clitic_len], clitic.as_bytes())
+				else {
+					continue;
+				};
+				let rest = &bytes[clitic_len..];
+				let shortest = if clitic_len >= 3 { 1 } else { 2 };
+				if rest.len() < shortest {
+					continue;
+				}
+				for word in language.dictionary.words() {
+					if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
+						continue;
+					}
+					let Some((rest_cost, rest_tier)) =
+						self.keyboard_distance(rest, word.folded.as_bytes())
+					else {
+						continue;
+					};
+					let cost = prefix_cost + rest_cost + APOSTROPHE_COST;
+					let (remainder, log_freq) =
+						elision_remainder(clitic, word, language.dictionary);
+					let tier = prefix_tier.max(rest_tier);
+					insert_elision(found, clitic, remainder, log_freq, penalty, cost, tier);
+				}
+			}
 		}
 	}
 }
 
-/// Candidates for the strip plus the auto-apply decision. Known words are
-/// kept unless a near-key candidate is much more likely; unknown words always
-/// get the best near-key interpretation, even when every letter is wrong.
+/// Candidates for the strip plus the auto-apply decision for the default
+/// profile. Prefer [`Profile::suggest`](crate::profile::Profile::suggest) when a
+/// specific keyboard profile is active.
 pub fn suggest(typed: &str) -> Suggestion {
-	let lower = typed.to_lowercase();
-	let length = lower.chars().count();
-	if length < 2 || lower.contains('\'') {
-		return Suggestion::empty();
-	}
+	crate::profile::default_profile().suggest(typed)
+}
 
-	let known = dictionary::exact(&lower);
-	let mut found: HashMap<String, Candidate> = HashMap::new();
-	let typed_score = known.map(|word| {
-		let score = word.log_freq * AGGRESSIVE_WEIGHT;
-		insert(
-			&mut found,
-			Candidate {
-				text: word.text.to_string(),
-				score,
-				tier: 1,
-			},
-		);
-		score
-	});
-
-	if known.is_none() {
-		for candidate in candidates_inner(&lower) {
-			insert(&mut found, candidate);
+impl Corrector {
+	/// Candidates for the strip plus the auto-apply decision. Known words are
+	/// kept unless a near-key candidate is much more likely; unknown words always
+	/// get the best near-key interpretation, even when every letter is wrong.
+	pub fn suggest(&self, typed: &str) -> Suggestion {
+		let lower = typed.to_lowercase();
+		let length = lower.chars().count();
+		if length < 2 || lower.contains('\'') {
+			return Suggestion::empty();
 		}
-	}
-	add_neighbour_candidates(&lower, &mut found);
-	if known.is_none() && length >= 3 {
-		add_aggressive_elisions(&lower, &mut found);
-	}
 
-	let mut list: Vec<Candidate> = found.into_values().collect();
-	sort_candidates(&mut list);
-	if list.is_empty() {
-		list = last_resort_candidates(&lower);
-	}
+		let known = self.exact(&lower);
+		let mut found: HashMap<String, Candidate> = HashMap::new();
+		let typed_score = known.map(|word| {
+			let score = word.log_freq * AGGRESSIVE_WEIGHT;
+			insert(
+				&mut found,
+				Candidate {
+					text: word.text.to_string(),
+					score,
+					tier: 1,
+				},
+			);
+			score
+		});
 
-	let Some(best) = list.first() else {
-		return Suggestion::empty();
-	};
-	if known.is_some_and(|word| word.text == best.text) {
-		// The typed word is already the best explanation.
-		return Suggestion::empty();
-	}
-
-	if let Some(word) = known {
-		list.retain(|candidate| candidate.text != word.text);
-	}
-	list.truncate(MAX_RESULTS);
-
-	let Some(best) = list.first() else {
-		return Suggestion::empty();
-	};
-	let mut apply = match best.tier {
-		1 => best.score >= MIN_SCORE,
-		2 => best.score >= TWO_KEY_MIN_SCORE,
-		_ => false,
-	};
-	if let Some(typed_score) = typed_score {
-		apply = apply && best.score - typed_score >= KNOWN_WORD_MARGIN;
-	}
-	if apply {
-		let runner_up = list.iter().skip(1).find(|candidate| candidate.tier == best.tier);
-		if let Some(second) = runner_up {
-			if best.score - second.score < AGGRESSIVE_MARGIN {
-				apply = false;
+		if known.is_none() {
+			for candidate in self.candidates_inner(&lower) {
+				insert(&mut found, candidate);
 			}
 		}
-	}
-	Suggestion {
-		candidates: list,
-		apply,
+		self.add_neighbour_candidates(&lower, &mut found);
+		if known.is_none() && length >= 3 {
+			self.add_aggressive_elisions(&lower, &mut found);
+		}
+
+		let mut list: Vec<Candidate> = found.into_values().collect();
+		sort_candidates(&mut list);
+		if list.is_empty() {
+			list = self.last_resort_candidates(&lower);
+		}
+
+		let Some(best) = list.first() else {
+			return Suggestion::empty();
+		};
+		if known.is_some_and(|word| word.text == best.text) {
+			// The typed word is already the best explanation.
+			return Suggestion::empty();
+		}
+
+		if let Some(word) = known {
+			list.retain(|candidate| candidate.text != word.text);
+		}
+		list.truncate(MAX_RESULTS);
+
+		let Some(best) = list.first() else {
+			return Suggestion::empty();
+		};
+		let mut apply = match best.tier {
+			1 => best.score >= MIN_SCORE,
+			2 => best.score >= TWO_KEY_MIN_SCORE,
+			_ => false,
+		};
+		if let Some(typed_score) = typed_score {
+			apply = apply && best.score - typed_score >= KNOWN_WORD_MARGIN;
+		}
+		if apply {
+			let runner_up = list.iter().skip(1).find(|candidate| candidate.tier == best.tier);
+			if let Some(second) = runner_up {
+				if best.score - second.score < AGGRESSIVE_MARGIN {
+					apply = false;
+				}
+			}
+		}
+		Suggestion {
+			candidates: list,
+			apply,
+		}
 	}
 }
 
@@ -731,11 +828,13 @@ mod tests {
 		let suggestion = suggest("pq");
 		assert!(suggestion.apply);
 		assert_eq!(suggestion.candidates[0].text, "la");
-		let texts: Vec<&str> = suggestion
-		.candidates
-		.iter()
-		.map(|candidate| candidate.text.as_str())
-		.collect();
+		let texts: Vec<&str> = (
+			suggestion
+			. candidates
+			. iter()
+			. map(|candidate| candidate.text.as_str())
+			. collect()
+		);
 		assert!(texts.contains(&"ma"), "got {texts:?}");
 	}
 

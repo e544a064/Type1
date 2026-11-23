@@ -2,6 +2,7 @@ package fr.type1.keyboard.core
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import fr.type1.keyboard.model.CatalogEntry
 import fr.type1.keyboard.model.KeyAction
 import fr.type1.keyboard.model.RowModel
 
@@ -55,6 +56,11 @@ class KeyboardController {
 	fun setImeOptions(imeOptions: Int) =
 		NativeBridge.nativeSetImeOptions(handle, imeOptions)
 
+	fun setProfile(layoutId: String, languageIds: List<String>): Boolean =
+		NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
+
+	fun setDefaultProfile() = NativeBridge.nativeSetDefaultProfile(handle)
+
 	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
 
 	fun syncContext(before: String, after: String) =
@@ -66,4 +72,12 @@ class KeyboardController {
 	KeyAction.parseList(NativeBridge.nativeKey(handle, keyId))
 
 	fun close() = NativeBridge.nativeDestroy(handle)
+
+	companion object {
+		fun layouts(): List<CatalogEntry> =
+			CatalogEntry.parseList(NativeBridge.nativeLayouts())
+
+		fun languages(): List<CatalogEntry> =
+			CatalogEntry.parseList(NativeBridge.nativeLanguages())
+	}
 }

@@ -99,6 +99,26 @@ fn shift_resets_when_changing_page() {
 }
 
 #[test]
+fn profiles_can_be_selected_from_layout_and_languages() {
+	let mut engine = Engine::new();
+	assert_eq!(engine.profile().layout.id, "azerty");
+	assert_eq!(engine.profile().languages[0].id, "fr");
+	assert!(engine.set_profile_ids("azerty", &["fr"]));
+	assert!(!engine.set_profile_ids("azerty", &["missing"]));
+	assert!(!engine.set_profile_ids("missing", &["fr"]));
+	assert_eq!(engine.profile().layout.id, "azerty");
+}
+
+#[test]
+fn the_builtin_profile_can_be_restored() {
+	let mut engine = Engine::new();
+	assert!(engine.set_profile_ids("azerty", &["fr"]));
+	engine.set_default_profile();
+	assert_eq!(engine.profile().layout.id, "azerty");
+	assert_eq!(engine.profile().languages[0].id, "fr");
+}
+
+#[test]
 fn auto_capitalises_sentences() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | CAP_SENTENCES, 0);

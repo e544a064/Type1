@@ -27,6 +27,17 @@ internal object NativeBridge {
 
 	external fun nativeSetImeOptions(handle: Long, imeOptions: Int)
 
+	/** JSON catalog of selectable layouts. */
+	external fun nativeLayouts(): String
+
+	/** JSON catalog of selectable languages. */
+	external fun nativeLanguages(): String
+
+	/** Layout id plus comma-separated language ids. */
+	external fun nativeSetProfile(handle: Long, layoutId: String, languages: String): Boolean
+
+	external fun nativeSetDefaultProfile(handle: Long)
+
 	/** JSON row model: keys, weights, page, shift state. */
 	external fun nativeRender(handle: Long): String
 
