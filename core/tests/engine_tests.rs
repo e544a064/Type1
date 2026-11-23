@@ -275,6 +275,19 @@ fn alternates_follow_shift() {
 }
 
 #[test]
+fn short_tokens_show_more_suggestions() {
+	for (typed, expected) in [("ue", 6), ("pqr", 4), ("ropp", 5), ("commant", 2)] {
+		let mut engine = plain();
+		for key in typed.chars() {
+			engine.on_key(&key.to_string());
+		}
+		let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+		let count = json["suggestions"].as_array().unwrap().len();
+		assert_eq!(count, expected, "typing {typed}");
+	}
+}
+
+#[test]
 fn suggests_corrections_while_typing() {
 	let mut engine = plain();
 	engine.on_key("t");

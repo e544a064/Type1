@@ -7,6 +7,18 @@ use crate::json;
 use crate::layout::{Page, ShiftState, STRIP, UTILITIES};
 
 const STRIP_SUGGESTIONS: usize = 3;
+const MAX_STRIP_SUGGESTIONS: usize = 6;
+
+/// Short tokens leave room for more cells in the strip. The corrector
+/// generates at most six candidates.
+fn suggestion_limit(typed: &str) -> usize {
+	match typed.chars().count() {
+		0..=3 => MAX_STRIP_SUGGESTIONS,
+		4 => 5,
+		5 => 4,
+		_ => STRIP_SUGGESTIONS,
+	}
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapsMode {
@@ -630,10 +642,11 @@ impl Engine {
 				return Vec::new();
 			}
 			let suggestion = self.suggestion_for(&full);
+			let limit = suggestion_limit(&full);
 			return suggestion
 			.candidates
 			.iter()
-			.take(STRIP_SUGGESTIONS)
+			.take(limit)
 			.map(|candidate| apply_case(&full, &candidate.text))
 			.collect();
 		}
@@ -649,10 +662,11 @@ impl Engine {
 				return Vec::new();
 			}
 			let suggestion = self.suggestion_for(&typed);
+			let limit = suggestion_limit(&typed);
 			return suggestion
 			.candidates
 			.iter()
-			.take(STRIP_SUGGESTIONS)
+			.take(limit)
 			.map(|candidate| apply_case(&typed, &candidate.text))
 			.collect();
 		}
