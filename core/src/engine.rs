@@ -60,6 +60,8 @@ pub struct Engine {
 	multiline: bool,
 	suggestions_enabled: bool,
 	last_correction: Option<CorrectionRecord>,
+	/// The word accepted from a suggestion tap, kept until the user moves on.
+	protected_word: Option<String>,
 	/// Boundary text left just after the caret when a correction is undone.
 	pending_boundary: Option<String>,
 	/// The current word was restored by an undo; do not correct it again until
@@ -89,6 +91,7 @@ impl Engine {
 			multiline: false,
 			suggestions_enabled: true,
 			last_correction: None,
+			protected_word: None,
 			pending_boundary: None,
 			reverted: false,
 			suggestion_cache: None,
@@ -106,6 +109,7 @@ impl Engine {
 		self.last_char = None;
 		self.word.clear();
 		self.last_correction = None;
+		self.protected_word = None;
 		self.pending_boundary = None;
 		self.reverted = false;
 		self.suggestion_cache = None;
@@ -148,6 +152,7 @@ impl Engine {
 	/// The editor selection moved: a pending correction can no longer be undone.
 	pub fn selection_changed(&mut self) {
 		self.last_correction = None;
+		self.protected_word = None;
 		self.pending_boundary = None;
 		self.reverted = false;
 		self.context = None;
@@ -159,8 +164,22 @@ impl Engine {
 	/// from the same text, so auto-capitalisation and French spacing stay
 	/// correct after a caret move or a backspace.
 	pub fn set_context_word(&mut self, before: &str, after: &str) {
+		// A correction undo leaves the user's boundary just after the caret;
+		// a suggestion tap leaves its accepted word there. The platform
+		// re-reads the context after that caret move, so keep the related
+		// guards while the text still matches.
+		let protected = self.protected_word.take();
+		let pending = self.pending_boundary.take();
+		let reverted = self.reverted;
 		self.selection_changed();
 		let prefix = trailing_word(before);
+		if let Some(boundary) = pending.filter(|boundary| after.starts_with(boundary)) {
+			self.pending_boundary = Some(boundary);
+			self.reverted = reverted;
+		}
+		if protected.is_some_and(|word| prefix == word) {
+			self.reverted = true;
+		}
 		let suffix = leading_word(after);
 		let total = prefix.chars().count() + suffix.chars().count();
 		let sentence_start = starts_sentence(before);
@@ -254,6 +273,7 @@ impl Engine {
 	/// punctuation when a new word starts).
 	fn commit(&mut self, text: &str, is_letter: bool, space_before: bool) -> Vec<Action> {
 		let mut out = Vec::new();
+		self.protected_word = None;
 
 		if is_letter {
 			self.last_correction = None;
@@ -298,6 +318,7 @@ impl Engine {
 
 	/// An apostrophe inside a word continues the token (`j'ai`).
 	fn commit_apostrophe(&mut self) -> Vec<Action> {
+		self.protected_word = None;
 		self.last_correction = None;
 		if self.word.is_empty() {
 			return self.commit("'", false, false);
@@ -328,6 +349,7 @@ impl Engine {
 		}
 		self.word.clear();
 		self.last_correction = None;
+		self.protected_word = None;
 		self.pending_boundary = None;
 		self.reverted = false;
 		self.suggestion_cache = None;
@@ -400,6 +422,7 @@ impl Engine {
 			self.commit_boundary(&mut out, boundary, leading_space);
 		}
 		self.word.clear();
+		self.protected_word = None;
 		self.reverted = false;
 		self.suggestion_cache = None;
 		out
@@ -492,6 +515,7 @@ impl Engine {
 			let after = context.after.chars().count() as u32;
 			self.word.clear();
 			self.last_correction = None;
+			self.protected_word = None;
 			self.pending_boundary = None;
 			self.reverted = false;
 			self.suggestion_cache = None;
@@ -514,6 +538,7 @@ impl Engine {
 				out.push(Action::Commit(text.clone()));
 				self.note_text(&text);
 				self.word.clear();
+				self.protected_word = None;
 				self.suggestion_cache = None;
 				if chosen != record.original {
 					self.last_correction = Some(CorrectionRecord {
@@ -536,6 +561,7 @@ impl Engine {
 		out.push(Action::CommitSuggestion(format!("{chosen} ")));
 		self.word.clear();
 		self.last_correction = None;
+		self.protected_word = Some(chosen);
 		self.reverted = false;
 		self.suggestion_cache = None;
 		self.note(' ');
@@ -567,11 +593,29 @@ impl Engine {
 				self.last_char = self.word.chars().last();
 				self.at_start = false;
 				self.reverted = true;
+				self.protected_word = None;
 				self.suggestion_cache = None;
 				return out;
 			}
 		}
 
+		// Deleting the convenience space after a suggestion reveals the
+		// accepted word. Protect it from a new autocorrection until the user
+		// edits it.
+		if self.word.is_empty() {
+			if let Some(accepted) = self.protected_word.clone() {
+				if self.last_char == Some(' ') {
+					self.at_start = false;
+					self.last_char = accepted.chars().last();
+					self.word = accepted;
+					self.reverted = true;
+					self.suggestion_cache = None;
+					return vec![Action::Delete { word: false }];
+				}
+			}
+		}
+
+		self.protected_word = None;
 		self.at_start = false;
 		self.last_char = None;
 		self.word.pop();
@@ -641,6 +685,7 @@ impl Engine {
 		self.word.clear();
 		self.last_char = None;
 		self.last_correction = None;
+		self.protected_word = None;
 		self.pending_boundary = None;
 		self.reverted = false;
 		self.suggestion_cache = None;

@@ -53,6 +53,8 @@ release on the letter you want.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
+- An accepted suggestion is not corrected again: backspacing over its automatic
+  space keeps the chosen word when the next comma, space or symbol is typed.
 - Move the caret back into an existing word and the strip re-suggests
   corrections for it; tapping one replaces the whole word in place
   (`Roppxjf` → `Comment`). Backspacing over a finished word's boundary brings
@@ -232,12 +234,19 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic, 6,500 autocorrect cases and held-out accuracy floors
+# core logic, 6,500 autocorrect cases, ~29,000 full interaction sessions
+# and held-out accuracy floors
 cd core; cargo test
 
 # JNI contract: real JVM -> Rust -> JSON (uses the host build of the core)
 ./tools/jni-smoke/run.ps1
 ```
+
+`core/tests/interaction_tests.rs` drives complete editing sessions through the
+engine and a small editor model: typing, autocorrect, suggestion taps,
+punctuation spacing, undo, backspace, recorrections, page switches, digits and
+selection deletion. The cases are generated deterministically, so a failure
+prints the exact key sequence and the expected/actual text.
 
 The bulk fixtures are regenerated after tuning the corrector:
 
@@ -253,7 +262,8 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 108 tests plus 6,500 fixture cases.
+- Rust 1.101 (nightly), `cargo test`: 137 tests, 6,500 fixture cases and
+  ~29,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

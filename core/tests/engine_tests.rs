@@ -356,6 +356,38 @@ fn backspace_undoes_the_correction() {
 }
 
 #[test]
+fn context_sync_keeps_the_undo_boundary_and_guard() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.on_key("backspace");
+	// The IME re-reads the context after the caret move that follows an undo.
+	engine.set_context_word("jai", " ");
+	assert_eq!(
+		engine.on_key("comma"),
+		vec![
+			Action::MoveCursor(1),
+			Action::DeleteChars(1),
+			Action::Commit(",".into()),
+		]
+	);
+}
+
+#[test]
+fn context_sync_after_undo_does_not_repeat_the_correction() {
+	let mut engine = plain();
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.on_key("backspace");
+	engine.set_context_word("jai", " ");
+	assert_eq!(engine.on_key("space"), vec![Action::MoveCursor(1)]);
+}
+
+#[test]
 fn space_after_undo_reuses_the_boundary_and_keeps_the_typed_word() {
 	let mut engine = plain();
 	for key in ["j", "a", "i"] {
@@ -365,6 +397,29 @@ fn space_after_undo_reuses_the_boundary_and_keeps_the_typed_word() {
 	engine.on_key("backspace");
 	// No second space, and no second correction.
 	assert_eq!(engine.on_key("space"), vec![Action::MoveCursor(1)]);
+}
+
+#[test]
+fn backspace_after_a_suggestion_keeps_the_accepted_word() {
+	let mut engine = plain();
+	for key in ["a", "i", "m", "s"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![
+			Action::DeleteChars(4),
+			Action::CommitSuggestion("amis ".into()),
+		]
+	);
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![Action::Delete { word: false }]
+	);
+	// The IME re-reads the text after the delete.
+	engine.set_context_word("amis", "");
+	// The accepted suggestion must not turn into "mais" at the comma.
+	assert_eq!(engine.on_key("comma"), vec![Action::Commit(",".into())]);
 }
 
 #[test]
