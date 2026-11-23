@@ -155,6 +155,8 @@ pub struct Engine {
 	suggestion_cache: Option<(String, Suggestion)>,
 	/// Word around the caret when the user moves back into existing text.
 	context: Option<ContextWord>,
+	/// Word characters after the caret when editing inside existing text.
+	context_suffix: Option<String>,
 }
 
 impl Default for Engine {
@@ -182,6 +184,7 @@ impl Engine {
 			reverted: false,
 			suggestion_cache: None,
 			context: None,
+			context_suffix: None,
 		}
 	}
 
@@ -220,6 +223,7 @@ impl Engine {
 		self.correction_memory.clear();
 		self.suggestion_cache = None;
 		self.context = None;
+		self.context_suffix = None;
 	}
 
 	/// Configure from `EditorInfo`. Flags mirror the Android constants so the
@@ -269,6 +273,7 @@ impl Engine {
 	pub fn selection_changed(&mut self) {
 		self.clear_correction_state();
 		self.context = None;
+		self.context_suffix = None;
 	}
 
 	/// The caret moved into existing text. `before` and `after` are the text
@@ -296,6 +301,11 @@ impl Engine {
 		let sentence_start = starts_sentence(before);
 		self.word.clear();
 		self.word.push_str(&prefix);
+		self.context_suffix = if self.suggestions_enabled && !suffix.is_empty() {
+			Some(suffix.clone())
+		} else {
+			None
+		};
 		self.context = if total >= 2 && self.suggestions_enabled {
 			Some(ContextWord {
 				before: prefix,
@@ -419,6 +429,7 @@ impl Engine {
 		} else {
 			self.word.clear();
 			self.last_correction = None;
+			self.context_suffix = None;
 		}
 		self.suggestion_cache = None;
 		if let Some(c) = rendered.chars().last() {
@@ -431,7 +442,7 @@ impl Engine {
 	fn commit_apostrophe(&mut self) -> Vec<Action> {
 		self.suggestion_word = None;
 		self.last_correction = None;
-		if self.word.is_empty() {
+		if self.word.is_empty() && self.context_suffix.is_none() {
 			return self.commit("'", false, false);
 		}
 		self.word.push('\'');
@@ -461,6 +472,7 @@ impl Engine {
 		}
 		self.word.clear();
 		self.clear_correction_state();
+		self.context_suffix = None;
 		self.suggestion_cache = None;
 		out.push(Action::Ime(self.ime_action));
 		out
@@ -534,6 +546,7 @@ impl Engine {
 		self.word.clear();
 		self.suggestion_word = None;
 		self.reverted = false;
+		self.context_suffix = None;
 		self.suggestion_cache = None;
 		out
 	}
@@ -633,7 +646,24 @@ impl Engine {
 			self.remember_correction(&chosen, &typed);
 			self.word.clear();
 			self.clear_correction_state();
+			self.context_suffix = None;
 			self.suggestion_cache = None;
+			return vec![Action::ReplaceSurrounding {
+				before,
+				after,
+				text: chosen,
+			}];
+		}
+
+		if let Some(suffix) = self.context_suffix.take() {
+			let before = self.word.chars().count() as u32;
+			let after = suffix.chars().count() as u32;
+			let original = format!("{}{}", self.word, suffix);
+			self.remember_correction(&chosen, &original);
+			self.word.clear();
+			self.clear_correction_state();
+			self.suggestion_cache = None;
+			self.note_text(&chosen);
 			return vec![Action::ReplaceSurrounding {
 				before,
 				after,
@@ -738,6 +768,13 @@ impl Engine {
 		vec![Action::Delete { word: false }]
 	}
 
+	fn word_with_suffix(&self) -> String {
+		match &self.context_suffix {
+			Some(suffix) => format!("{}{}", self.word, suffix),
+			None => self.word.clone(),
+		}
+	}
+
 	fn current_suggestions(&mut self) -> Vec<String> {
 		if !self.suggestions_enabled {
 			return Vec::new();
@@ -775,8 +812,8 @@ impl Engine {
 			}
 			return out;
 		}
-		if !self.word.is_empty() {
-			let typed = self.word.clone();
+		if !self.word.is_empty() || self.context_suffix.is_some() {
+			let typed = self.word_with_suffix();
 			if typed.chars().count() < 2 {
 				return Vec::new();
 			}
@@ -815,6 +852,7 @@ impl Engine {
 		self.word.clear();
 		self.last_char = None;
 		self.clear_correction_state();
+		self.context_suffix = None;
 		self.suggestion_cache = None;
 	}
 

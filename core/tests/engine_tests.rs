@@ -293,6 +293,26 @@ fn enter_triggers_editor_action_when_single_line() {
 }
 
 #[test]
+fn typing_after_backspacing_inside_a_word_uses_the_suffix() {
+	let mut engine = plain();
+	// The caret sits inside the typo "bknj|pur".
+	engine.set_context_word("bknj", "pur");
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![Action::Delete { word: false }]
+	);
+	// The IME re-reads the text after the delete: "bkn|pur".
+	engine.set_context_word("bkn", "pur");
+	engine.on_key("j");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions = suggestion_texts(&json);
+	assert!(
+		suggestions.iter().any(|text| text == "bonjour"),
+		"suggestions: {suggestions:?}"
+	);
+}
+
+#[test]
 fn multiline_field_without_action_keeps_newline() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | 0x0002_0000, 0);

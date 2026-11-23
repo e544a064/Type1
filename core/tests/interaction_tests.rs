@@ -97,6 +97,17 @@ fn capitalize(word: &str) -> String {
 	}
 }
 
+fn suggestion_texts(json: &serde_json::Value) -> Vec<String> {
+	(
+		json["suggestions"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap().to_string())
+		. collect()
+	)
+}
+
 #[derive(Clone, Copy, Debug)]
 enum Step<'a> {
 	/// Press `typed`; the engine should settle on `expected` at the next boundary.
@@ -1231,14 +1242,7 @@ fn suggestion_choice_shard(seed: u64, offset: usize, cases: usize) {
 
 		let json: serde_json::Value =
 			serde_json::from_str(&engine.render_json()).unwrap();
-		let suggestions: Vec<String> = (
-			json["suggestions"]
-			. as_array()
-			. unwrap()
-			. iter()
-			. map(|value| value.as_str().unwrap().to_string())
-			. collect()
-		);
+		let suggestions = suggestion_texts(&json);
 		if suggestions.is_empty() {
 			continue;
 		}
@@ -1319,14 +1323,7 @@ fn original_suggestions_shard(seed: u64, offset: usize, cases: usize) {
 		editor.sync(&mut engine);
 		let json: serde_json::Value =
 			serde_json::from_str(&engine.render_json()).unwrap();
-		let suggestions: Vec<String> = (
-			json["suggestions"]
-			. as_array()
-			. unwrap()
-			. iter()
-			. map(|value| value.as_str().unwrap().to_string())
-			. collect()
-		);
+		let suggestions = suggestion_texts(&json);
 		if (
 			suggestions
 			. iter()
@@ -1409,6 +1406,28 @@ fn full_original_suggestions_0() {
 #[test]
 fn full_original_suggestions_1() {
 	original_suggestions_shard(0xa000_0002, 500, 500);
+}
+
+#[test]
+fn full_middle_word_edit_uses_the_suffix() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT, 0);
+	let mut editor = Editor::default();
+	editor.set_text("bknjpur toi", 4);
+	editor.sync(&mut engine);
+	press(&mut engine, &mut editor, "backspace");
+	press(&mut engine, &mut editor, "j");
+
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions = suggestion_texts(&json);
+	let choice = (
+		suggestions
+		. iter()
+		. position(|suggestion| suggestion == "bonjour")
+		. unwrap_or_else(|| panic!("bonjour missing from {suggestions:?}"))
+	);
+	press(&mut engine, &mut editor, &format!("sug:{choice}"));
+	assert_eq!(editor.text(), "bonjour toi");
 }
 
 #[test]

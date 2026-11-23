@@ -55,6 +55,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       (`bknjpur` → `bonjour`), spelling variants (`commant` → `comment`) and
       a last-resort closest-word suggestion (`bodjmur` → `bonjour`)
 - [x] Re-suggest corrections when the caret moves back into an existing word
+- [x] Full-word suggestions and replacement when typing inside a word
 - [ ] Next-word prediction
 - [x] Auto-capitalisation (sentences / words / characters), including plain-text
       fields that do not request a cap flag, and after caret moves or backspace
