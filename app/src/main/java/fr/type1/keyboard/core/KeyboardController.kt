@@ -34,18 +34,19 @@ class KeyboardController {
 		)
 		if (cls != InputType.TYPE_CLASS_TEXT || type and caps != 0) return type
 		val variation = type and InputType.TYPE_MASK_VARIATION
-		val blocked = (
-			variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-			|| variation == InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT
-			|| variation == InputType.TYPE_TEXT_VARIATION_URI
-			|| variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
-			|| variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-			|| variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
-			|| variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-			|| variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
-			|| variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
-			|| variation == InputType.TYPE_TEXT_VARIATION_FILTER
-		)
+		val blocked = when (variation) {
+			InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+			InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT,
+			InputType.TYPE_TEXT_VARIATION_URI,
+			InputType.TYPE_TEXT_VARIATION_PASSWORD,
+			InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+			InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
+			InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+			InputType.TYPE_TEXT_VARIATION_PERSON_NAME,
+			InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS,
+			InputType.TYPE_TEXT_VARIATION_FILTER -> true
+			else -> false
+		}
 		return if (blocked) type else type or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
 	}
 

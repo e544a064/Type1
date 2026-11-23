@@ -51,6 +51,20 @@ fn auto_cases() -> &'static [(&'static str, &'static str)] {
 
 static SAFE_WORDS: OnceLock<Vec<&'static str>> = OnceLock::new();
 
+fn is_safe_word(word: &str) -> bool {
+	type1_core::dictionary::exact(word).is_some()
+	&& (
+		type1_core::correction::suggest(word)
+		. candidates
+		. is_empty()
+	)
+	&& (
+		type1_core::correction::suggest(&capitalize(word))
+		. candidates
+		. is_empty()
+	)
+}
+
 /// Common words the corrector leaves alone, including their capitalised form.
 fn safe_words() -> &'static [&'static str] {
 	SAFE_WORDS.get_or_init(|| {
@@ -67,19 +81,7 @@ fn safe_words() -> &'static [&'static str] {
 			POOL
 			. iter()
 			. copied()
-			. filter(|word| {
-				type1_core::dictionary::exact(word).is_some()
-				&& (
-					type1_core::correction::suggest(word)
-					. candidates
-					. is_empty()
-				)
-				&& (
-					type1_core::correction::suggest(&capitalize(word))
-					. candidates
-					. is_empty()
-				)
-			})
+			. filter(|word| is_safe_word(word))
 			. collect()
 		);
 		assert!(words.len() >= 30, "only {} safe words", words.len());

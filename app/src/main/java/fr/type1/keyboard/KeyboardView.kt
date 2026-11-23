@@ -160,7 +160,7 @@ class KeyboardView(
 			Band.Utilities -> {
 				val key = model?.keys?.getOrNull(downUtility) ?: return@Runnable
 				when {
-					key.kind == "backspace" -> handleBackspaceHold()
+					key.isBackspace() -> handleBackspaceHold()
 					key.kind == "page" && showPageAltPopup(downUtility) -> {
 						longPressFired = true
 						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -173,7 +173,7 @@ class KeyboardView(
 			}
 			Band.Suggestions -> {
 				val key = model?.strip?.getOrNull(downStrip) ?: return@Runnable
-				if (key.kind == "backspace") handleBackspaceHold()
+				if (key.isBackspace()) handleBackspaceHold()
 			}
 			else -> Unit
 		}
@@ -217,6 +217,8 @@ class KeyboardView(
 	fun setBackspaceHold(mode: BackspaceHold) {
 		backspaceHold = mode
 	}
+
+	private fun UtilityKey?.isBackspace(): Boolean = this?.kind == "backspace"
 
 	/** dp of horizontal travel per caret/selection step (8-40). */
 	fun setSwipeSensitivity(dpPerStep: Int) {
@@ -662,10 +664,7 @@ class KeyboardView(
 					else -> -1
 				}
 				downStrip = pressedStrip
-				downBackspace = (
-					pressedStrip >= 0
-					&& model?.strip?.getOrNull(pressedStrip)?.kind == "backspace"
-				)
+				downBackspace = model?.strip?.getOrNull(pressedStrip).isBackspace()
 				if (pressedStrip >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
@@ -685,10 +684,7 @@ class KeyboardView(
 			Band.Utilities -> {
 				downUtility = hit(utilityRects, x)
 				pressedUtility = downUtility
-				downBackspace = (
-					downUtility >= 0
-					&& model?.keys?.getOrNull(downUtility)?.kind == "backspace"
-				)
+				downBackspace = model?.keys?.getOrNull(downUtility).isBackspace()
 				if (downUtility >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
