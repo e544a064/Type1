@@ -341,6 +341,20 @@ fn correction_memory_preserves_the_typed_case() {
 }
 
 #[test]
+fn correction_memory_is_not_offered_while_typing() {
+	let mut engine = plain();
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	for key in ["b", "o", "n", "j", "o", "u", "r"] {
+		engine.on_key(key);
+	}
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn correction_memory_is_field_scoped() {
 	let mut engine = plain();
 	for key in ["b", "k", "n", "j", "p", "u", "r"] {
