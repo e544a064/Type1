@@ -12,7 +12,9 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Period key shows its `!`/`?`/`:` alternates greyed at the top
 - [x] Page key long-press popup for a single digit without leaving the page
 - [x] Symbols / numbers replace the letter line
-- [x] Contextual enter key (`⏎`, `→`, `✓`, `🔍`, `➤`)
+- [x] Contextual enter key (`⏎`, `→`, `✓`, `🔍`, `➤`); an explicit action
+      wins over multiline, newline only without an action or with
+      `IME_FLAG_NO_ENTER_ACTION`
 - [x] Shift and backspace pinned to the suggestion strip
 - [x] Hold-to-repeat backspace
 - [x] Comma left of the spacebar, period on its right with `!`/`?` on long-press

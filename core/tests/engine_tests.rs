@@ -293,10 +293,57 @@ fn enter_triggers_editor_action_when_single_line() {
 }
 
 #[test]
-fn multiline_field_keeps_newline_even_with_action() {
+fn multiline_field_without_action_keeps_newline() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0002_0000, 0);
+	assert_eq!(engine.on_key("enter"), vec![Action::Commit("\n".into())]);
+}
+
+#[test]
+fn multiline_field_performs_an_explicit_action() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | 0x0002_0000, 0x0000_0006);
+	assert_eq!(engine.on_key("enter"), vec![Action::Ime(ImeActionKind::Done)]);
+}
+
+#[test]
+fn multiline_search_action_shows_the_search_key() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0002_0000, 0x0000_0003);
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let enter = (
+		json["keys"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. find(|key| key["id"] == "enter")
+		. unwrap()
+	);
+	assert_eq!(enter["icon"], "search");
+	assert_eq!(enter["label"], "🔍");
+}
+
+#[test]
+fn multiline_search_action_searches() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0002_0000, 0x0000_0003);
+	assert_eq!(engine.on_key("enter"), vec![Action::Ime(ImeActionKind::Search)]);
+}
+
+#[test]
+fn no_enter_action_flag_keeps_the_newline() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | 0x0002_0000, 0x4000_0006);
 	assert_eq!(engine.on_key("enter"), vec![Action::Commit("\n".into())]);
+}
+
+#[test]
+fn refreshing_ime_options_updates_the_enter_key() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT, 0);
+	assert_eq!(engine.on_key("enter"), vec![Action::Commit("\n".into())]);
+	engine.set_ime_options(0x0000_0003);
+	assert_eq!(engine.on_key("enter"), vec![Action::Ime(ImeActionKind::Search)]);
 }
 
 #[test]

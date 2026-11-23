@@ -21,6 +21,8 @@ public class NativeBridge {
 
 	public static native void nativeSetInputType(long handle, int inputType, int imeOptions);
 
+	public static native void nativeSetImeOptions(long handle, int imeOptions);
+
 	public static native String nativeRender(long handle);
 
 	public static native String nativeKey(long handle, String key);
@@ -71,6 +73,11 @@ public class NativeBridge {
 		nativeSetInputType(handle, 0x0000_4001, 0);
 		nativeSyncContext(handle, "Bonjour. ", "");
 		System.out.println("caps     -> " + nativeKey(handle, "a"));
+
+		nativeReset(handle);
+		nativeSetInputType(handle, 0x0000_0001, 0);
+		nativeSetImeOptions(handle, 0x0000_0003);
+		System.out.println("search   -> " + nativeKey(handle, "enter"));
 
 		nativeDestroy(handle);
 		System.out.println("OK");

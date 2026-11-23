@@ -64,6 +64,8 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		keyboardView?.setUtilityRowHeight(Prefs.utilityRowHeight(this))
 		selectAnchor = -1
 		selectWidth = 0
+		// Some editors set imeOptions just before the view appears.
+		if (info != null) controller.setImeOptions(info.imeOptions)
 		keyboardView?.refresh()
 		syncContextFromEditor()
 	}

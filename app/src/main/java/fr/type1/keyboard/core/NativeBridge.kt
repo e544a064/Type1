@@ -25,6 +25,8 @@ internal object NativeBridge {
 
 	external fun nativeSetInputType(handle: Long, inputType: Int, imeOptions: Int)
 
+	external fun nativeSetImeOptions(handle: Long, imeOptions: Int)
+
 	/** JSON row model: keys, weights, page, shift state. */
 	external fun nativeRender(handle: Long): String
 

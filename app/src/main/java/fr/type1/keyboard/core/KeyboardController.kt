@@ -52,6 +52,9 @@ class KeyboardController {
 
 	fun reset() = NativeBridge.nativeReset(handle)
 
+	fun setImeOptions(imeOptions: Int) =
+		NativeBridge.nativeSetImeOptions(handle, imeOptions)
+
 	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
 
 	fun syncContext(before: String, after: String) =

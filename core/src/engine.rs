@@ -139,7 +139,8 @@ pub struct Engine {
 	/// Letters (and inner apostrophes) committed since the last boundary.
 	word: String,
 	ime_action: ImeActionKind,
-	multiline: bool,
+	/// True when the editor asked the enter key to stay a newline.
+	no_enter_action: bool,
 	suggestions_enabled: bool,
 	last_correction: Option<CorrectionRecord>,
 	/// Words changed in this field, keyed by their visible form.
@@ -172,7 +173,7 @@ impl Engine {
 			last_char: None,
 			word: String::new(),
 			ime_action: ImeActionKind::None,
-			multiline: false,
+			no_enter_action: false,
 			suggestions_enabled: true,
 			last_correction: None,
 			correction_memory: CorrectionMemory::default(),
@@ -233,7 +234,6 @@ impl Engine {
 		let no_suggestions = input_type & 0x0008_0000 != 0;
 
 		let numeric = matches!(class, 0x2..=0x4);
-		self.multiline = class == 0x1 && (input_type & 0x0002_0000) != 0;
 		self.suggestions_enabled = class == 0x1 && !blocked_variation && !no_suggestions;
 		self.caps = if input_type & 0x0000_1000 != 0 {
 			CapsMode::Characters
@@ -244,7 +244,7 @@ impl Engine {
 		} else {
 			CapsMode::None
 		};
-		self.ime_action = ImeActionKind::from_ime_options(ime_options);
+		self.apply_ime_options(ime_options);
 
 		self.page = if numeric {
 			Page::Numbers
@@ -252,6 +252,17 @@ impl Engine {
 			Page::Letters
 		};
 		self.reset();
+	}
+
+	/// Refresh the editor action without resetting the current edit. The app
+	/// may set `imeOptions` after `onStartInput`, just before the view appears.
+	pub fn set_ime_options(&mut self, ime_options: i32) {
+		self.apply_ime_options(ime_options);
+	}
+
+	fn apply_ime_options(&mut self, ime_options: i32) {
+		self.ime_action = ImeActionKind::from_ime_options(ime_options);
+		self.no_enter_action = ime_options & 0x4000_0000 != 0;
 	}
 
 	/// The editor selection moved: a pending correction can no longer be undone.
@@ -431,7 +442,7 @@ impl Engine {
 	}
 
 	fn enter(&mut self) -> Vec<Action> {
-		if self.multiline || self.ime_action == ImeActionKind::None {
+		if self.no_enter_action || self.ime_action == ImeActionKind::None {
 			return self.finish_word("\n", false);
 		}
 
@@ -843,7 +854,7 @@ impl Engine {
 	}
 
 	fn enter_label(&self) -> &'static str {
-		if self.multiline || self.ime_action == ImeActionKind::None {
+		if self.no_enter_action || self.ime_action == ImeActionKind::None {
 			"⏎"
 		} else {
 			self.ime_action.key_label()
@@ -851,7 +862,7 @@ impl Engine {
 	}
 
 	fn enter_icon(&self) -> &'static str {
-		if self.multiline || self.ime_action == ImeActionKind::None {
+		if self.no_enter_action || self.ime_action == ImeActionKind::None {
 			return "enter";
 		}
 		match self.ime_action {

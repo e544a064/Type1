@@ -110,6 +110,20 @@ pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSetInputTy
 }
 
 #[no_mangle]
+pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSetImeOptions(
+	_env: JNIEnv<'_>,
+	_this: JObject<'_>,
+	_handle: jlong,
+	ime_options: jint,
+) {
+	let _ = catch_unwind(AssertUnwindSafe(|| {
+		if let Some(engine) = lock().as_mut() {
+			engine.set_ime_options(ime_options);
+		}
+	}));
+}
+
+#[no_mangle]
 pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeRender(
 	env: JNIEnv<'_>,
 	_this: JObject<'_>,
