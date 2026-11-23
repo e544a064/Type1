@@ -741,20 +741,23 @@ impl Engine {
 			) {
 				return Vec::new();
 			}
-			// A word the keyboard changed keeps what the user typed.
-			// Offer it first so proofreading can recover the original.
-			let remembered = self.remembered_typed(&full).map(str::to_string);
-			let suggestion = self.suggestion_for(&full);
-			let limit = suggestion_limit(&full);
+			// If the word was changed, re-open the suggestions for the form
+			// the user actually typed, not for the visible correction.
+			let source = self.remembered_typed(&full).unwrap_or(&full).to_string();
+			let suggestion = self.suggestion_for(&source);
+			let limit = suggestion_limit(&source);
+			let full_key = full.to_lowercase();
+			let source_key = source.to_lowercase();
 			let mut out = Vec::new();
-			if let Some(typed) = remembered {
-				out.push(typed);
-			}
 			for candidate in suggestion.candidates.iter() {
 				if out.len() >= limit {
 					break;
 				}
 				let text = apply_case(&full, &candidate.text);
+				let key = text.to_lowercase();
+				if key == full_key || key == source_key {
+					continue;
+				}
 				if !out.contains(&text) {
 					out.push(text);
 				}

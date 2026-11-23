@@ -56,9 +56,9 @@ release on the letter you want.
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
 - Words the keyboard changes are remembered for the current field. Move the
-  caret back into one and the form you actually typed is offered first in the
-  strip. The memory is capped at 1,000 words / 256 KB and cleared on a new or
-  sensitive field.
+  caret back into one and the suggestions for the form you actually typed are
+  offered again. The memory is capped at 1,000 words / 256 KB and cleared on a
+  new or sensitive field.
 - An accepted suggestion is not corrected again: backspacing over its automatic
   space keeps the chosen word when the next comma, space or symbol is typed.
 - Move the caret back into an existing word and the strip re-suggests

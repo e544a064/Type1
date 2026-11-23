@@ -1278,10 +1278,11 @@ fn full_suggestion_choice_1() {
 	suggestion_choice_shard(0x9000_0002, 600, 600);
 }
 
-fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
+fn original_suggestions_shard(seed: u64, offset: usize, cases: usize) {
 	let corpus = auto_cases();
 	let mut rng = Rng(seed);
 	let mut failures = Vec::new();
+	let mut checked = 0usize;
 	for index in 0..cases {
 		let (typed, expected_word) = corpus[(offset + index) % corpus.len()];
 		let caps = rng.below(2) == 0;
@@ -1296,7 +1297,7 @@ fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
 		} else {
 			expected_word.to_string()
 		};
-		let restored = if caps {
+		let typed_form = if caps {
 			capitalize(typed)
 		} else {
 			typed.to_string()
@@ -1304,7 +1305,7 @@ fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
 		let after_correction = format!("{corrected} ");
 		if editor.text() != after_correction {
 			failures.push(format!(
-				"restore case {} after correction: typed {typed:?}\n  expected {after_correction:?}\n  actual   {:?}",
+				"original-suggestions case {} after correction: typed {typed:?}\n  expected {after_correction:?}\n  actual   {:?}",
 				offset + index,
 				editor.text()
 			));
@@ -1326,29 +1327,66 @@ fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
 			. map(|value| value.as_str().unwrap().to_string())
 			. collect()
 		);
-		let choice = (
+		if (
 			suggestions
 			. iter()
-			. position(|suggestion| suggestion == &restored)
-		);
-		let Some(choice) = choice else {
+			. any(|suggestion| suggestion.eq_ignore_ascii_case(&typed_form))
+		) {
 			failures.push(format!(
-				"restore case {}: typed {typed:?}, no {:?} in {suggestions:?}",
-				offset + index,
-				restored
+				"original-suggestions case {}: typed {typed:?} was offered as {suggestions:?}",
+				offset + index
 			));
 			if failures.len() >= 8 {
 				break;
 			}
 			continue;
-		};
-		press(&mut engine, &mut editor, &format!("sug:{choice}"));
+		}
 
-		let expected = format!("{restored} ");
-		let actual = editor.text();
-		if actual != expected {
+		let expected_all: Vec<String> = (
+			type1_core::correction::suggest(typed)
+			. candidates
+			. iter()
+			. map(|candidate| {
+				if caps {
+					capitalize(&candidate.text)
+				} else {
+					candidate.text.clone()
+				}
+			})
+			. filter(|text| {
+				!text.eq_ignore_ascii_case(&corrected)
+					&& !text.eq_ignore_ascii_case(&typed_form)
+			})
+			. collect()
+		);
+		let expected = (
+			expected_all
+			. iter()
+			. take(suggestions.len())
+			. cloned()
+			. collect::<Vec<_>>()
+		);
+		if suggestions != expected {
 			failures.push(format!(
-				"restore case {} after tap: typed {typed:?}\n  expected {expected:?}\n  actual   {actual:?}",
+				"original-suggestions case {}: typed {typed:?}\n  expected {expected:?}\n  actual   {suggestions:?}",
+				offset + index
+			));
+			if failures.len() >= 8 {
+				break;
+			}
+			continue;
+		}
+		if expected.is_empty() {
+			continue;
+		}
+		checked += 1;
+
+		press(&mut engine, &mut editor, "sug:0");
+		let expected_text = format!("{} ", expected[0]);
+		let actual = editor.text();
+		if actual != expected_text {
+			failures.push(format!(
+				"original-suggestions case {} after tap: typed {typed:?}\n  expected {expected_text:?}\n  actual   {actual:?}",
 				offset + index
 			));
 			if failures.len() >= 8 {
@@ -1357,16 +1395,20 @@ fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
 		}
 	}
 	assert!(failures.is_empty(), "{}", failures.join("\n"));
+	assert!(
+		checked >= 200,
+		"only {checked} cases had an alternative suggestion"
+	);
 }
 
 #[test]
-fn full_restore_typed_0() {
-	restore_typed_shard(0xa000_0001, 0, 500);
+fn full_original_suggestions_0() {
+	original_suggestions_shard(0xa000_0001, 0, 500);
 }
 
 #[test]
-fn full_restore_typed_1() {
-	restore_typed_shard(0xa000_0002, 500, 500);
+fn full_original_suggestions_1() {
+	original_suggestions_shard(0xa000_0002, 500, 500);
 }
 
 #[test]

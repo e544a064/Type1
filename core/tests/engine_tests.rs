@@ -19,6 +19,54 @@ fn commits(actions: &[Action]) -> Vec<String> {
 	. collect()
 }
 
+fn capitalize(word: &str) -> String {
+	let mut chars = word.chars();
+	match chars.next() {
+		Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+		None => String::new(),
+	}
+}
+
+/// What the strip should show when the caret re-enters a changed word.
+fn original_suggestions(
+	typed: &str,
+	visible: &str,
+	caps: bool,
+	limit: usize,
+) -> Vec<String> {
+	let visible_key = visible.to_lowercase();
+	let typed_key = typed.to_lowercase();
+	(
+		type1_core::correction::suggest(typed)
+		. candidates
+		. iter()
+		. map(|candidate| {
+			if caps {
+				capitalize(&candidate.text)
+			} else {
+				candidate.text.clone()
+			}
+		})
+		. filter(|text| {
+			let key = text.to_lowercase();
+			key != visible_key && key != typed_key
+		})
+		. take(limit)
+		. collect()
+	)
+}
+
+fn suggestion_texts(json: &serde_json::Value) -> Vec<String> {
+	(
+		json["suggestions"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap().to_string())
+		. collect()
+	)
+}
+
 #[test]
 fn shift_applies_once() {
 	let mut engine = plain();
@@ -288,23 +336,25 @@ fn short_tokens_show_more_suggestions() {
 }
 
 #[test]
-fn moving_into_a_corrected_word_offers_the_typed_form() {
+fn moving_into_a_corrected_word_reopens_the_original_suggestions() {
 	let mut engine = plain();
-	for key in ["b", "k", "n", "j", "p", "u", "r"] {
-		engine.on_key(key);
-	}
+	engine.on_key("u");
+	engine.on_key("e");
 	engine.on_key("space");
-	// The editor text is "bonjour ". The caret moves back onto the word.
-	engine.set_context_word("bonjour", " ");
+	// The editor text is "je ". The caret moves back onto the word.
+	engine.set_context_word("je", " ");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	let suggestions = json["suggestions"].as_array().unwrap();
-	assert_eq!(suggestions[0], "bknjpur");
+	let suggestions = suggestion_texts(&json);
+	let expected = original_suggestions("ue", "je", false, 6);
+	assert!(!expected.is_empty());
+	assert_eq!(suggestions, expected);
+	assert!(!suggestions.iter().any(|text| text.eq_ignore_ascii_case("ue")));
 	assert_eq!(
 		engine.on_key("sug:0"),
 		vec![Action::ReplaceSurrounding {
-			before: 7,
+			before: 2,
 			after: 0,
-			text: "bknjpur".into(),
+			text: expected[0].clone(),
 		}]
 	);
 }
@@ -312,32 +362,38 @@ fn moving_into_a_corrected_word_offers_the_typed_form() {
 #[test]
 fn a_tapped_suggestion_is_remembered_too() {
 	let mut engine = plain();
-	for key in ["b", "k", "n", "j", "p", "u", "r"] {
-		engine.on_key(key);
-	}
+	engine.on_key("u");
+	engine.on_key("e");
 	assert_eq!(
 		engine.on_key("sug:0"),
 		vec![
-			Action::DeleteChars(7),
-			Action::CommitSuggestion("bonjour ".into()),
+			Action::DeleteChars(2),
+			Action::CommitSuggestion("je ".into()),
 		]
 	);
-	engine.set_context_word("bonjour", " ");
+	engine.set_context_word("je", " ");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	assert_eq!(json["suggestions"][0], "bknjpur");
+	let suggestions = suggestion_texts(&json);
+	let expected = original_suggestions("ue", "je", false, 6);
+	assert!(!expected.is_empty());
+	assert_eq!(suggestions, expected);
+	assert!(!suggestions.iter().any(|text| text.eq_ignore_ascii_case("ue")));
 }
 
 #[test]
-fn correction_memory_preserves_the_typed_case() {
+fn correction_memory_reopens_suggestions_in_the_visible_case() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
-	for key in ["b", "k", "n", "j", "p", "u", "r"] {
-		engine.on_key(key);
-	}
+	engine.on_key("u");
+	engine.on_key("e");
 	engine.on_key("space");
-	engine.set_context_word("Bonjour", " ");
+	engine.set_context_word("Je", " ");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	assert_eq!(json["suggestions"][0], "Bknjpur");
+	let suggestions = suggestion_texts(&json);
+	let expected = original_suggestions("ue", "Je", true, 6);
+	assert!(!expected.is_empty());
+	assert_eq!(suggestions, expected);
+	assert!(!suggestions.iter().any(|text| text.eq_ignore_ascii_case("Ue")));
 }
 
 #[test]

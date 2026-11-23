@@ -40,8 +40,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 ## 4. Suggestions & correction
 - [x] Suggestion strip above the letters showing correction candidates
 - [x] Short tokens show more candidates (up to six for two or three letters)
-- [x] Per-field correction memory: moving back into a changed word offers what
-      was typed, capped and cleared on a new or sensitive field
+- [x] Per-field correction memory: moving back into a changed word re-opens
+      the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
 - [x] Frequency-ranked 20k French dictionary with a layout-aware touch model
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
