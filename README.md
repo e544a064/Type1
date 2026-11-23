@@ -55,6 +55,10 @@ release on the letter you want.
 - The suggestion strip shows correction candidates while typing and the
   original + alternatives after a correction; the first backspace undoes the
   correction, keeps the boundary you typed and reopens the word.
+- Words the keyboard changes are remembered for the current field. Move the
+  caret back into one and the form you actually typed is offered first in the
+  strip. The memory is capped at 1,000 words / 256 KB and cleared on a new or
+  sensitive field.
 - An accepted suggestion is not corrected again: backspacing over its automatic
   space keeps the chosen word when the next comma, space or symbol is typed.
 - Move the caret back into an existing word and the strip re-suggests
@@ -236,7 +240,7 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic, 6,500 autocorrect cases, ~29,000 full interaction sessions
+# core logic, 6,500 autocorrect cases, ~30,000 full interaction sessions
 # and held-out accuracy floors
 cd core; cargo test
 
@@ -264,8 +268,8 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 138 tests, 6,500 fixture cases and
-  ~29,000 generated interaction sessions.
+- Rust 1.101 (nightly), `cargo test`: 146 tests, 6,500 fixture cases and
+  ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

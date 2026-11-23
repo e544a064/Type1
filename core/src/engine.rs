@@ -1,6 +1,8 @@
 //! Keyboard state machine: pages, shift, capitalisation, French spacing,
 //! current-word tracking, correction and suggestions.
 
+use std::collections::VecDeque;
+
 use crate::action::{Action, ImeActionKind};
 use crate::correction::{self, Suggestion};
 use crate::json;
@@ -8,6 +10,12 @@ use crate::layout::{Page, ShiftState, STRIP, UTILITIES};
 
 const STRIP_SUGGESTIONS: usize = 3;
 const MAX_STRIP_SUGGESTIONS: usize = 6;
+
+/// Per-field correction memory caps. Only words the keyboard actually changed
+/// are stored, so this is generous for a normal text field.
+const MAX_MEMORY_ENTRIES: usize = 1_000;
+const MAX_MEMORY_BYTES: usize = 256 * 1024;
+const MEMORY_ENTRY_OVERHEAD: usize = 32;
 
 /// Short tokens leave room for more cells in the strip. The corrector
 /// generates at most six candidates.
@@ -58,6 +66,68 @@ impl ContextWord {
 	}
 }
 
+/// A word the keyboard changed, paired with what the user actually typed.
+#[derive(Debug)]
+struct MemoryEntry {
+	/// Lowercase visible word, used as the content address.
+	visible: String,
+	typed: String,
+}
+
+#[derive(Debug, Default)]
+struct CorrectionMemory {
+	entries: VecDeque<MemoryEntry>,
+	bytes: usize,
+}
+
+impl CorrectionMemory {
+	fn clear(&mut self) {
+		self.entries.clear();
+		self.bytes = 0;
+	}
+
+	fn remember(&mut self, visible: &str, typed: &str) {
+		let key = visible.to_lowercase();
+		if key.is_empty() || typed.is_empty() || key == typed.to_lowercase() {
+			return;
+		}
+		if let Some(index) = (
+			self
+			. entries
+			. iter()
+			. position(|entry| entry.visible == key)
+		) {
+			if let Some(old) = self.entries.remove(index) {
+				self.bytes = self.bytes.saturating_sub(entry_bytes(&old));
+			}
+		}
+		let entry = MemoryEntry {
+			visible: key,
+			typed: typed.to_string(),
+		};
+		self.bytes += entry_bytes(&entry);
+		self.entries.push_front(entry);
+		while self.entries.len() > MAX_MEMORY_ENTRIES || self.bytes > MAX_MEMORY_BYTES {
+			let Some(old) = self.entries.pop_back() else {
+				break;
+			};
+			self.bytes = self.bytes.saturating_sub(entry_bytes(&old));
+		}
+	}
+
+	fn lookup(&self, visible: &str) -> Option<&str> {
+		let key = visible.to_lowercase();
+		self.entries
+		. iter()
+		. find(|entry| entry.visible == key)
+		. map(|entry| entry.typed.as_str())
+	}
+}
+
+fn entry_bytes(entry: &MemoryEntry) -> usize {
+	entry.visible.len() + entry.typed.len() + MEMORY_ENTRY_OVERHEAD
+}
+
 #[derive(Debug)]
 pub struct Engine {
 	page: Page,
@@ -72,6 +142,8 @@ pub struct Engine {
 	multiline: bool,
 	suggestions_enabled: bool,
 	last_correction: Option<CorrectionRecord>,
+	/// Words changed in this field, keyed by their visible form.
+	correction_memory: CorrectionMemory,
 	/// Word accepted from the suggestion strip, kept until the user moves on.
 	suggestion_word: Option<String>,
 	/// Boundary text left just after the caret when a correction is undone.
@@ -103,6 +175,7 @@ impl Engine {
 			multiline: false,
 			suggestions_enabled: true,
 			last_correction: None,
+			correction_memory: CorrectionMemory::default(),
 			suggestion_word: None,
 			pending_boundary: None,
 			reverted: false,
@@ -123,12 +196,27 @@ impl Engine {
 		self.reverted = false;
 	}
 
+	fn remember_correction(&mut self, visible: &str, typed: &str) {
+		if self.suggestions_enabled {
+			self.correction_memory.remember(visible, typed);
+		}
+	}
+
+	fn remembered_typed(&self, visible: &str) -> Option<&str> {
+		if self.suggestions_enabled {
+			self.correction_memory.lookup(visible)
+		} else {
+			None
+		}
+	}
+
 	pub fn reset(&mut self) {
 		self.shift = ShiftState::Off;
 		self.at_start = true;
 		self.last_char = None;
 		self.word.clear();
 		self.clear_correction_state();
+		self.correction_memory.clear();
 		self.suggestion_cache = None;
 		self.context = None;
 	}
@@ -358,6 +446,7 @@ impl Engine {
 			out.push(Action::DeleteChars(original.chars().count() as u32));
 			out.push(Action::Commit(corrected.clone()));
 			self.note_text(&corrected);
+			self.remember_correction(&corrected, &original);
 		}
 		self.word.clear();
 		self.clear_correction_state();
@@ -401,6 +490,7 @@ impl Engine {
 			out.push(Action::DeleteChars(original.chars().count() as u32));
 			out.push(Action::Commit(corrected.clone()));
 			self.note_text(&corrected);
+			self.remember_correction(&corrected, &original);
 			self.last_correction = Some(CorrectionRecord {
 				original,
 				corrected,
@@ -522,6 +612,14 @@ impl Engine {
 		if let Some(context) = self.context.take() {
 			let before = context.before.chars().count() as u32;
 			let after = context.after.chars().count() as u32;
+			let full = context.full();
+			let typed = (
+				self
+				. remembered_typed(&full)
+				. map(str::to_string)
+				. unwrap_or(full)
+			);
+			self.remember_correction(&chosen, &typed);
 			self.word.clear();
 			self.clear_correction_state();
 			self.suggestion_cache = None;
@@ -543,6 +641,7 @@ impl Engine {
 				let text = format!("{chosen}{}", record.boundary);
 				out.push(Action::Commit(text.clone()));
 				self.note_text(&text);
+				self.remember_correction(&chosen, &record.original);
 				self.word.clear();
 				self.suggestion_word = None;
 				self.suggestion_cache = None;
@@ -558,14 +657,15 @@ impl Engine {
 			}
 		}
 
-		let delete = self.word.chars().count() as u32;
+		let typed = std::mem::take(&mut self.word);
+		let delete = typed.chars().count() as u32;
 		let mut out = Vec::new();
 		self.consume_pending_boundary(&mut out);
 		if delete > 0 {
 			out.push(Action::DeleteChars(delete));
 		}
 		out.push(Action::CommitSuggestion(format!("{chosen} ")));
-		self.word.clear();
+		self.remember_correction(&chosen, &typed);
 		self.clear_correction_state();
 		self.suggestion_word = Some(chosen);
 		self.suggestion_cache = None;
@@ -641,14 +741,25 @@ impl Engine {
 			) {
 				return Vec::new();
 			}
+			// A word the keyboard changed keeps what the user typed.
+			// Offer it first so proofreading can recover the original.
+			let remembered = self.remembered_typed(&full).map(str::to_string);
 			let suggestion = self.suggestion_for(&full);
 			let limit = suggestion_limit(&full);
-			return suggestion
-			.candidates
-			.iter()
-			.take(limit)
-			.map(|candidate| apply_case(&full, &candidate.text))
-			.collect();
+			let mut out = Vec::new();
+			if let Some(typed) = remembered {
+				out.push(typed);
+			}
+			for candidate in suggestion.candidates.iter() {
+				if out.len() >= limit {
+					break;
+				}
+				let text = apply_case(&full, &candidate.text);
+				if !out.contains(&text) {
+					out.push(text);
+				}
+			}
+			return out;
 		}
 		if !self.word.is_empty() {
 			let typed = self.word.clone();
@@ -664,11 +775,11 @@ impl Engine {
 			let suggestion = self.suggestion_for(&typed);
 			let limit = suggestion_limit(&typed);
 			return suggestion
-			.candidates
-			.iter()
-			.take(limit)
-			.map(|candidate| apply_case(&typed, &candidate.text))
-			.collect();
+			. candidates
+			. iter()
+			. take(limit)
+			. map(|candidate| apply_case(&typed, &candidate.text))
+			. collect();
 		}
 
 		if let Some(record) = &self.last_correction {
@@ -959,5 +1070,37 @@ fn kind_id(kind: crate::layout::KeyKind) -> &'static str {
 		Enter => "enter",
 		Space => "space",
 		Page => "page",
+	}
+}
+
+#[cfg(test)]
+mod memory_tests {
+	use super::*;
+
+	#[test]
+	fn correction_memory_keeps_one_typed_form_per_word() {
+		let mut memory = CorrectionMemory::default();
+		memory.remember("bonjour", "bouiojn");
+		memory.remember("Bonjour", "bknjpur");
+		assert_eq!(memory.entries.len(), 1);
+		assert_eq!(memory.lookup("bonjour"), Some("bknjpur"));
+	}
+
+	#[test]
+	fn correction_memory_is_bounded() {
+		let mut memory = CorrectionMemory::default();
+		for index in 0..(MAX_MEMORY_ENTRIES + 10) {
+			memory.remember(
+				&format!("visible{index}"),
+				&format!("typed{index}"),
+			);
+		}
+		assert_eq!(memory.entries.len(), MAX_MEMORY_ENTRIES);
+		assert!(memory.lookup("visible0").is_none());
+		assert!(
+			memory
+			. lookup(&format!("visible{}", MAX_MEMORY_ENTRIES + 9))
+			. is_some()
+		);
 	}
 }

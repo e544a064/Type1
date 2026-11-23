@@ -288,6 +288,73 @@ fn short_tokens_show_more_suggestions() {
 }
 
 #[test]
+fn moving_into_a_corrected_word_offers_the_typed_form() {
+	let mut engine = plain();
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	// The editor text is "bonjour ". The caret moves back onto the word.
+	engine.set_context_word("bonjour", " ");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	let suggestions = json["suggestions"].as_array().unwrap();
+	assert_eq!(suggestions[0], "bknjpur");
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![Action::ReplaceSurrounding {
+			before: 7,
+			after: 0,
+			text: "bknjpur".into(),
+		}]
+	);
+}
+
+#[test]
+fn a_tapped_suggestion_is_remembered_too() {
+	let mut engine = plain();
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("sug:0"),
+		vec![
+			Action::DeleteChars(7),
+			Action::CommitSuggestion("bonjour ".into()),
+		]
+	);
+	engine.set_context_word("bonjour", " ");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "bknjpur");
+}
+
+#[test]
+fn correction_memory_preserves_the_typed_case() {
+	let mut engine = Engine::new();
+	engine.set_input_type(TEXT | CAP_SENTENCES, 0);
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	engine.set_context_word("Bonjour", " ");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(json["suggestions"][0], "Bknjpur");
+}
+
+#[test]
+fn correction_memory_is_field_scoped() {
+	let mut engine = plain();
+	for key in ["b", "k", "n", "j", "p", "u", "r"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	// A new field resets the memory.
+	engine.set_input_type(TEXT, 0);
+	engine.set_context_word("bonjour", " ");
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn suggests_corrections_while_typing() {
 	let mut engine = plain();
 	engine.on_key("t");

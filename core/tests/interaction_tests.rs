@@ -233,6 +233,12 @@ impl Editor {
 		self.needs_sync = false;
 	}
 
+	fn set_caret(&mut self, caret: usize) {
+		self.caret = caret.min(self.chars.len());
+		self.selection_anchor = None;
+		self.selection_width = 0;
+	}
+
 	/// Mirror the platform's context re-read after a caret move or a delete.
 	fn sync(&mut self, engine: &mut Engine) {
 		let before: String = (
@@ -1270,6 +1276,97 @@ fn full_suggestion_choice_0() {
 #[test]
 fn full_suggestion_choice_1() {
 	suggestion_choice_shard(0x9000_0002, 600, 600);
+}
+
+fn restore_typed_shard(seed: u64, offset: usize, cases: usize) {
+	let corpus = auto_cases();
+	let mut rng = Rng(seed);
+	let mut failures = Vec::new();
+	for index in 0..cases {
+		let (typed, expected_word) = corpus[(offset + index) % corpus.len()];
+		let caps = rng.below(2) == 0;
+		let mut engine = Engine::new();
+		engine.set_input_type(if caps { TEXT | CAP_SENTENCES } else { TEXT }, 0);
+		let mut editor = Editor::default();
+		type_text(&mut engine, &mut editor, typed);
+		press(&mut engine, &mut editor, "space");
+
+		let corrected = if caps {
+			capitalize(expected_word)
+		} else {
+			expected_word.to_string()
+		};
+		let restored = if caps {
+			capitalize(typed)
+		} else {
+			typed.to_string()
+		};
+		let after_correction = format!("{corrected} ");
+		if editor.text() != after_correction {
+			failures.push(format!(
+				"restore case {} after correction: typed {typed:?}\n  expected {after_correction:?}\n  actual   {:?}",
+				offset + index,
+				editor.text()
+			));
+			if failures.len() >= 8 {
+				break;
+			}
+			continue;
+		}
+
+		editor.set_caret(rng.below(corrected.chars().count() + 1));
+		editor.sync(&mut engine);
+		let json: serde_json::Value =
+			serde_json::from_str(&engine.render_json()).unwrap();
+		let suggestions: Vec<String> = (
+			json["suggestions"]
+			. as_array()
+			. unwrap()
+			. iter()
+			. map(|value| value.as_str().unwrap().to_string())
+			. collect()
+		);
+		let choice = (
+			suggestions
+			. iter()
+			. position(|suggestion| suggestion == &restored)
+		);
+		let Some(choice) = choice else {
+			failures.push(format!(
+				"restore case {}: typed {typed:?}, no {:?} in {suggestions:?}",
+				offset + index,
+				restored
+			));
+			if failures.len() >= 8 {
+				break;
+			}
+			continue;
+		};
+		press(&mut engine, &mut editor, &format!("sug:{choice}"));
+
+		let expected = format!("{restored} ");
+		let actual = editor.text();
+		if actual != expected {
+			failures.push(format!(
+				"restore case {} after tap: typed {typed:?}\n  expected {expected:?}\n  actual   {actual:?}",
+				offset + index
+			));
+			if failures.len() >= 8 {
+				break;
+			}
+		}
+	}
+	assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn full_restore_typed_0() {
+	restore_typed_shard(0xa000_0001, 0, 500);
+}
+
+#[test]
+fn full_restore_typed_1() {
+	restore_typed_shard(0xa000_0002, 500, 500);
 }
 
 #[test]
