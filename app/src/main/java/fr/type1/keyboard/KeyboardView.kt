@@ -539,8 +539,10 @@ class KeyboardView(
 		// the finger starts on its own character.
 		val baseCenter = (baseIndex + 0.5f) * cellWidth
 		val maxLeft = (width - bubbleWidth).toInt()
-		val leftInView = (rect.centerX() - baseCenter).toInt()
-		.coerceIn(0, maxOf(0, maxLeft))
+		val leftInView = (
+			(rect.centerX() - baseCenter).toInt()
+			. coerceIn(0, maxOf(0, maxLeft))
+		)
 		val x = location[0] + leftInView
 		val y = (location[1] + bandTop - bubbleHeight - dp(6f)).toInt()
 
@@ -565,8 +567,10 @@ class KeyboardView(
 		// The page-key popup starts unselected; ignore hand jitter until the
 		// finger really slides.
 		if (altSelected < 0 && abs(x - downX) < dp(ALT_SELECT_SLOP_DP)) return
-		val index = ((x - altPopupLeft) / altCellWidth).toInt()
-		.coerceIn(0, altEntries.size - 1)
+		val index = (
+			((x - altPopupLeft) / altCellWidth).toInt()
+			. coerceIn(0, altEntries.size - 1)
+		)
 		if (index != altSelected) {
 			altSelected = index
 			altPopupView?.selected = index
@@ -658,8 +662,10 @@ class KeyboardView(
 					else -> -1
 				}
 				downStrip = pressedStrip
-				downBackspace = pressedStrip >= 0 &&
-					model?.strip?.getOrNull(pressedStrip)?.kind == "backspace"
+				downBackspace = (
+					pressedStrip >= 0
+					&& model?.strip?.getOrNull(pressedStrip)?.kind == "backspace"
+				)
 				if (pressedStrip >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
@@ -679,8 +685,10 @@ class KeyboardView(
 			Band.Utilities -> {
 				downUtility = hit(utilityRects, x)
 				pressedUtility = downUtility
-				downBackspace = downUtility >= 0 &&
-					model?.keys?.getOrNull(downUtility)?.kind == "backspace"
+				downBackspace = (
+					downUtility >= 0
+					&& model?.keys?.getOrNull(downUtility)?.kind == "backspace"
+				)
 				if (downUtility >= 0) {
 					performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 					scheduleLongPress()
@@ -712,9 +720,11 @@ class KeyboardView(
 			val entry = altEntries.getOrNull(altSelected)
 			// A page-key popup starts unselected: releasing without sliding
 			// keeps the normal page switch instead of typing a digit.
-			val switchPage = entry == null &&
-				band == Band.Utilities &&
-				model?.keys?.getOrNull(downUtility)?.kind == "page"
+			val switchPage = (
+				entry == null
+				&& band == Band.Utilities
+				&& model?.keys?.getOrNull(downUtility)?.kind == "page"
+			)
 			dismissAltPopup()
 			when {
 				entry != null -> emit(controller.press(entry.keyId))
@@ -778,9 +788,11 @@ class KeyboardView(
 				// A clear leftward swipe on backspace means the user wants
 				// selection mode; start it now instead of waiting for the
 				// long-press timeout.
-				if (!selecting && downBackspace &&
-					backspaceHold == BackspaceHold.Select &&
-					x <= downX - dp(swipeStepDp.toFloat())
+				if (
+					!selecting
+					&& downBackspace
+					&& backspaceHold == BackspaceHold.Select
+					&& x <= downX - dp(swipeStepDp.toFloat())
 				) {
 					cancelTimers()
 					handleBackspaceHold()

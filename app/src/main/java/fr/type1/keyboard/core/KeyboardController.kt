@@ -27,21 +27,25 @@ class KeyboardController {
 	private fun effectiveInputType(info: EditorInfo?): Int {
 		val type = info?.inputType ?: return InputType.TYPE_CLASS_TEXT
 		val cls = type and InputType.TYPE_MASK_CLASS
-		val caps = InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or
-			InputType.TYPE_TEXT_FLAG_CAP_WORDS or
-			InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+		val caps = (
+			InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+			or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+			or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+		)
 		if (cls != InputType.TYPE_CLASS_TEXT || type and caps != 0) return type
 		val variation = type and InputType.TYPE_MASK_VARIATION
-		val blocked = variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
-			variation == InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT ||
-			variation == InputType.TYPE_TEXT_VARIATION_URI ||
-			variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
-			variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
-			variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
-			variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
-			variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME ||
-			variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS ||
-			variation == InputType.TYPE_TEXT_VARIATION_FILTER
+		val blocked = (
+			variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+			|| variation == InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT
+			|| variation == InputType.TYPE_TEXT_VARIATION_URI
+			|| variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
+			|| variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+			|| variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+			|| variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+			|| variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+			|| variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
+			|| variation == InputType.TYPE_TEXT_VARIATION_FILTER
+		)
 		return if (blocked) type else type or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
 	}
 

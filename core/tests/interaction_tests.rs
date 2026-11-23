@@ -32,15 +32,15 @@ impl Rng {
 
 fn parse_cases(source: &'static str) -> Vec<(&'static str, &'static str)> {
 	source
-	.lines()
-	.filter_map(|line| {
+	. lines()
+	. filter_map(|line| {
 		let (typed, expected) = line.split_once('\t')?;
 		if typed.is_empty() || expected.is_empty() {
 			return None;
 		}
 		Some((typed, expected))
 	})
-	.collect()
+	. collect()
 }
 
 static AUTO_CASES: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
@@ -63,19 +63,25 @@ fn safe_words() -> &'static [&'static str] {
 			"jour", "soir", "monde", "temps", "vie", "amour", "travail", "encore",
 			"aussi", "quand", "alors", "ici", "peut", "faire", "voir", "savoir",
 		];
-		let words: Vec<&'static str> = POOL
-		.iter()
-		.copied()
-		.filter(|word| {
-			type1_core::dictionary::exact(word).is_some()
-				&& type1_core::correction::suggest(word)
-					.candidates
-					.is_empty()
-				&& type1_core::correction::suggest(&capitalize(word))
-					.candidates
-					.is_empty()
-		})
-		.collect();
+		let words: Vec<&'static str> = (
+			POOL
+			. iter()
+			. copied()
+			. filter(|word| {
+				type1_core::dictionary::exact(word).is_some()
+				&& (
+					type1_core::correction::suggest(word)
+					. candidates
+					. is_empty()
+				)
+				&& (
+					type1_core::correction::suggest(&capitalize(word))
+					. candidates
+					. is_empty()
+				)
+			})
+			. collect()
+		);
 		assert!(words.len() >= 30, "only {} safe words", words.len());
 		words
 	})
@@ -227,18 +233,22 @@ impl Editor {
 
 	/// Mirror the platform's context re-read after a caret move or a delete.
 	fn sync(&mut self, engine: &mut Engine) {
-		let before: String = self.chars[..self.caret]
-			.iter()
-			.rev()
-			.take(64)
-			.collect::<Vec<_>>()
-			.into_iter()
-			.rev()
-			.collect();
-		let after: String = self.chars[self.caret..]
-			.iter()
-			.take(64)
-			.collect();
+		let before: String = (
+			self.chars[..self.caret]
+			. iter()
+			. rev()
+			. take(64)
+			. collect::<Vec<_>>()
+			. into_iter()
+			. rev()
+			. collect()
+		);
+		let after: String = (
+			self.chars[self.caret..]
+			. iter()
+			. take(64)
+			. collect()
+		);
 		engine.set_context_word(&before, &after);
 		self.needs_sync = false;
 	}
@@ -374,9 +384,10 @@ impl Editor {
 				}
 				Action::ExtendSelection(delta) => {
 					if let Some(anchor) = self.selection_anchor {
-						let target = (self.selection_width as i32 - delta)
-							.clamp(0, anchor as i32)
-							as usize;
+						let target = (
+							(self.selection_width as i32 - delta)
+							. clamp(0, anchor as i32) as usize
+						);
 						if target != self.selection_width {
 							self.selection_width = target;
 							self.caret = anchor - target;
@@ -918,10 +929,12 @@ fn selection_shard(seed: u64, cases: usize) {
 			press(&mut engine, &mut editor, "select_left");
 		}
 		press(&mut engine, &mut editor, "delete_selection");
-		let expected: String = before
-			.chars()
-			.take(before.chars().count() - count)
-			.collect();
+		let expected: String = (
+			before
+			. chars()
+			. take(before.chars().count() - count)
+			. collect()
+		);
 		let actual = editor.text();
 		if actual != expected {
 			failures.push(format!(
@@ -1210,12 +1223,14 @@ fn suggestion_choice_shard(seed: u64, offset: usize, cases: usize) {
 
 		let json: serde_json::Value =
 			serde_json::from_str(&engine.render_json()).unwrap();
-		let suggestions: Vec<String> = json["suggestions"]
-		.as_array()
-		.unwrap()
-		.iter()
-		.map(|value| value.as_str().unwrap().to_string())
-		.collect();
+		let suggestions: Vec<String> = (
+			json["suggestions"]
+			. as_array()
+			. unwrap()
+			. iter()
+			. map(|value| value.as_str().unwrap().to_string())
+			. collect()
+		);
 		if suggestions.is_empty() {
 			continue;
 		}

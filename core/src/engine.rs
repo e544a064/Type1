@@ -838,11 +838,13 @@ fn is_word_char(c: char) -> bool {
 
 /// Word-ending characters before the caret, used for context corrections.
 fn trailing_word(text: &str) -> String {
-	let mut chars: Vec<char> = text
-	.chars()
-	.rev()
-	.take_while(|c| is_word_char(*c))
-	.collect();
+	let mut chars: Vec<char> = (
+		text
+		. chars()
+		. rev()
+		. take_while(|c| is_word_char(*c))
+		. collect()
+	);
 	chars.reverse();
 	chars.into_iter().collect()
 }
