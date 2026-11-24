@@ -361,7 +361,8 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		if (count > 0) ic.deleteSurroundingText(count, 0) else ic.deleteSurroundingText(1, 0)
 	}
 
-	private fun performEditorAction(ic: InputConnection, action: String) {		val id = when (action) {
+	private fun performEditorAction(ic: InputConnection, action: String) {
+		val id = when (action) {
 			"go" -> EditorInfo.IME_ACTION_GO
 			"search" -> EditorInfo.IME_ACTION_SEARCH
 			"send" -> EditorInfo.IME_ACTION_SEND

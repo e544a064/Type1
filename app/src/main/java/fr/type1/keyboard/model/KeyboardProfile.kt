@@ -23,8 +23,9 @@ data class KeyboardProfile(
 	}
 
 	companion object {
-		fun create(layoutId: String, languageIds: List<String>): KeyboardProfile =
-			KeyboardProfile(UUID.randomUUID().toString(), layoutId, languageIds)
+		fun create(layoutId: String, languageIds: List<String>): KeyboardProfile {
+			return KeyboardProfile(UUID.randomUUID().toString(), layoutId, languageIds)
+		}
 
 		fun parseList(json: String?): List<KeyboardProfile> {
 			if (json.isNullOrBlank()) return emptyList()

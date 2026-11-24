@@ -53,31 +53,31 @@ class KeyboardController {
 
 	fun reset() = NativeBridge.nativeReset(handle)
 
-	fun setImeOptions(imeOptions: Int) =
-		NativeBridge.nativeSetImeOptions(handle, imeOptions)
+	fun setImeOptions(imeOptions: Int) = NativeBridge.nativeSetImeOptions(handle, imeOptions)
 
-	fun setProfile(layoutId: String, languageIds: List<String>): Boolean =
-		NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
+	fun setProfile(layoutId: String, languageIds: List<String>): Boolean {
+		return NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
+	}
 
 	fun setDefaultProfile() = NativeBridge.nativeSetDefaultProfile(handle)
 
 	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
 
-	fun syncContext(before: String, after: String) =
-		NativeBridge.nativeSyncContext(handle, before, after)
+	fun syncContext(before: String, after: String) {
+		return NativeBridge.nativeSyncContext(handle, before, after)
+	}
 
 	fun render(): RowModel = RowModel.parse(NativeBridge.nativeRender(handle))
 
-	fun press(keyId: String): List<KeyAction> =
-	KeyAction.parseList(NativeBridge.nativeKey(handle, keyId))
+	fun press(keyId: String): List<KeyAction> {
+		return KeyAction.parseList(NativeBridge.nativeKey(handle, keyId))
+	}
 
 	fun close() = NativeBridge.nativeDestroy(handle)
 
 	companion object {
-		fun layouts(): List<CatalogEntry> =
-			CatalogEntry.parseList(NativeBridge.nativeLayouts())
+		fun layouts(): List<CatalogEntry> = CatalogEntry.parseList(NativeBridge.nativeLayouts())
 
-		fun languages(): List<CatalogEntry> =
-			CatalogEntry.parseList(NativeBridge.nativeLanguages())
+		fun languages(): List<CatalogEntry> = CatalogEntry.parseList(NativeBridge.nativeLanguages())
 	}
 }

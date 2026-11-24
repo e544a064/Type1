@@ -430,10 +430,12 @@ class KeyboardView(
 	}
 
 	/** Top-row letters sit higher, bottom-row letters lower. */
-	private fun rowOffset(letter: LetterKey): Float = when (letter.row) {
-		0 -> -dp(7f)
-		2 -> dp(7f)
-		else -> 0f
+	private fun rowOffset(letter: LetterKey): Float {
+		return when (letter.row) {
+			0 -> -dp(7f)
+			2 -> dp(7f)
+			else -> 0f
+		}
 	}
 
 	private fun drawUtilities(canvas: Canvas, row: RowModel) {
@@ -699,8 +701,9 @@ class KeyboardView(
 		}
 	}
 
-	private fun baseline(rect: RectF): Float =
-	rect.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2f
+	private fun baseline(rect: RectF): Float {
+		return rect.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2f
+	}
 
 	private fun fitText(text: String, maxWidth: Float, startSize: Float, minSize: Float): Float {
 		var size = startSize
@@ -933,11 +936,13 @@ class KeyboardView(
 		return true
 	}
 
-	private fun bandAt(y: Float): Band = when {
-		y < letterTop - bandGap / 2f -> Band.Suggestions
-		y < utilityTop - bandGap / 2f -> Band.Letters
-		y <= height.toFloat() -> Band.Utilities
-		else -> Band.None
+	private fun bandAt(y: Float): Band {
+		return when {
+			y < letterTop - bandGap / 2f -> Band.Suggestions
+			y < utilityTop - bandGap / 2f -> Band.Letters
+			y <= height.toFloat() -> Band.Utilities
+			else -> Band.None
+		}
 	}
 
 	private fun hit(rects: List<RectF>, x: Float): Int {
