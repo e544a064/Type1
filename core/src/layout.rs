@@ -1,8 +1,9 @@
 //! Declarative layout for the one-line keyboard.
 //!
 //! The middle band holds every letter on a single horizontal line. Letters are
-//! grouped by AZERTY columns (`A Q W`, `Z S X`, ...), so the reading order of
-//! the first letter of each group is the familiar `A Z E R T Y U I O P` row.
+//! grouped by physical columns (AZERTY `A Q W`, `Z S X`, ...; QWERTY `Q A Z`,
+//! `W S X`, ...), so the first letter of each group is the top-row letter and
+//! the line reads `AZERTYUIOP` / `QWERTYUIOP` from left to right.
 //!
 //! The bottom band holds the utility keys (page, shift, space, comma, delete,
 //! enter). The suggestion strip is rendered by the UI from the engine payload.
@@ -27,7 +28,7 @@ pub struct Letter {
 	pub commit: &'static str,
 	/// Follows shift / auto-capitalisation.
 	pub letter: bool,
-	/// Physical AZERTY row: 0 top, 1 home, 2 bottom. Used for the vertical
+	/// Physical keyboard row: 0 top, 1 home, 2 bottom. Used for the vertical
 	/// offset of the glyph inside the single line.
 	pub row: u8,
 	pub alts: &'static [&'static str],
@@ -89,6 +90,37 @@ pub static LETTERS: &[Letter] = &[
 	l("l", "L", 1, &[]),
 	l("p", "P", 0, &[]),
 	l("m", "M", 1, &[]),
+];
+
+/// The 26 letters in QWERTY column order: top, home, bottom, left to right.
+/// Reading only the top-row letters gives `QWERTYUIOP`.
+pub static QWERTY_LETTERS: &[Letter] = &[
+	l("q", "Q", 0, &[]),
+	l("a", "A", 1, &["à", "â", "ä"]),
+	l("z", "Z", 2, &[]),
+	l("w", "W", 0, &[]),
+	l("s", "S", 1, &["ß"]),
+	l("x", "X", 2, &[]),
+	l("e", "E", 0, &["é", "è", "ê", "ë"]),
+	l("d", "D", 1, &[]),
+	l("c", "C", 2, &["ç"]),
+	l("r", "R", 0, &[]),
+	l("f", "F", 1, &[]),
+	l("v", "V", 2, &[]),
+	l("t", "T", 0, &[]),
+	l("g", "G", 1, &[]),
+	l("b", "B", 2, &[]),
+	l("y", "Y", 0, &["ÿ"]),
+	l("h", "H", 1, &[]),
+	l("n", "N", 2, &["ñ"]),
+	l("u", "U", 0, &["ù", "û", "ü"]),
+	l("j", "J", 1, &[]),
+	l("m", "M", 2, &[]),
+	l("i", "I", 0, &["î", "ï"]),
+	l("k", "K", 1, &[]),
+	l("o", "O", 0, &["ô", "ö", "œ"]),
+	l("l", "L", 1, &[]),
+	l("p", "P", 0, &[]),
 ];
 
 pub static NUMBERS: &[Letter] = &[
@@ -261,8 +293,7 @@ impl Layout {
 	}
 }
 
-/// The current AZERTY layout. Other layouts can reuse the same pages or define
-/// their own and be picked by a keyboard profile.
+/// The default layout.
 pub static AZERTY: Layout = Layout {
 	id: "azerty",
 	label: "AZERTY",
@@ -273,8 +304,19 @@ pub static AZERTY: Layout = Layout {
 	utilities: UTILITIES,
 };
 
+/// QWERTY shares the number, symbol, strip and utility data with AZERTY.
+pub static QWERTY: Layout = Layout {
+	id: "qwerty",
+	label: "QWERTY",
+	letters: QWERTY_LETTERS,
+	numbers: NUMBERS,
+	symbols: SYMBOLS,
+	strip: STRIP,
+	utilities: UTILITIES,
+};
+
 /// Layouts offered when creating a keyboard profile.
-pub static LAYOUTS: &[&Layout] = &[&AZERTY];
+pub static LAYOUTS: &[&Layout] = &[&AZERTY, &QWERTY];
 
 pub fn find(id: &str) -> Option<&'static Layout> {
 	LAYOUTS.iter().copied().find(|layout| layout.id == id)
@@ -348,6 +390,36 @@ mod tests {
 		assert_eq!(row(0), "AZERTYUIOP");
 		assert_eq!(row(1), "QSDFGHJKLM");
 		assert_eq!(row(2), "WXCVBN");
+	}
+
+	#[test]
+	fn qwerty_letters_match_the_physical_rows() {
+		let row = |index: u8| -> String {
+			QWERTY_LETTERS
+			. iter()
+			.filter(|letter| letter.row == index)
+			. map(|letter| letter.label)
+			. collect()
+		};
+		assert_eq!(row(0), "QWERTYUIOP");
+		assert_eq!(row(1), "ASDFGHJKL");
+		assert_eq!(row(2), "ZXCVBNM");
+		assert_eq!(QWERTY_LETTERS.len(), 26);
+	}
+
+	#[test]
+	fn layouts_can_be_looked_up() {
+		let azerty = find("azerty").unwrap();
+		assert_eq!(azerty.label, "AZERTY");
+		assert_eq!(azerty.letters.len(), 26);
+		let qwerty = find("qwerty").unwrap();
+		assert_eq!(qwerty.label, "QWERTY");
+		assert_eq!(qwerty.letters.len(), 26);
+		assert!(find("missing").is_none());
+		let mut ids: Vec<&str> = LAYOUTS.iter().map(|layout| layout.id).collect();
+		ids.sort_unstable();
+		ids.dedup();
+		assert_eq!(ids.len(), LAYOUTS.len());
 	}
 
 	#[test]

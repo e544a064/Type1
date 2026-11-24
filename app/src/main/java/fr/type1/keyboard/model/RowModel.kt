@@ -7,7 +7,7 @@ data class LetterKey(
 	val id: String,
 	val label: String,
 	val letter: Boolean,
-	/** Physical AZERTY row: 0 top, 1 home, 2 bottom. */
+	/** Physical keyboard row: 0 top, 1 home, 2 bottom. */
 	val row: Int,
 	val alts: List<String>,
 )

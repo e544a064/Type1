@@ -89,6 +89,8 @@ public class NativeBridge {
 		System.out.println("layouts  -> " + nativeLayouts());
 		System.out.println("langs    -> " + nativeLanguages());
 		System.out.println("profile  -> " + nativeSetProfile(handle, "azerty", "fr"));
+		System.out.println("qwerty   -> " + nativeSetProfile(handle, "qwerty", "fr"));
+		System.out.println("qwerty row: " + nativeRender(handle));
 		nativeSetDefaultProfile(handle);
 		System.out.println("default  -> " + nativeRender(handle));
 

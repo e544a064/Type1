@@ -1,4 +1,4 @@
-# Type1 — a one-line AZERTY Android keyboard
+# Type1 — a one-line AZERTY/QWERTY Android keyboard
 
 Every letter sits on **one horizontal line**, between a suggestion strip and a
 row of utility keys: ~154 dp of screen instead of the usual ~250 dp. The typing
@@ -17,17 +17,19 @@ iOS port later only needs a new UI + FFI shim.
 ```
 
 The middle band has **no key boxes and no groups**: 26 evenly spaced letters in
-AZERTY column order (`A Q W`, `Z S X`, ...). All glyphs share one size and one
-case. Each letter is shifted vertically according to its physical row — top-row
-letters higher, bottom-row letters lower — so the original layout stays legible.
+physical column order (AZERTY `A Q W`, `Z S X`, ...; QWERTY `Q A Z`, `W S X`,
+...). All glyphs share one size and one case. Each letter is shifted vertically
+according to its physical row — top-row letters higher, bottom-row letters
+lower — so the original layout stays legible.
 The row is lowercase normally and uppercase while shift (or auto-capitalisation)
 is active. Taps resolve by horizontal position; you can drag along the strip and
 release on the letter you want.
 
 ## Status: MVP
 
-- All 26 letters on one line in AZERTY column order, row-based vertical offsets,
-  uniform size and case (uppercase while shift/auto-caps is active).
+- AZERTY and QWERTY layouts, all 26 letters on one line in physical column
+  order with row-based vertical offsets, uniform size and case (uppercase while
+  shift/auto-caps is active). AZERTY is the default.
 - Profiles pair a layout with one or more languages. They are created in
   **Profils de clavier** (setup → Gérer les profils): the layout comes from a
   dropdown and the languages are toggles. The list starts empty, and the
@@ -121,9 +123,9 @@ it workable. Three things compensate:
 - autocorrection with layout-aware candidates (`dkre` → `dire`,
   `ecole` → `école`).
 
-Layout and language are data, not code: `core/src/layout.rs` lists the letters
-in AZERTY column order with a `row` index (0 top, 1 home, 2 bottom), each
-language owns its dictionary in `core/src/language.rs`, and
+Layout and language are data, not code: `core/src/layout.rs` lists the AZERTY
+and QWERTY letters in physical column order with a `row` index (0 top, 1 home,
+2 bottom), each language owns its dictionary in `core/src/language.rs`, and
 `core/src/profile.rs` combines one layout with a set of languages at runtime.
 The core exposes layouts and languages separately; the user's profiles are
 stored in preferences, so no combination list is hard-coded.
@@ -285,7 +287,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 159 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 161 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

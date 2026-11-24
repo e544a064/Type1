@@ -7,7 +7,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Letters, digits, punctuation, space, enter, backspace
 - [x] Shift, caps lock (tap twice)
 - [x] Multi-touch rollover: overlapping presses are committed in down order
-- [x] AZERTY, all 26 letters on one line (column order, row-based vertical offsets)
+- [x] AZERTY and QWERTY, all 26 letters on one line (column order, row-based vertical offsets)
 - [x] Alternates via long-press (accents, `'`, `-`, `«»`, `!`, `?`, `:`, `0`–`9` on the page key)
 - [x] Period key shows its `!`/`?`/`:` alternates greyed at the top
 - [x] Page key long-press popup for a single digit without leaving the page
@@ -19,7 +19,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Hold-to-repeat backspace
 - [x] Comma left of the spacebar, period on its right with `!`/`?` on long-press
 - [ ] Key preview bubble
-- [~] Other layouts: user profiles pick a layout and languages; QWERTY data pending
+- [~] Other layouts: AZERTY and QWERTY data; Sebeolsik/Korean pending
 - [ ] Landscape-specific tuning
 
 ## 2. Modes & switching (critical for a one-row keyboard)

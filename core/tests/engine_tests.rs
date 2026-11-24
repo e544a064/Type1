@@ -107,6 +107,8 @@ fn profiles_can_be_selected_from_layout_and_languages() {
 	assert!(!engine.set_profile_ids("azerty", &["missing"]));
 	assert!(!engine.set_profile_ids("missing", &["fr"]));
 	assert_eq!(engine.profile().layout.id, "azerty");
+	assert!(engine.set_profile_ids("qwerty", &["fr"]));
+	assert_eq!(engine.profile().layout.id, "qwerty");
 }
 
 #[test]
