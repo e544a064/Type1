@@ -239,8 +239,7 @@ class KeyboardView(
 
 	private fun openEmojiPicker() {
 		emojiPicker?.dismiss()
-		var picker: EmojiPickerPopup? = null
-		val created = EmojiPickerPopup(
+		val picker = EmojiPickerPopup(
 			context,
 			recentEmojis = { Prefs.recentEmojis(context) },
 			onPick = { emoji ->
@@ -248,12 +247,9 @@ class KeyboardView(
 				playClick()
 				performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
 			},
-			onDismissed = {
-				if (emojiPicker === picker) emojiPicker = null
-			},
+			onDismissed = { if (emojiPicker === it) emojiPicker = null },
 		)
-		picker = created
-		if (created.show(this)) emojiPicker = created
+		if (picker.show(this)) emojiPicker = picker
 	}
 
 	/** Hide the emoji panel, for example when the IME window goes away. */
@@ -401,6 +397,7 @@ class KeyboardView(
 	private fun drawStripKey(canvas: Canvas, rect: RectF, key: UtilityKey?, index: Int, shift: Int) {
 		if (key == null) return
 		val pressed = pressedStrip == index
+		val highlighted = pressed || key.active
 		keyPaint.color = when {
 			pressed -> colors.pressed
 			key.active -> colors.accent
@@ -409,12 +406,12 @@ class KeyboardView(
 		canvas.drawRoundRect(rect, corner, corner, keyPaint)
 		// Shift once highlights the arrow; caps lock adds a bar under it.
 		val icon = if (key.icon == "shift" && shift == SHIFT_LOCKED) "shift-locked" else key.icon
+		val tint = if (highlighted) Color.WHITE else colors.muted
 		if (icon.isNotEmpty()) {
-			val tint = if (key.active || pressed) Color.WHITE else colors.muted
 			drawIcon(canvas, rect, icon, tint, 20f)
 			return
 		}
-		labelPaint.color = if (key.active || pressed) Color.WHITE else colors.muted
+		labelPaint.color = tint
 		labelPaint.textSize = fitText(
 			key.label,
 			rect.width() - dp(8f),
@@ -467,20 +464,17 @@ class KeyboardView(
 		for (i in row.keys.indices) {
 			val rect = utilityRects.getOrNull(i) ?: continue
 			val key = row.keys[i]
+			val pressed = pressedUtility == i
+			val highlighted = pressed || key.kind == "enter" || key.active
 			keyPaint.color = when {
-				pressedUtility == i -> colors.pressed
-				key.kind == "enter" || key.active -> colors.accent
+				pressed -> colors.pressed
+				highlighted -> colors.accent
 				else -> colors.key
 			}
 			canvas.drawRoundRect(rect, corner, corner, keyPaint)
 
 			if (key.icon.isNotEmpty()) {
-				val tint = if (pressedUtility == i || key.kind == "enter" || key.active) {
-					Color.WHITE
-				} else {
-					colors.muted
-				}
-				drawIcon(canvas, rect, key.icon, tint, 22f)
+				drawIcon(canvas, rect, key.icon, if (highlighted) Color.WHITE else colors.muted, 22f)
 				continue
 			}
 
@@ -1105,8 +1099,7 @@ class KeyboardView(
 
 	override fun onDetachedFromWindow() {
 		handler.removeCallbacksAndMessages(null)
-		emojiPicker?.dismiss()
-		emojiPicker = null
+		dismissEmojiPicker()
 		dismissAltPopup()
 		super.onDetachedFromWindow()
 	}

@@ -55,17 +55,14 @@ class KeyboardController {
 
 	fun setImeOptions(imeOptions: Int) = NativeBridge.nativeSetImeOptions(handle, imeOptions)
 
-	fun setProfile(layoutId: String, languageIds: List<String>): Boolean {
-		return NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
-	}
+	fun setProfile(layoutId: String, languageIds: List<String>): Boolean =
+		NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
 
 	fun setDefaultProfile() = NativeBridge.nativeSetDefaultProfile(handle)
 
 	fun selectionChanged() = NativeBridge.nativeSelectionChanged(handle)
 
-	fun syncContext(before: String, after: String) {
-		return NativeBridge.nativeSyncContext(handle, before, after)
-	}
+	fun syncContext(before: String, after: String) = NativeBridge.nativeSyncContext(handle, before, after)
 
 	fun render(): RowModel = RowModel.parse(NativeBridge.nativeRender(handle))
 

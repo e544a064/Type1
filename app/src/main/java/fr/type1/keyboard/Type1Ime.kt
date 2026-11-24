@@ -52,10 +52,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onCreateInputView(): View {
 		val view = KeyboardView(this, controller)
 		view.listener = this
-		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
-		view.setBackspaceHold(Prefs.backspaceHold(this))
-		view.setSwipeSensitivity(Prefs.swipeSensitivity(this))
-		view.setUtilityRowHeight(Prefs.utilityRowHeight(this))
+		applyPreferences(view)
 		applyProfile()
 		view.setOnApplyWindowInsetsListener { _, insets ->
 			view.setBottomInset(navigationBarHeight(insets))
@@ -67,11 +64,17 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		return view
 	}
 
+	/** Push the settings that can change between keyboard invocations. */
+	private fun applyPreferences(view: KeyboardView) {
+		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
+		view.setBackspaceHold(Prefs.backspaceHold(this))
+		view.setSwipeSensitivity(Prefs.swipeSensitivity(this))
+		view.setUtilityRowHeight(Prefs.utilityRowHeight(this))
+	}
+
 	override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
 		super.onStartInput(attribute, restarting)
-		expectedSelStart = -1
-		expectedSelEnd = -1
-		allowNextSelection = false
+		clearSelectionTracking()
 		lastActionAt = 0L
 		controller.onStartInput(attribute)
 	}
@@ -81,10 +84,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		// Some IME windows do not dispatch insets to the input view; query the
 		// window directly as well.
 		applyNavigationInset()
-		keyboardView?.setSpaceCursorEnabled(Prefs.spaceCursor(this))
-		keyboardView?.setBackspaceHold(Prefs.backspaceHold(this))
-		keyboardView?.setSwipeSensitivity(Prefs.swipeSensitivity(this))
-		keyboardView?.setUtilityRowHeight(Prefs.utilityRowHeight(this))
+		keyboardView?.let { applyPreferences(it) }
 		selectAnchor = -1
 		selectWidth = 0
 		applyProfile()
@@ -134,7 +134,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		ic.commitText(emoji, 1)
 		// Remember the pick for the recent tab before the panel refreshes it.
 		Prefs.addRecentEmoji(this, emoji)
-		keyboardView?.refresh()
+		// Re-read the context once the editor has accepted the emoji.
 		keyboardView?.post { syncContextFromEditor() }
 	}
 
@@ -146,13 +146,17 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onFinishInput() {
 		super.onFinishInput()
 		controller.reset()
-		expectedSelStart = -1
-		expectedSelEnd = -1
-		allowNextSelection = false
+		clearSelectionTracking()
 		selectAnchor = -1
 		selectWidth = 0
 		keyboardView?.dismissEmojiPicker()
 		keyboardView?.refresh()
+	}
+
+	private fun clearSelectionTracking() {
+		expectedSelStart = -1
+		expectedSelEnd = -1
+		allowNextSelection = false
 	}
 
 	private fun applyNavigationInset() {
@@ -241,12 +245,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			expectedSelEnd = -1
 			allowNextSelection = true
 		} else {
-			val before = ic.getTextBeforeCursor(MAX_SELECTION_CHARS, 0)
-			val cursor = if (before != null && before.length < MAX_SELECTION_CHARS) {
-				before.length
-			} else {
-				-1
-			}
+			val cursor = cursorOffset(ic)
 			expectedSelStart = cursor
 			expectedSelEnd = cursor
 			allowNextSelection = false
@@ -330,13 +329,14 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		}
 	}
 
+	/** The caret offset, or -1 when the editor cannot report the whole prefix. */
+	private fun cursorOffset(ic: InputConnection): Int {
+		val before = ic.getTextBeforeCursor(MAX_SELECTION_CHARS, 0) ?: return -1
+		return if (before.length < MAX_SELECTION_CHARS) before.length else -1
+	}
+
 	private fun startSelection(ic: InputConnection) {
-		val before = ic.getTextBeforeCursor(MAX_SELECTION_CHARS, 0)
-		selectAnchor = if (before != null && before.length < MAX_SELECTION_CHARS) {
-			before.length
-		} else {
-			-1
-		}
+		selectAnchor = cursorOffset(ic)
 		selectWidth = 0
 		if (selectAnchor >= 0) {
 			ic.setSelection(selectAnchor, selectAnchor)
@@ -365,10 +365,8 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			return deleteBackward(ic)
 		}
 		val before = ic.getTextBeforeCursor(64, 0)?.toString().orEmpty()
-		var index = before.length
-		while (index > 0 && before[index - 1].isWhitespace()) index--
-		while (index > 0 && !before[index - 1].isWhitespace()) index--
-		val count = before.length - index
+		val wordStart = before.trimEnd().indexOfLast { it.isWhitespace() } + 1
+		val count = before.length - wordStart
 		if (count > 0) ic.deleteSurroundingText(count, 0) else ic.deleteSurroundingText(1, 0)
 		return true
 	}

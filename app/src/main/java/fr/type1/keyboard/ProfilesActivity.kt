@@ -71,17 +71,11 @@ class ProfilesActivity : Activity() {
 		row.isClickable = true
 		row.setOnClickListener { select(profile) }
 
-		val label = TextView(this)
-		label.text = profile.label(layouts, languages)
-		label.textSize = 16f
-		label.setTextColor(0xFF11131A.toInt())
+		val label = text(profile.label(layouts, languages), 16f, 0xFF11131A.toInt())
 		row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
 		if (active) {
-			val marker = TextView(this)
-			marker.text = getString(R.string.profiles_active)
-			marker.textSize = 12f
-			marker.setTextColor(0xFF4C6FFF.toInt())
+			val marker = text(getString(R.string.profiles_active), 12f, 0xFF4C6FFF.toInt())
 			marker.setPadding(dp(8), 0, dp(4), 0)
 			row.addView(marker)
 		}
@@ -92,14 +86,19 @@ class ProfilesActivity : Activity() {
 	}
 
 	private fun action(label: Int, onClick: () -> Unit): TextView {
-		val view = TextView(this)
-		view.text = getString(label)
-		view.textSize = 14f
-		view.setTextColor(0xFF4C6FFF.toInt())
-		view.setPadding(dp(10), dp(8), 0, dp(8))
-		view.isClickable = true
-		view.setOnClickListener { onClick() }
-		return view
+		return text(getString(label), 14f, 0xFF4C6FFF.toInt()).apply {
+			setPadding(dp(10), dp(8), 0, dp(8))
+			isClickable = true
+			setOnClickListener { onClick() }
+		}
+	}
+
+	private fun text(value: CharSequence, size: Float, color: Int): TextView {
+		return TextView(this).apply {
+			text = value
+			textSize = size
+			setTextColor(color)
+		}
 	}
 
 	private fun select(profile: KeyboardProfile) {
@@ -114,10 +113,7 @@ class ProfilesActivity : Activity() {
 		container.orientation = LinearLayout.VERTICAL
 		container.setPadding(dp(20), dp(8), dp(20), 0)
 
-		val layoutTitle = TextView(this)
-		layoutTitle.text = getString(R.string.profile_layout)
-		layoutTitle.textSize = 14f
-		layoutTitle.setTextColor(0xFF6B7285.toInt())
+		val layoutTitle = text(getString(R.string.profile_layout), 14f, 0xFF6B7285.toInt())
 		container.addView(layoutTitle)
 
 		val spinner = Spinner(this)
@@ -134,10 +130,7 @@ class ProfilesActivity : Activity() {
 		)
 		container.addView(spinner)
 
-		val languageTitle = TextView(this)
-		languageTitle.text = getString(R.string.profile_languages)
-		languageTitle.textSize = 14f
-		languageTitle.setTextColor(0xFF6B7285.toInt())
+		val languageTitle = text(getString(R.string.profile_languages), 14f, 0xFF6B7285.toInt())
 		languageTitle.setPadding(0, dp(16), 0, 0)
 		container.addView(languageTitle)
 

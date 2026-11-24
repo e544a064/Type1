@@ -23,25 +23,18 @@ data class KeyboardProfile(
 	}
 
 	companion object {
-		fun create(layoutId: String, languageIds: List<String>): KeyboardProfile {
-			return KeyboardProfile(UUID.randomUUID().toString(), layoutId, languageIds)
-		}
+		fun create(layoutId: String, languageIds: List<String>): KeyboardProfile =
+			KeyboardProfile(UUID.randomUUID().toString(), layoutId, languageIds)
 
 		fun parseList(json: String?): List<KeyboardProfile> {
 			if (json.isNullOrBlank()) return emptyList()
 			val array = JSONArray(json)
 			return List(array.length()) { index ->
 				val item = array.getJSONObject(index)
-				val languages = item.optJSONArray("languages")
-				val languageIds = if (languages == null) {
-					emptyList()
-				} else {
-					List(languages.length()) { languages.getString(it) }
-				}
 				KeyboardProfile(
 					id = item.getString("id"),
 					layoutId = item.getString("layout"),
-					languageIds = languageIds,
+					languageIds = item.stringList("languages"),
 				)
 			}
 		}
@@ -49,12 +42,10 @@ data class KeyboardProfile(
 		fun listJson(profiles: List<KeyboardProfile>): String {
 			val array = JSONArray()
 			for (profile in profiles) {
-				val languages = JSONArray()
-				for (languageId in profile.languageIds) languages.put(languageId)
 				val item = JSONObject()
 				item.put("id", profile.id)
 				item.put("layout", profile.layoutId)
-				item.put("languages", languages)
+				item.put("languages", JSONArray(profile.languageIds))
 				array.put(item)
 			}
 			return array.toString()

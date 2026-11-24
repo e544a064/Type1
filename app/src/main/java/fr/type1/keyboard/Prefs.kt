@@ -24,14 +24,15 @@ object Prefs {
 		return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 	}
 
+	private inline fun edit(context: Context, block: SharedPreferences.Editor.() -> Unit) {
+		preferences(context).edit().apply(block).apply()
+	}
+
 	/** Drag horizontally on the spacebar to move the caret. Enabled by default. */
 	fun spaceCursor(context: Context): Boolean = preferences(context).getBoolean(SPACE_CURSOR, true)
 
 	fun setSpaceCursor(context: Context, enabled: Boolean) {
-		preferences(context)
-		. edit()
-		. putBoolean(SPACE_CURSOR, enabled)
-		. apply()
+		edit(context) { putBoolean(SPACE_CURSOR, enabled) }
 	}
 
 	/** Long-press behaviour of the backspace key. Selects text by default. */
@@ -48,10 +49,7 @@ object Prefs {
 	}
 
 	fun setBackspaceHold(context: Context, mode: BackspaceHold) {
-		preferences(context)
-		. edit()
-		. putString(BACKSPACE_HOLD, mode.name)
-		. apply()
+		edit(context) { putString(BACKSPACE_HOLD, mode.name) }
 	}
 
 	/**
@@ -63,10 +61,7 @@ object Prefs {
 	}
 
 	fun setSwipeSensitivity(context: Context, dpPerStep: Int) {
-		preferences(context)
-		. edit()
-		. putInt(SWIPE_SENSITIVITY, dpPerStep.coerceIn(8, 40))
-		. apply()
+		edit(context) { putInt(SWIPE_SENSITIVITY, dpPerStep.coerceIn(8, 40)) }
 	}
 
 	/** Height in dp of the bottom row holding the spacebar. Default 48 dp. */
@@ -75,10 +70,7 @@ object Prefs {
 	}
 
 	fun setUtilityRowHeight(context: Context, heightDp: Int) {
-		preferences(context)
-		. edit()
-		. putInt(UTILITY_ROW_HEIGHT, heightDp.coerceIn(36, 72))
-		. apply()
+		edit(context) { putInt(UTILITY_ROW_HEIGHT, heightDp.coerceIn(36, 72)) }
 	}
 
 	/** User-created keyboard profiles, newest last. */
@@ -87,10 +79,7 @@ object Prefs {
 	}
 
 	fun setProfiles(context: Context, profiles: List<KeyboardProfile>) {
-		preferences(context)
-		. edit()
-		. putString(PROFILES, KeyboardProfile.listJson(profiles))
-		. apply()
+		edit(context) { putString(PROFILES, KeyboardProfile.listJson(profiles)) }
 	}
 
 	/** Id of the active profile, or null when none is configured. */
@@ -99,16 +88,9 @@ object Prefs {
 	}
 
 	fun setActiveProfileId(context: Context, profileId: String?) {
-		val editor = (
-			preferences(context)
-			. edit()
-		)
-		if (profileId == null) {
-			editor.remove(ACTIVE_PROFILE)
-		} else {
-			editor.putString(ACTIVE_PROFILE, profileId)
+		edit(context) {
+			if (profileId == null) remove(ACTIVE_PROFILE) else putString(ACTIVE_PROFILE, profileId)
 		}
-		editor.apply()
 	}
 
 	/** The active profile, falling back to the first configured one. */
@@ -120,10 +102,7 @@ object Prefs {
 
 	/** Recently inserted emoji, newest first. */
 	fun recentEmojis(context: Context): List<String> {
-		val raw = (
-			preferences(context)
-			. getString(RECENT_EMOJIS, null)
-		) ?: return emptyList()
+		val raw = preferences(context).getString(RECENT_EMOJIS, null) ?: return emptyList()
 		return try {
 			val array = JSONArray(raw)
 			List(array.length()) { array.getString(it) }
@@ -133,18 +112,12 @@ object Prefs {
 	}
 
 	fun addRecentEmoji(context: Context, emoji: String) {
-		val recent = (
-			recentEmojis(context)
-			. filterNot { it == emoji }
-			. toMutableList()
-		)
-		recent.add(0, emoji)
-		while (recent.size > MAX_RECENT_EMOJIS) {
-			recent.removeAt(recent.lastIndex)
+		val recent = buildList {
+			add(emoji)
+			addAll(recentEmojis(context).filterNot { it == emoji })
 		}
-		preferences(context)
-		. edit()
-		. putString(RECENT_EMOJIS, JSONArray(recent).toString())
-		. apply()
+		edit(context) {
+			putString(RECENT_EMOJIS, JSONArray(recent.take(MAX_RECENT_EMOJIS)).toString())
+		}
 	}
 }

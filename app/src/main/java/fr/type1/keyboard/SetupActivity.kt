@@ -62,35 +62,42 @@ class SetupActivity : Activity() {
 			override fun onNothingSelected(parent: AdapterView<*>?) = Unit
 		}
 
-		val swipeSeek = findViewById<SeekBar>(R.id.swipeSensitivitySeek)
-		val swipeValue = findViewById<TextView>(R.id.swipeSensitivityValue)
-		swipeSeek.max = 32
-		val initialSensitivity = Prefs.swipeSensitivity(this)
-		swipeSeek.progress = initialSensitivity - 8
-		swipeValue.text = getString(R.string.setup_swipe_value, initialSensitivity)
-		swipeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+		bindSeekBar(
+			R.id.swipeSensitivitySeek,
+			R.id.swipeSensitivityValue,
+			R.string.setup_swipe_value,
+			8..40,
+			Prefs.swipeSensitivity(this),
+		) { Prefs.setSwipeSensitivity(this, it) }
+
+		bindSeekBar(
+			R.id.utilityHeightSeek,
+			R.id.utilityHeightValue,
+			R.string.setup_height_value,
+			36..72,
+			Prefs.utilityRowHeight(this),
+		) { Prefs.setUtilityRowHeight(this, it) }
+	}
+
+	private fun bindSeekBar(
+		seekId: Int,
+		valueId: Int,
+		labelId: Int,
+		range: IntRange,
+		initial: Int,
+		onValue: (Int) -> Unit,
+	) {
+		val seek = findViewById<SeekBar>(seekId)
+		val value = findViewById<TextView>(valueId)
+		val offset = range.first
+		seek.max = range.last - offset
+		seek.progress = initial - offset
+		value.text = getString(labelId, initial)
+		seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
 			override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
-				val dp = progress + 8
-				swipeValue.text = getString(R.string.setup_swipe_value, dp)
-				if (fromUser) Prefs.setSwipeSensitivity(this@SetupActivity, dp)
-			}
-
-			override fun onStartTrackingTouch(bar: SeekBar?) = Unit
-
-			override fun onStopTrackingTouch(bar: SeekBar?) = Unit
-		})
-
-		val heightSeek = findViewById<SeekBar>(R.id.utilityHeightSeek)
-		val heightValue = findViewById<TextView>(R.id.utilityHeightValue)
-		heightSeek.max = 36
-		val initialHeight = Prefs.utilityRowHeight(this)
-		heightSeek.progress = initialHeight - 36
-		heightValue.text = getString(R.string.setup_height_value, initialHeight)
-		heightSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-			override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
-				val dp = progress + 36
-				heightValue.text = getString(R.string.setup_height_value, dp)
-				if (fromUser) Prefs.setUtilityRowHeight(this@SetupActivity, dp)
+				val current = progress + offset
+				value.text = getString(labelId, current)
+				if (fromUser) onValue(current)
 			}
 
 			override fun onStartTrackingTouch(bar: SeekBar?) = Unit

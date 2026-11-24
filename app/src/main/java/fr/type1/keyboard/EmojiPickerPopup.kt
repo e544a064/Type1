@@ -29,7 +29,7 @@ internal class EmojiPickerPopup(
 	private val context: Context,
 	private val recentEmojis: () -> List<String>,
 	private val onPick: (String) -> Unit,
-	private val onDismissed: () -> Unit,
+	private val onDismissed: (EmojiPickerPopup) -> Unit,
 ) {
 
 	private data class Tab(
@@ -103,7 +103,7 @@ internal class EmojiPickerPopup(
 			elevation = dp(16f)
 			setOnDismissListener {
 				popup = null
-				onDismissed()
+				onDismissed(this@EmojiPickerPopup)
 			}
 		}
 
