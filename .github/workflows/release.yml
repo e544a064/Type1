@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core -> target
+
+      - name: Run core tests
+        run: cargo test --quiet --manifest-path core/Cargo.toml
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform, build tools and NDK
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?Android SDK root is not set}}"
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.0.12077973" >/dev/null
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.0.12077973" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/27.0.12077973" >> "$GITHUB_ENV"
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Check release signing secrets
+        env:
+          KEYSTORE: ${{ secrets.TYPE1_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TYPE1_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TYPE1_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TYPE1_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          if [ -z "$KEYSTORE" ]; then missing+=("TYPE1_KEYSTORE_BASE64"); fi
+          if [ -z "$STORE_PASSWORD" ]; then missing+=("TYPE1_KEYSTORE_PASSWORD"); fi
+          if [ -z "$KEY_ALIAS" ]; then missing+=("TYPE1_KEY_ALIAS"); fi
+          if [ -z "$KEY_PASSWORD" ]; then missing+=("TYPE1_KEY_PASSWORD"); fi
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing release signing secret(s): ${missing[*]}"
+            echo "See the Releases section of README.md for setup."
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TYPE1_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/type1-release.keystore"
+          echo "TYPE1_KEYSTORE_FILE=$RUNNER_TEMP/type1-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Derive version from tag
+        run: |
+          set -euo pipefail
+          VERSION_NAME="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION_NAME" ]; then VERSION_NAME="$GITHUB_REF_NAME"; fi
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          # Android only needs a monotonic code; the tag supplies the user-facing name.
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "ASSET_BASE=type1-${VERSION_NAME//\//-}" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          TYPE1_KEYSTORE_PASSWORD: ${{ secrets.TYPE1_KEYSTORE_PASSWORD }}
+          TYPE1_KEY_ALIAS: ${{ secrets.TYPE1_KEY_ALIAS }}
+          TYPE1_KEY_PASSWORD: ${{ secrets.TYPE1_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew lintRelease assembleRelease --console=plain \
+            -PversionName="$VERSION_NAME" \
+            -PversionCode="$VERSION_CODE"
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)
+          if [ -z "$APK" ]; then
+            echo "::error::No release APK was produced."
+            exit 1
+          fi
+          cp "$APK" "dist/${ASSET_BASE}.apk"
+          (cd dist && sha256sum "${ASSET_BASE}.apk" > "${ASSET_BASE}.apk.sha256")
+
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          "$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" verify "dist/${ASSET_BASE}.apk"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            args=(--title "Type1 $VERSION_NAME" --generate-notes)
+            if [[ "$VERSION_NAME" == *-* ]]; then args+=(--prerelease); fi
+            gh release create "$GITHUB_REF_NAME" "${args[@]}" dist/*
+          fi
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/type1-release.keystore"

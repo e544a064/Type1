@@ -6,6 +6,23 @@ plugins {
 	id("org.jetbrains.kotlin.android")
 }
 
+// CI passes these from the pushed tag; local builds keep the defaults.
+val releaseVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 1
+val releaseVersionName = providers.gradleProperty("versionName").orNull ?: "0.1.0"
+
+// Release signing is optional locally and required by the tag workflow. The
+// workflow decodes the keystore into the runner and exports these variables.
+val releaseStoreFile = providers.environmentVariable("TYPE1_KEYSTORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("TYPE1_KEYSTORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("TYPE1_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("TYPE1_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(
+	releaseStoreFile,
+	releaseStorePassword,
+	releaseKeyAlias,
+	releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
 android {
 	namespace = "fr.type1.keyboard"
 	compileSdk = 35
@@ -14,12 +31,24 @@ android {
 		applicationId = "fr.type1.keyboard"
 		minSdk = 24
 		targetSdk = 35
-		versionCode = 1
-		versionName = "0.1.0"
+		versionCode = releaseVersionCode
+		versionName = releaseVersionName
+	}
+
+	signingConfigs {
+		if (hasReleaseSigning) {
+			create("release") {
+				storeFile = file(releaseStoreFile!!)
+				storePassword = releaseStorePassword
+				keyAlias = releaseKeyAlias
+				keyPassword = releaseKeyPassword
+			}
+		}
 	}
 
 	buildTypes {
 		release {
+			signingConfig = signingConfigs.findByName("release")
 			isMinifyEnabled = false
 			proguardFiles(
 				getDefaultProguardFile("proguard-android-optimize.txt"),

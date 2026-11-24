@@ -216,10 +216,12 @@ app/                      Android app (Kotlin, no AndroidX needed)
     model/RowModel.kt     JSON model (suggestions, letters, keys)
     model/KeyAction.kt    JSON action model
     model/KeyboardProfile.kt  user profile and its JSON storage
+    model/Json.kt         shared string-array parsing
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
+.github/workflows/release.yml  tag-triggered signed APK release
 ```
 
 ## Dictionary
@@ -335,11 +337,55 @@ cd core; cargo run --release --example make_fuzzy_contraction_extra_cases
 class mirrors the Kotlin `NativeBridge` so a broken symbol name or signature
 fails immediately, without installing an APK.
 
+## Releases
+
+Pushing a tag that starts with `v` runs `.github/workflows/release.yml`, which
+tests the core, builds a signed release APK, and publishes it with a SHA-256
+checksum:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The tag becomes the Android `versionName` (without the leading `v`), while the
+`versionCode` is the GitHub Actions run number. Tags containing a hyphen, such
+as `v1.1.0-beta.1`, are published as prereleases.
+
+### Signing secrets
+
+Add these repository secrets under **Settings → Secrets and variables →
+Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `TYPE1_KEYSTORE_BASE64` | Base64 of the release keystore |
+| `TYPE1_KEYSTORE_PASSWORD` | Keystore password |
+| `TYPE1_KEY_ALIAS` | Key alias |
+| `TYPE1_KEY_PASSWORD` | Key password |
+
+PowerShell:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks"))
+```
+
+Linux/macOS:
+
+```bash
+base64 -w0 release.jks
+```
+
+The workflow fails early with a clear message if a secret is missing. Local
+release builds are signed when `TYPE1_KEYSTORE_FILE`,
+`TYPE1_KEYSTORE_PASSWORD`, `TYPE1_KEY_ALIAS` and `TYPE1_KEY_PASSWORD` are set;
+otherwise `assembleRelease` produces an unsigned APK.
+
 ## Verified
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 191 tests, 12,020 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 192 tests, 12,020 fixture rows
   (6,500 typos + 2,000 all-caps + 1,534 fuzzy contractions + 1,986 wider
   contraction typos), ~30,000 generated interaction sessions, 1,800 exact
   contraction cases, 6,588 fuzzy contraction executions and 1,488 single-letter
