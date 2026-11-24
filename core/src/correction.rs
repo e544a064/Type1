@@ -40,6 +40,9 @@ const TWO_KEY_MIN_SCORE: f32 = 2.0;
 const LAST_RESORT_MIN_LEN: usize = 4;
 const LAST_RESORT_TIE: f32 = 0.5;
 const MAX_RESULTS: usize = 6;
+/// Confidence for a curated contraction (`dont` -> `don't`). It must beat the
+/// apostrophe-less form that web-derived dictionaries sometimes list as a word.
+const CONTRACTION_LOG_FREQ: f32 = 8.0;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
 /// `a`–`z` use 0–25, everything else (apostrophes, stray letters) shares 26.
@@ -594,6 +597,35 @@ fn sort_candidates(list: &mut [Candidate]) {
 }
 
 impl Corrector {
+	/// Restore the apostrophe in curated contractions (`dont` -> `don't`).
+	fn add_contractions(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
+		for language in &self.languages {
+			let language = *language;
+			for &(typed, contraction) in language.contractions {
+				if lower != typed {
+					continue;
+				}
+				// `dont` is a French word too: in a mixed profile leave the
+				// other language's valid word alone.
+				let conflicted = self.languages.iter().any(|other| {
+					!std::ptr::eq(*other, language)
+						&& other.dictionary.exact(lower).is_some()
+				});
+				if conflicted {
+					continue;
+				}
+				insert(
+					found,
+					Candidate {
+						text: contraction.to_string(),
+						score: CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
+						tier: 1,
+					},
+				);
+			}
+		}
+	}
+
 	/// Words where every typed letter is one or two keys away from the intended
 	/// one, ranked by frequency. This is the narrow-keyboard rescue: an input can
 	/// be complete nonsense and still point at a common word.
@@ -714,6 +746,7 @@ impl Corrector {
 				insert(&mut found, candidate);
 			}
 		}
+		self.add_contractions(&lower, &mut found);
 		self.add_neighbour_candidates(&lower, &mut found);
 		if known.is_none() && length >= 3 {
 			self.add_aggressive_elisions(&lower, &mut found);

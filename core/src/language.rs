@@ -17,6 +17,8 @@ pub struct Language {
 	pub dictionary: &'static Dictionary,
 	/// French elision/clitic handling (`jai` -> `j'ai`).
 	pub elisions: bool,
+	/// Missing-apostrophe forms and their contraction (`dont` -> `don't`).
+	pub contractions: &'static [(&'static str, &'static str)],
 }
 
 pub static FRENCH: Language = Language {
@@ -25,7 +27,61 @@ pub static FRENCH: Language = Language {
 	short: "FR",
 	dictionary: &FRENCH_DICTIONARY,
 	elisions: true,
+	contractions: &[],
 };
+
+pub static ENGLISH_CONTRACTIONS: &[(&str, &str)] = &[
+	("dont", "don't"),
+	("cant", "can't"),
+	("wont", "won't"),
+	("isnt", "isn't"),
+	("arent", "aren't"),
+	("wasnt", "wasn't"),
+	("werent", "weren't"),
+	("hasnt", "hasn't"),
+	("havent", "haven't"),
+	("hadnt", "hadn't"),
+	("doesnt", "doesn't"),
+	("didnt", "didn't"),
+	("couldnt", "couldn't"),
+	("shouldnt", "shouldn't"),
+	("wouldnt", "wouldn't"),
+	("mustnt", "mustn't"),
+	("neednt", "needn't"),
+	("mightnt", "mightn't"),
+	("shant", "shan't"),
+	("thats", "that's"),
+	("theres", "there's"),
+	("whats", "what's"),
+	("whos", "who's"),
+	("wheres", "where's"),
+	("whens", "when's"),
+	("whys", "why's"),
+	("hows", "how's"),
+	("heres", "here's"),
+	("hes", "he's"),
+	("shes", "she's"),
+	("hed", "he'd"),
+	("youre", "you're"),
+	("theyre", "they're"),
+	("youve", "you've"),
+	("youll", "you'll"),
+	("youd", "you'd"),
+	("weve", "we've"),
+	("theyve", "they've"),
+	("theyll", "they'll"),
+	("theyd", "they'd"),
+	("itll", "it'll"),
+	("itd", "it'd"),
+	("therell", "there'll"),
+	("thered", "there'd"),
+	("wholl", "who'll"),
+	("whod", "who'd"),
+	("im", "I'm"),
+	("ive", "I've"),
+	("maam", "ma'am"),
+	("oclock", "o'clock"),
+];
 
 pub static ENGLISH: Language = Language {
 	id: "en",
@@ -33,6 +89,7 @@ pub static ENGLISH: Language = Language {
 	short: "EN",
 	dictionary: &ENGLISH_DICTIONARY,
 	elisions: false,
+	contractions: ENGLISH_CONTRACTIONS,
 };
 
 /// Languages with a correction model today. Korean can be added here once its
@@ -70,6 +127,12 @@ mod tests {
 		assert_eq!(english.short, "EN");
 		assert!(!english.elisions);
 		assert!(english.dictionary.words().len() >= 15_000);
+		assert!(
+			english
+			. contractions
+			. iter()
+			. any(|&(typed, contraction)| typed == "dont" && contraction == "don't")
+		);
 	}
 
 	#[test]

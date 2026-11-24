@@ -47,6 +47,9 @@ release on the letter you want.
 - British English autocorrection (`langauge` → `language`, `recieve` →
   `receive`) with British spellings preferred (`colour`, `centre`, `organise`,
   `favourite`, `behaviour`).
+- English contractions are restored (`dont` → `don't`, `cant` → `can't`,
+  `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`). Ambiguous forms
+  such as `its`/`it's`, `well`/`we'll` and `ill`/`I'll` are left alone.
 - Narrow-key rescue: when every typed key is one or two keys away from a
   word, the most frequent such word is offered (`geqnvx` → `beauté`,
   `vqjmd` → `t'aime`, `bknjpur` → `bonjour`). One-key candidates always rank
@@ -312,7 +315,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 175 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 178 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

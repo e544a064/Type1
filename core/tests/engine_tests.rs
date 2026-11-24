@@ -218,6 +218,79 @@ fn corrects_english_typos_on_qwerty() {
 }
 
 #[test]
+fn corrects_english_contractions() {
+	let cases = [
+		("dont", "don't"),
+		("cant", "can't"),
+		("wont", "won't"),
+		("isnt", "isn't"),
+		("youre", "you're"),
+		("thats", "that's"),
+		("oclock", "o'clock"),
+	];
+	for (typed, corrected) in cases {
+		let mut engine = plain();
+		assert!(engine.set_profile_ids("qwerty", &["en"]));
+		for key in typed.chars() {
+			engine.on_key(&key.to_string());
+		}
+		assert_eq!(
+			engine.on_key("space"),
+			vec![
+				Action::DeleteChars(typed.chars().count() as u32),
+				Action::Commit(corrected.into()),
+				Action::Commit(" ".into()),
+			],
+			"typing {typed}"
+		);
+	}
+}
+
+#[test]
+fn french_dont_is_not_turned_into_an_english_contraction() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("azerty", &["fr", "en"]));
+	for key in ["d", "o", "n", "t"] {
+		engine.on_key(key);
+	}
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn contractions_follow_the_word_case() {
+	let mut capitalized = plain();
+	assert!(capitalized.set_profile_ids("qwerty", &["en"]));
+	capitalized.on_key("shift");
+	for key in ["d", "o", "n", "t"] {
+		capitalized.on_key(key);
+	}
+	assert_eq!(
+		capitalized.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("Don't".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+
+	let mut all_caps = plain();
+	assert!(all_caps.set_profile_ids("qwerty", &["en"]));
+	all_caps.on_key("shift");
+	all_caps.on_key("shift");
+	for key in ["d", "o", "n", "t"] {
+		all_caps.on_key(key);
+	}
+	assert_eq!(
+		all_caps.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("DON'T".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
 fn the_builtin_profile_can_be_restored() {
 	let mut engine = Engine::new();
 	assert!(engine.set_profile_ids("azerty", &["fr"]));

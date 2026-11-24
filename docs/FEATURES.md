@@ -58,6 +58,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`)
 - [x] British English autocorrect with British spelling preference
       (`langauge` → `language`, `colour`, `centre`, `organise`)
+- [x] English contractions restored (`dont` → `don't`, `cant` → `can't`,
+      `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`)
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with
       typos inside the elided word (`taimx` → `t'aime`) and grammar-aware
       validation (`j'aime`, not `t'est`)
