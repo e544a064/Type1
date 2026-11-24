@@ -247,6 +247,104 @@ fn corrects_english_contractions() {
 }
 
 #[test]
+fn contraction_aliases_the_ordinary_candidate() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["e", "o", "n", "t"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	assert_eq!(options.first().map(String::as_str), Some("don't"));
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("don't".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn fuzzy_contractions_are_corrected() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["d", "o", "u", "v"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	assert!(
+		options.iter().any(|text| text == "don't"),
+		"suggestions: {options:?}"
+	);
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("don't".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn all_caps_fuzzy_contractions_are_corrected() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("shift");
+	engine.on_key("shift");
+	for key in ["d", "o", "u", "v"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("DON'T".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn tapping_a_fuzzy_contraction_replaces_the_word() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["d", "o", "u", "v"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	let index = options
+	. iter()
+	. position(|text| text == "don't")
+	. expect("don't");
+	assert_eq!(
+		engine.on_key(&format!("sug:{index}")),
+		vec![
+			Action::DeleteChars(4),
+			Action::CommitSuggestion("don't ".into()),
+		]
+	);
+}
+
+#[test]
+fn fuzzy_contraction_does_not_block_a_strong_correction() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["t", "h", "e", "r", "d", "e"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(6),
+			Action::Commit("there".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
 fn french_dont_is_not_turned_into_an_english_contraction() {
 	let mut engine = plain();
 	assert!(engine.set_profile_ids("azerty", &["fr", "en"]));

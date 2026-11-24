@@ -43,6 +43,10 @@ const MAX_RESULTS: usize = 6;
 /// Confidence for a curated contraction (`dont` -> `don't`). It must beat the
 /// apostrophe-less form that web-derived dictionaries sometimes list as a word.
 const CONTRACTION_LOG_FREQ: f32 = 8.0;
+/// A contraction is much more likely than the bare key (`dont`), which is
+/// normally a misspelling or a rare word. Applied to any candidate that
+/// matches a contraction key before it is shown to the user.
+const CONTRACTION_ALIAS_BONUS: f32 = 4.0;
 /// Longest token the weighted distance will consider.
 const MAX_CHARS: usize = 31;
 /// `a`–`z` use 0–25, everything else (apostrophes, stray letters) shares 26.
@@ -598,30 +602,43 @@ fn sort_candidates(list: &mut [Candidate]) {
 
 impl Corrector {
 	/// Restore the apostrophe in curated contractions (`dont` -> `don't`).
+	///
+	/// Any normal candidate that equals a contraction key is renamed to the
+	/// contraction. This means `eont` or `douv`, whose best ordinary candidate
+	/// is `dont`, also get `don't` at a higher probability.
 	fn add_contractions(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
 		for language in &self.languages {
 			let language = *language;
-			for &(typed, contraction) in language.contractions {
-				if lower != typed {
-					continue;
+			// `dont` is a French word too: in a mixed profile leave the
+			// other language's valid word alone.
+			let conflicted = self.languages.iter().any(|other| {
+				!std::ptr::eq(*other, language)
+					&& other.dictionary.exact(lower).is_some()
+			});
+			if conflicted {
+				continue;
+			}
+			for &(key, contraction) in language.contractions {
+				if lower == key {
+					insert(
+						found,
+						Candidate {
+							text: contraction.to_string(),
+							score: CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
+							tier: 1,
+						},
+					);
 				}
-				// `dont` is a French word too: in a mixed profile leave the
-				// other language's valid word alone.
-				let conflicted = self.languages.iter().any(|other| {
-					!std::ptr::eq(*other, language)
-						&& other.dictionary.exact(lower).is_some()
-				});
-				if conflicted {
-					continue;
+				if let Some(candidate) = found.remove(key) {
+					insert(
+						found,
+						Candidate {
+							text: contraction.to_string(),
+							score: candidate.score + CONTRACTION_ALIAS_BONUS,
+							tier: candidate.tier,
+						},
+					);
 				}
-				insert(
-					found,
-					Candidate {
-						text: contraction.to_string(),
-						score: CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
-						tier: 1,
-					},
-				);
 			}
 		}
 	}
@@ -746,11 +763,11 @@ impl Corrector {
 				insert(&mut found, candidate);
 			}
 		}
-		self.add_contractions(&lower, &mut found);
 		self.add_neighbour_candidates(&lower, &mut found);
 		if known.is_none() && length >= 3 {
 			self.add_aggressive_elisions(&lower, &mut found);
 		}
+		self.add_contractions(&lower, &mut found);
 
 		let mut list: Vec<Candidate> = found.into_values().collect();
 		sort_candidates(&mut list);

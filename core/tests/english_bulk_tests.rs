@@ -133,6 +133,50 @@ fn thousands_of_all_caps_typos_are_corrected() {
 	}
 }
 
+fn fuzzy_contraction_cases() -> Vec<(&'static str, &'static str, &'static str)> {
+	include_str!("data/fuzzy_contraction_cases.tsv")
+	. lines()
+	. filter_map(|line| {
+		let mut parts = line.split('\t');
+		Some((parts.next()?, parts.next()?, parts.next()?))
+	})
+	. collect()
+}
+
+#[test]
+fn thousands_of_fuzzy_contractions_are_corrected() {
+	let cases = fuzzy_contraction_cases();
+	assert!(cases.len() >= 1_000, "only {} cases", cases.len());
+	let mut checked = 0usize;
+	for layout in ["azerty", "qwerty"] {
+		let mut engine = Engine::new();
+		assert!(engine.set_profile_ids(layout, &["en"]));
+		for &(case_layout, typed, expected) in &cases {
+			if case_layout != layout {
+				continue;
+			}
+			for case in [Case::Lower, Case::Capitalized, Case::Upper] {
+				engine.set_input_type(TEXT, 0);
+				type_with_case(&mut engine, typed, case);
+				assert_eq!(
+					engine.on_key("space"),
+					vec![
+						Action::DeleteChars(typed.chars().count() as u32),
+						Action::Commit(cased(expected, case)),
+						Action::Commit(" ".into()),
+					],
+					"typing {typed} ({case:?}) on {layout}"
+				);
+				checked += 1;
+			}
+		}
+	}
+	assert!(
+		checked >= 3_000,
+		"only {checked} fuzzy contraction cases checked"
+	);
+}
+
 #[test]
 fn every_contraction_is_corrected_in_every_case_and_boundary() {
 	let boundaries = [
