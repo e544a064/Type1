@@ -926,6 +926,22 @@ impl Engine {
 		self.shift = ShiftState::Off;
 	}
 
+	/// Spacebar label: the active language codes, e.g. `FR` or `FR-EN`.
+	fn language_label(&self) -> String {
+		let label = self
+		. profile
+		. languages
+		.iter()
+		.map(|language| language.short)
+		.collect::<Vec<_>>()
+		.join("-");
+		if label.is_empty() {
+			"espace".to_string()
+		} else {
+			label
+		}
+	}
+
 	fn enter_label(&self) -> &'static str {
 		if self.no_enter_action || self.ime_action == ImeActionKind::None {
 			"⏎"
@@ -951,6 +967,7 @@ impl Engine {
 	/// Full keyboard model for the UI, as JSON.
 	pub fn render_json(&mut self) -> String {
 		let suggestions = self.current_suggestions();
+		let language_label = self.language_label();
 
 		let mut out = String::with_capacity(1800);
 		out.push_str("{\"page\":");
@@ -998,6 +1015,7 @@ impl Engine {
 			}
 			let label = match key.id {
 				"page" => self.page.switch_label(),
+				"space" => language_label.as_str(),
 				"enter" => self.enter_label(),
 				_ => key.label,
 			};

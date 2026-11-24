@@ -12,7 +12,6 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
-import fr.type1.keyboard.model.ProfileChoice
 import kotlin.math.abs
 
 /**
@@ -33,7 +32,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		if (key == Prefs.PROFILES || key == Prefs.ACTIVE_PROFILE) {
 			keyboardView?.post {
 				applyProfile()
-				updateProfileChoices()
+				updateProfileAvailability()
 				syncContextFromEditor()
 			}
 		}
@@ -62,7 +61,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 			insets
 		}
 		keyboardView = view
-		updateProfileChoices()
+		updateProfileAvailability()
 		view.refresh()
 		return view
 	}
@@ -88,7 +87,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		selectAnchor = -1
 		selectWidth = 0
 		applyProfile()
-		updateProfileChoices()
+		updateProfileAvailability()
 		// Some editors set imeOptions just before the view appears.
 		if (info != null) controller.setImeOptions(info.imeOptions)
 		keyboardView?.refresh()
@@ -113,22 +112,20 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		}
 	}
 
-	/** Publish the profiles offered by the comma long-press switcher. */
-	private fun updateProfileChoices() {
-		val profiles = Prefs.profiles(this)
-		val layouts = KeyboardController.layouts()
-		val languages = KeyboardController.languages()
-		keyboardView?.setProfileChoices(
-			profiles.map {
-				ProfileChoice(it.id, it.label(layouts, languages))
-			},
-		)
+	/** Tell the comma popup whether there is another profile to switch to. */
+	private fun updateProfileAvailability() {
+		keyboardView?.setProfileCount(Prefs.profiles(this).size)
 	}
 
-	override fun onSwitchProfile(profileId: String) {
+	override fun onCycleProfile() {
+		val profiles = Prefs.profiles(this)
+		if (profiles.size < 2) return
+		val current = Prefs.activeProfile(this) ?: return
+		val index = profiles.indexOfFirst { it.id == current.id }
+		val next = profiles[(index + 1) % profiles.size]
 		// The preference listener reconfigures the engine and refreshes the
 		// keyboard when the active profile changes.
-		Prefs.setActiveProfileId(this, profileId)
+		Prefs.setActiveProfileId(this, next.id)
 	}
 
 	override fun onFinishInput() {

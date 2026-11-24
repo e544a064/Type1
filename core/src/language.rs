@@ -10,6 +10,8 @@ use crate::json;
 pub struct Language {
 	pub id: &'static str,
 	pub label: &'static str,
+	/// Short code shown on the spacebar (`FR`, `EN`, ...).
+	pub short: &'static str,
 	pub dictionary: &'static Dictionary,
 	/// French elision/clitic handling (`jai` -> `j'ai`).
 	pub elisions: bool,
@@ -18,6 +20,7 @@ pub struct Language {
 pub static FRENCH: Language = Language {
 	id: "fr",
 	label: "Français",
+	short: "FR",
 	dictionary: &FRENCH_DICTIONARY,
 	elisions: true,
 };

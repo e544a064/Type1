@@ -1,4 +1,7 @@
-use type1_core::{Action, Engine, ImeActionKind, Page};
+use type1_core::dictionary::Dictionary;
+use type1_core::language::{Language, FRENCH};
+use type1_core::layout;
+use type1_core::{Action, Engine, ImeActionKind, Page, Profile};
 
 const TEXT: i32 = 0x0000_0001;
 const CAP_SENTENCES: i32 = 0x0000_4000;
@@ -17,6 +20,20 @@ fn commits(actions: &[Action]) -> Vec<String> {
 		_ => None,
 	})
 	. collect()
+}
+
+fn space_label(engine: &mut Engine) -> String {
+	let json: serde_json::Value =
+		serde_json::from_str(&engine.render_json()).unwrap();
+	json["keys"]
+	. as_array()
+	. unwrap()
+	. iter()
+	. find(|key| key["id"] == "space")
+	. unwrap()["label"]
+	. as_str()
+	. unwrap()
+	. to_string()
 }
 
 fn capitalize(word: &str) -> String {
@@ -109,6 +126,23 @@ fn profiles_can_be_selected_from_layout_and_languages() {
 	assert_eq!(engine.profile().layout.id, "azerty");
 	assert!(engine.set_profile_ids("qwerty", &["fr"]));
 	assert_eq!(engine.profile().layout.id, "qwerty");
+}
+
+#[test]
+fn spacebar_shows_the_active_language_codes() {
+	static EMPTY: Dictionary = Dictionary::new("");
+	static ENGLISH: Language = Language {
+		id: "en",
+		label: "English",
+		short: "EN",
+		dictionary: &EMPTY,
+		elisions: false,
+	};
+
+	let mut engine = Engine::new();
+	assert_eq!(space_label(&mut engine), "FR");
+	engine.set_profile(Profile::new(&layout::AZERTY, vec![&FRENCH, &ENGLISH]));
+	assert_eq!(space_label(&mut engine), "FR-EN");
 }
 
 #[test]

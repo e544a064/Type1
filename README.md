@@ -12,7 +12,7 @@ iOS port later only needs a new UI + FFI shim.
 ├──────────────────────────────────────────────────────────────┤
 │ A q w Z s x E d c R f v T g b Y h n U j I k O l P m          │  56 dp
 ├──────────────────────────────────────────────────────────────┤
-│ 123      ,        espace        .        ⏎                 │  48 dp
+│ 123      ,         FR           .        ⏎                 │  48 dp
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -34,8 +34,10 @@ release on the letter you want.
   **Profils de clavier** (setup → Gérer les profils): the layout comes from a
   dropdown and the languages are toggles. The list starts empty, and the
   keyboard falls back to `AZERTY · Français` until a profile exists.
-- Long-press `,` when at least two profiles exist to switch the active one from
-  a popup with a planet icon per profile.
+- Long-press `,` when at least two profiles exist: a single globe popup cycles
+  to the next profile and wraps around at the end of the list.
+- The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
+  instead of the word “espace”. The layout itself is visible on the keys.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from a 20k frequency-ranked French
   dictionary with a layout-aware touch model: neighbouring-key slips,
@@ -287,7 +289,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 161 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 162 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
@@ -309,7 +311,7 @@ untested.
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `!`, `?` and `:`; slide and release |
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
-| Long-press `,` (2+ profiles) | Popup with a planet icon per profile; slide and release to switch |
+| Long-press `,` (2+ profiles) | Globe popup; release to cycle to the next profile |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe left to size a selection then delete, or nothing. In Select mode a clear leftward swipe starts selecting immediately. |

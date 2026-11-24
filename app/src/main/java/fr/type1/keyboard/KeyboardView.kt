@@ -20,7 +20,6 @@ import android.widget.PopupWindow
 import fr.type1.keyboard.core.KeyboardController
 import fr.type1.keyboard.model.KeyAction
 import fr.type1.keyboard.model.LetterKey
-import fr.type1.keyboard.model.ProfileChoice
 import fr.type1.keyboard.model.RowModel
 import fr.type1.keyboard.model.SUGGESTION_PREFIX
 import fr.type1.keyboard.model.UtilityKey
@@ -43,7 +42,7 @@ class KeyboardView(
 
 	interface Listener {
 		fun onActions(actions: List<KeyAction>)
-		fun onSwitchProfile(profileId: String)
+		fun onCycleProfile()
 	}
 
 	var listener: Listener? = null
@@ -99,7 +98,7 @@ class KeyboardView(
 	private var downStrip = -1
 	private var downBackspace = false
 	private var longPressFired = false
-	private var profileChoices: List<ProfileChoice> = emptyList()
+	private var profileCount = 0
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
 	private var spaceAnchorX = 0f
@@ -175,7 +174,7 @@ class KeyboardView(
 					}
 					(
 						key.id == "comma"
-						&& profileChoices.size >= 2
+						&& profileCount >= 2
 						&& showProfilePopup(downUtility)
 					) -> {
 						longPressFired = true
@@ -234,9 +233,9 @@ class KeyboardView(
 		backspaceHold = mode
 	}
 
-	/** Profiles offered by the comma long-press switcher. */
-	fun setProfileChoices(choices: List<ProfileChoice>) {
-		profileChoices = choices
+	/** Number of configured profiles; the comma popup cycles when there are 2+. */
+	fun setProfileCount(count: Int) {
+		profileCount = count
 	}
 
 	private fun UtilityKey?.isBackspace(): Boolean = this?.kind == "backspace"
@@ -535,21 +534,18 @@ class KeyboardView(
 		return showAltEntries(entries, rect, 0, utilityTop, initialSelected = -1)
 	}
 
-	/** Long-press on the comma: switch to another configured profile. */
+	/** Long-press on the comma: cycle to the next configured profile. */
 	private fun showProfilePopup(index: Int): Boolean {
 		val rect = utilityRects.getOrNull(index) ?: return false
-		if (profileChoices.size < 2) return false
-		val entries = profileChoices.map {
-			AltEntry("$PROFILE_PREFIX${it.id}", it.label, "planet")
-		}
-		// Start unselected so a long press alone never switches profile.
+		if (profileCount < 2) return false
+		val entries = listOf(AltEntry(PROFILE_NEXT, "", "planet"))
 		return showAltEntries(
 			entries,
 			rect,
 			0,
 			utilityTop,
-			initialSelected = -1,
-			cellDp = PROFILE_CELL_DP,
+			initialSelected = 0,
+			cellDp = PLANET_CELL_DP,
 		)
 	}
 
@@ -664,11 +660,9 @@ class KeyboardView(
 				}
 				val entry = entries[i]
 				popupTextPaint.color = if (i == selected) Color.WHITE else colors.text
-				var textLeft = left + dp(2f)
-				val textRight = left + cell - dp(2f)
 				if (entry.icon.isNotEmpty()) {
-					val iconSize = min(cell, height.toFloat()) * 0.48f
-					val iconLeft = left + dp(4f)
+					val iconSize = min(cell, height.toFloat()) * 0.56f
+					val iconLeft = left + (cell - iconSize) / 2f
 					val iconTop = (height - iconSize) / 2f
 					iconDrawables[entry.icon]?.let { drawable ->
 						drawable.setBounds(
@@ -679,13 +673,11 @@ class KeyboardView(
 						)
 						drawable.setTint(popupTextPaint.color)
 						drawable.draw(canvas)
-						textLeft = iconLeft + iconSize + dp(2f)
 					}
-				}
-				if (textRight > textLeft) {
-					popupTextPaint.textSize = fitPopupText(entry.display, textRight - textLeft)
+				} else {
+					popupTextPaint.textSize = fitPopupText(entry.display, cell - dp(4f))
 					val baseline = height / 2f - (popupTextPaint.ascent() + popupTextPaint.descent()) / 2f
-					canvas.drawText(entry.display, (textLeft + textRight) / 2f, baseline, popupTextPaint)
+					canvas.drawText(entry.display, left + cell / 2f, baseline, popupTextPaint)
 				}
 			}
 		}
@@ -785,12 +777,10 @@ class KeyboardView(
 				&& band == Band.Utilities
 				&& model?.keys?.getOrNull(downUtility)?.kind == "page"
 			)
-			val profileId = entry?.keyId?.takeIf { it.startsWith(PROFILE_PREFIX) }
+			val cycleProfile = entry?.keyId == PROFILE_NEXT
 			dismissAltPopup()
 			when {
-				profileId != null -> listener?.onSwitchProfile(
-					profileId.removePrefix(PROFILE_PREFIX),
-				)
+				cycleProfile -> listener?.onCycleProfile()
 				entry != null -> emit(controller.press(entry.keyId))
 				switchPage -> emit(controller.press("page"))
 			}
@@ -1091,7 +1081,7 @@ class KeyboardView(
 		const val ALT_CELL_DP = 40f
 		const val ALT_HEIGHT_DP = 44f
 		const val ALT_SELECT_SLOP_DP = 6f
-		const val PROFILE_CELL_DP = 150f
-		const val PROFILE_PREFIX = "profile:"
+		const val PLANET_CELL_DP = 64f
+		const val PROFILE_NEXT = "profile:next"
 	}
 }
