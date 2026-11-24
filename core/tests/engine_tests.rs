@@ -328,6 +328,65 @@ fn tapping_a_fuzzy_contraction_replaces_the_word() {
 }
 
 #[test]
+fn contraction_keys_are_not_suggested() {
+	for (typed, expected) in [("dont", "don't"), ("cant", "can't"), ("wont", "won't")] {
+		let mut engine = plain();
+		assert!(engine.set_profile_ids("qwerty", &["en"]));
+		for key in typed.chars() {
+			engine.on_key(&key.to_string());
+		}
+		let options = suggestions(&mut engine);
+		assert!(
+			options.iter().any(|text| text.as_str() == expected),
+			"typing {typed}: {options:?}"
+		);
+		assert!(
+			!options.iter().any(|text| text.as_str() == typed),
+			"typing {typed}: bare key in {options:?}"
+		);
+	}
+}
+
+#[test]
+fn backspace_undoes_a_contraction_correction() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["d", "o", "n", "t"] {
+		engine.on_key(key);
+	}
+	engine.on_key("space");
+	assert_eq!(
+		engine.on_key("backspace"),
+		vec![
+			Action::DeleteChars(6),
+			Action::Commit("dont ".into()),
+			Action::MoveCursor(-1),
+		]
+	);
+}
+
+#[test]
+fn tapping_an_exact_contraction_suggestion_replaces_the_word() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["d", "o", "n", "t"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	let index = options
+	. iter()
+	. position(|text| text == "don't")
+	. expect("don't");
+	assert_eq!(
+		engine.on_key(&format!("sug:{index}")),
+		vec![
+			Action::DeleteChars(4),
+			Action::CommitSuggestion("don't ".into()),
+		]
+	);
+}
+
+#[test]
 fn fuzzy_contraction_does_not_block_a_strong_correction() {
 	let mut engine = plain();
 	assert!(engine.set_profile_ids("qwerty", &["en"]));

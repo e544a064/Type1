@@ -187,6 +187,7 @@ core/                     Rust crate (no Android dependency)
   examples/make_autocorrect_cases.rs  regenerate the typo fixtures
   examples/make_all_caps_cases.rs  regenerate the caps-lock fixture
   examples/make_fuzzy_contraction_cases.rs  regenerate contraction typos
+  examples/make_fuzzy_contraction_extra_cases.rs  wider contraction typos
   tests/engine_tests.rs   keyboard-engine behaviour tests
   tests/english_bulk_tests.rs  contractions, caps-lock and single letters
   tests/autocorrect_tests.rs  bulk autocorrect regressions
@@ -195,6 +196,7 @@ core/                     Rust crate (no Android dependency)
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
   tests/data/all_caps_cases.tsv  2,000 all-caps typo cases
   tests/data/fuzzy_contraction_cases.tsv  1,534 contraction typos
+  tests/data/fuzzy_contraction_extra_cases.tsv  1,986 single-letter typos
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -296,10 +298,10 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic: 10,034 fixture rows (6,500 typos + 2,000 all-caps + 1,534
-# fuzzy contractions), ~30,000 full interaction sessions, 1,800 exact
-# contraction cases, 4,602 fuzzy contraction executions and 1,488
-# single-letter checks
+# core logic: 12,020 fixture rows (6,500 typos + 2,000 all-caps + 1,534
+# fuzzy contractions + 1,986 wider contraction typos), ~30,000 full
+# interaction sessions, 1,800 exact contraction cases, 6,588 fuzzy
+# contraction executions and 1,488 single-letter checks
 cd core; cargo test
 
 # JNI contract: real JVM -> Rust -> JSON (uses the host build of the core)
@@ -318,6 +320,7 @@ The bulk fixtures are regenerated after tuning the corrector:
 cd core; cargo run --release --example make_autocorrect_cases
 cd core; cargo run --release --example make_all_caps_cases
 cd core; cargo run --release --example make_fuzzy_contraction_cases
+cd core; cargo run --release --example make_fuzzy_contraction_extra_cases
 ```
 
 `run.ps1` prints the row model and the actions for a few key presses. The Java
@@ -328,10 +331,11 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 187 tests, 10,034 fixture rows
-  (6,500 typos + 2,000 all-caps + 1,534 fuzzy contractions), ~30,000
-  generated interaction sessions, 1,800 exact contraction cases, 4,602 fuzzy
-  contraction executions and 1,488 single-letter checks.
+- Rust 1.101 (nightly), `cargo test`: 191 tests, 12,020 fixture rows
+  (6,500 typos + 2,000 all-caps + 1,534 fuzzy contractions + 1,986 wider
+  contraction typos), ~30,000 generated interaction sessions, 1,800 exact
+  contraction cases, 6,588 fuzzy contraction executions and 1,488 single-letter
+  checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.

@@ -158,11 +158,22 @@ fn thousands_of_fuzzy_contractions_are_corrected() {
 			for case in [Case::Lower, Case::Capitalized, Case::Upper] {
 				engine.set_input_type(TEXT, 0);
 				type_with_case(&mut engine, typed, case);
+				let wanted = cased(expected, case);
+				let bare = cased(&expected.replace('\'', "").to_lowercase(), case);
+				let options = suggestions(&mut engine);
+				assert!(
+					options.iter().any(|text| text == &wanted),
+					"typing {typed} ({case:?}) on {layout}: missing {wanted} in {options:?}"
+				);
+				assert!(
+					!options.iter().any(|text| text == &bare),
+					"typing {typed} ({case:?}) on {layout}: bare {bare} in {options:?}"
+				);
 				assert_eq!(
 					engine.on_key("space"),
 					vec![
 						Action::DeleteChars(typed.chars().count() as u32),
-						Action::Commit(cased(expected, case)),
+						Action::Commit(wanted),
 						Action::Commit(" ".into()),
 					],
 					"typing {typed} ({case:?}) on {layout}"
@@ -174,6 +185,60 @@ fn thousands_of_fuzzy_contractions_are_corrected() {
 	assert!(
 		checked >= 3_000,
 		"only {checked} fuzzy contraction cases checked"
+	);
+}
+
+fn fuzzy_extra_cases() -> Vec<(&'static str, &'static str, &'static str)> {
+	include_str!("data/fuzzy_contraction_extra_cases.tsv")
+	. lines()
+	. filter_map(|line| {
+		let mut parts = line.split('\t');
+		Some((parts.next()?, parts.next()?, parts.next()?))
+	})
+	. collect()
+}
+
+#[test]
+fn more_fuzzy_contractions_are_corrected() {
+	let cases = fuzzy_extra_cases();
+	assert!(cases.len() >= 1_500, "only {} cases", cases.len());
+	let mut checked = 0usize;
+	for layout in ["azerty", "qwerty"] {
+		let mut engine = Engine::new();
+		assert!(engine.set_profile_ids(layout, &["en"]));
+		for &(case_layout, typed, expected) in &cases {
+			if case_layout != layout {
+				continue;
+			}
+			engine.set_input_type(TEXT, 0);
+			for ch in typed.chars() {
+				engine.on_key(&ch.to_string());
+			}
+			let bare = expected.replace('\'', "").to_lowercase();
+			let options = suggestions(&mut engine);
+			assert!(
+				options.iter().any(|text| text.as_str() == expected),
+				"typing {typed} on {layout}: missing {expected} in {options:?}"
+			);
+			assert!(
+				!options.iter().any(|text| text.as_str() == bare.as_str()),
+				"typing {typed} on {layout}: bare {bare} in {options:?}"
+			);
+			assert_eq!(
+				engine.on_key("space"),
+				vec![
+					Action::DeleteChars(typed.chars().count() as u32),
+					Action::Commit(expected.into()),
+					Action::Commit(" ".into()),
+				],
+				"typing {typed} on {layout}"
+			);
+			checked += 1;
+		}
+	}
+	assert!(
+		checked >= 1_500,
+		"only {checked} extra fuzzy contraction cases checked"
 	);
 }
 
