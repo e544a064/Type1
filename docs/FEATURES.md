@@ -54,6 +54,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Per-language dictionaries (French and English UK) with a profile-scoped
       corrector
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
+- [x] Autocorrect with caps lock: all-caps words keep their capitals
+      (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`)
 - [x] British English autocorrect with British spelling preference
       (`langauge` → `language`, `colour`, `centre`, `organise`)
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with

@@ -850,13 +850,53 @@ fn correction_preserves_capitalisation() {
 }
 
 #[test]
-fn all_caps_words_are_not_corrected() {
+fn all_caps_words_are_corrected() {
 	let mut engine = Engine::new();
 	engine.set_input_type(TEXT | 0x0000_1000, 0);
-	engine.on_key("j");
-	engine.on_key("a");
-	engine.on_key("i");
-	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(3),
+			Action::Commit("J'AI".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+}
+
+#[test]
+fn all_caps_suggestions_are_uppercase() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("shift");
+	engine.on_key("shift");
+	for key in ["l", "a", "n", "g", "a", "u", "g", "e"] {
+		engine.on_key(key);
+	}
+	let suggestions = suggestions(&mut engine);
+	assert_eq!(suggestions.first().map(String::as_str), Some("LANGUAGE"));
+	assert!(suggestions.iter().all(|text| text.chars().all(|c| !c.is_lowercase())));
+}
+
+#[test]
+fn shift_lock_corrects_in_all_caps() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("shift");
+	engine.on_key("shift");
+	for key in ["l", "a", "n", "g", "a", "u", "g", "e"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(8),
+			Action::Commit("LANGUAGE".into()),
+			Action::Commit(" ".into()),
+		]
+	);
 }
 
 #[test]

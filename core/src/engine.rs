@@ -618,8 +618,7 @@ impl Engine {
 		if length < 2 || typed.contains('\'') {
 			return None;
 		}
-		let pattern = case_pattern(&typed);
-		if matches!(pattern, CasePattern::AllCaps | CasePattern::Mixed) {
+		if case_pattern(&typed) == CasePattern::Mixed {
 			return None;
 		}
 
@@ -818,10 +817,7 @@ impl Engine {
 			if full.chars().count() < 2 {
 				return Vec::new();
 			}
-			if matches!(
-				case_pattern(&full),
-				CasePattern::AllCaps | CasePattern::Mixed
-			) {
+			if case_pattern(&full) == CasePattern::Mixed {
 				return Vec::new();
 			}
 			// If the word was changed, re-open the suggestions for the form
@@ -872,10 +868,7 @@ impl Engine {
 			if length < 2 {
 				return Vec::new();
 			}
-			if matches!(
-				case_pattern(&typed),
-				CasePattern::AllCaps | CasePattern::Mixed
-			) {
+			if case_pattern(&typed) == CasePattern::Mixed {
 				return Vec::new();
 			}
 			let suggestion = self.suggestion_for(&typed);
@@ -1156,16 +1149,16 @@ fn case_pattern(word: &str) -> CasePattern {
 }
 
 fn apply_case(typed: &str, candidate: &str) -> String {
-	let single_upper = typed.chars().count() == 1
-		&& typed.chars().next().is_some_and(|c| c.is_uppercase());
-	if case_pattern(typed) == CasePattern::Capitalized || single_upper {
-		let mut chars = candidate.chars();
-		match chars.next() {
-			Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-			None => String::new(),
+	match case_pattern(typed) {
+		CasePattern::AllCaps => candidate.to_uppercase(),
+		CasePattern::Capitalized => {
+			let mut chars = candidate.chars();
+			match chars.next() {
+				Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+				None => String::new(),
+			}
 		}
-	} else {
-		candidate.to_string()
+		_ => candidate.to_string(),
 	}
 }
 

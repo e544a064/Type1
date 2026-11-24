@@ -87,8 +87,10 @@ release on the letter you want.
   a word keeps the text after the caret in the correction token, so the
   suggestions still cover the whole word.
 - Conservative application: a confidence margin (stricter for two-letter
-  tokens), no all-caps/mixed-case words, no suggestions in password/email/URI/
-  name/address/number fields or when the editor asks for none.
+  tokens), mixed-case words are left alone, and all-caps words are corrected
+  while keeping their capitals (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`). No
+  suggestions in password/email/URI/name/address/number fields or when the
+  editor asks for none.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`), with sentence
@@ -310,7 +312,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 173 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 175 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
