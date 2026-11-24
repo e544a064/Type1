@@ -27,7 +27,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Shift and backspace occupy the suggestion strip's ends; the bottom row is page, comma, space, period, enter
 - [x] Profiles page: create, edit, delete and select profiles from a layout
       dropdown and language toggles
-- [x] Long-press comma to cycle to the next profile (globe popup, wraps around)
+- [x] Long-press comma opens the emoji picker (recents, categories, scrollable
+      grid); with 2+ profiles the popup also cycles to the next profile
 - [x] Spacebar shows the active language codes (`FR`, `FR-EN`, ...)
 - [ ] Remember last page per app
 - [ ] IME picker key (globe)

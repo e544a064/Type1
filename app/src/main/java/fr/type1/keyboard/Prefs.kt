@@ -3,6 +3,7 @@ package fr.type1.keyboard
 import android.content.Context
 import android.content.SharedPreferences
 import fr.type1.keyboard.model.KeyboardProfile
+import org.json.JSONArray
 
 /** What a long press on the backspace key does. */
 enum class BackspaceHold { None, Repeat, Select }
@@ -14,8 +15,10 @@ object Prefs {
 	private const val BACKSPACE_HOLD = "backspace_hold"
 	private const val SWIPE_SENSITIVITY = "swipe_sensitivity"
 	private const val UTILITY_ROW_HEIGHT = "utility_row_height"
+	private const val RECENT_EMOJIS = "recent_emojis"
 	const val PROFILES = "profiles"
 	const val ACTIVE_PROFILE = "active_profile"
+	private const val MAX_RECENT_EMOJIS = 30
 
 	fun preferences(context: Context): SharedPreferences {
 		return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -109,5 +112,32 @@ object Prefs {
 		val profiles = profiles(context)
 		val id = activeProfileId(context)
 		return profiles.firstOrNull { it.id == id } ?: profiles.firstOrNull()
+	}
+
+	/** Recently inserted emoji, newest first. */
+	fun recentEmojis(context: Context): List<String> {
+		val raw = preferences(context)
+		. getString(RECENT_EMOJIS, null)
+		?: return emptyList()
+		return try {
+			val array = JSONArray(raw)
+			List(array.length()) { array.getString(it) }
+		} catch (_: Exception) {
+			emptyList()
+		}
+	}
+
+	fun addRecentEmoji(context: Context, emoji: String) {
+		val recent = recentEmojis(context)
+		. filterNot { it == emoji }
+		. toMutableList()
+		recent.add(0, emoji)
+		while (recent.size > MAX_RECENT_EMOJIS) {
+			recent.removeAt(recent.lastIndex)
+		}
+		preferences(context)
+		. edit()
+		. putString(RECENT_EMOJIS, JSONArray(recent).toString())
+		. apply()
 	}
 }

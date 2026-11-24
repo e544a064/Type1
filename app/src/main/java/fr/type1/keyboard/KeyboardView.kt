@@ -43,6 +43,7 @@ class KeyboardView(
 	interface Listener {
 		fun onActions(actions: List<KeyAction>)
 		fun onCycleProfile()
+		fun onEmoji(emoji: String)
 	}
 
 	var listener: Listener? = null
@@ -99,6 +100,7 @@ class KeyboardView(
 	private var downBackspace = false
 	private var longPressFired = false
 	private var profileCount = 0
+	private var emojiPicker: EmojiPickerPopup? = null
 	private var spaceCursorEnabled = true
 	private var spaceDragging = false
 	private var spaceAnchorX = 0f
@@ -172,11 +174,7 @@ class KeyboardView(
 						longPressFired = true
 						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 					}
-					(
-						key.id == "comma"
-						&& profileCount >= 2
-						&& showProfilePopup(downUtility)
-					) -> {
+					key.id == "comma" && showCommaPopup(downUtility) -> {
 						longPressFired = true
 						performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 					}
@@ -236,6 +234,31 @@ class KeyboardView(
 	/** Number of configured profiles; the comma popup cycles when there are 2+. */
 	fun setProfileCount(count: Int) {
 		profileCount = count
+	}
+
+	private fun openEmojiPicker() {
+		emojiPicker?.dismiss()
+		var picker: EmojiPickerPopup? = null
+		val created = EmojiPickerPopup(
+			context,
+			recentEmojis = { Prefs.recentEmojis(context) },
+			onPick = { emoji ->
+				listener?.onEmoji(emoji)
+				playClick()
+				performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+			},
+			onDismissed = {
+				if (emojiPicker === picker) emojiPicker = null
+			},
+		)
+		picker = created
+		if (created.show(this)) emojiPicker = created
+	}
+
+	/** Hide the emoji panel, for example when the IME window goes away. */
+	fun dismissEmojiPicker() {
+		emojiPicker?.dismiss()
+		emojiPicker = null
 	}
 
 	private fun UtilityKey?.isBackspace(): Boolean = this?.kind == "backspace"
@@ -538,11 +561,17 @@ class KeyboardView(
 		return showAltEntries(entries, rect, 0, utilityTop, initialSelected = -1)
 	}
 
-	/** Long-press on the comma: cycle to the next configured profile. */
-	private fun showProfilePopup(index: Int): Boolean {
+	/**
+	 * Long-press on the comma: emoji picker, plus the profile switcher when
+	 * there is another profile to cycle to.
+	 */
+	private fun showCommaPopup(index: Int): Boolean {
 		val rect = utilityRects.getOrNull(index) ?: return false
-		if (profileCount < 2) return false
-		val entries = listOf(AltEntry(PROFILE_NEXT, "", "planet"))
+		val entries = ArrayList<AltEntry>()
+		if (profileCount >= 2) {
+			entries += AltEntry(PROFILE_NEXT, "", "planet")
+		}
+		entries += AltEntry(EMOJI_PICKER, "🙂")
 		return showAltEntries(
 			entries,
 			rect,
@@ -782,9 +811,11 @@ class KeyboardView(
 				&& model?.keys?.getOrNull(downUtility)?.kind == "page"
 			)
 			val cycleProfile = entry?.keyId == PROFILE_NEXT
+			val openEmoji = entry?.keyId == EMOJI_PICKER
 			dismissAltPopup()
 			when {
 				cycleProfile -> listener?.onCycleProfile()
+				openEmoji -> openEmojiPicker()
 				entry != null -> emit(controller.press(entry.keyId))
 				switchPage -> emit(controller.press("page"))
 			}
@@ -1071,6 +1102,8 @@ class KeyboardView(
 
 	override fun onDetachedFromWindow() {
 		handler.removeCallbacksAndMessages(null)
+		emojiPicker?.dismiss()
+		emojiPicker = null
 		dismissAltPopup()
 		super.onDetachedFromWindow()
 	}
@@ -1087,5 +1120,6 @@ class KeyboardView(
 		const val ALT_SELECT_SLOP_DP = 6f
 		const val PLANET_CELL_DP = 64f
 		const val PROFILE_NEXT = "profile:next"
+		const val EMOJI_PICKER = "emoji:picker"
 	}
 }

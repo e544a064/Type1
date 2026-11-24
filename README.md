@@ -35,8 +35,11 @@ release on the letter you want.
   dropdown and the languages are toggles (Français, English (UK)). The list
   starts empty, and the keyboard falls back to `AZERTY · Français` until a
   profile exists.
-- Long-press `,` when at least two profiles exist: a single globe popup cycles
-  to the next profile and wraps around at the end of the list.
+- Long-press `,` for the emoji picker: a scrollable grid with a category strip
+  (recent emoji first, then smileys, people, activities, objects, travel,
+  sports, symbols, signs, flags and text emoticons). With at least two
+  profiles, the same popup also shows a globe that cycles to the next profile
+  and wraps around at the end of the list.
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
   instead of the word “espace”. The layout itself is visible on the keys.
 - Predictive back gestures are enabled for the setup and profiles screens
@@ -203,6 +206,8 @@ app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
     KeyboardView.kt       three bands + touch handling
+    EmojiPickerPopup.kt   emoji panel opened from the comma
+    EmojiData.kt          emoji categories and recent-emoji tab
     SetupActivity.kt      enable/pick the keyboard, open the profiles page
     ProfilesActivity.kt   create/edit/delete and select profiles
     core/NativeBridge.kt  external fun declarations
@@ -358,7 +363,8 @@ untested.
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `& % + " - : ' @ ; / ( ) # ! ?`; slide and release |
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
-| Long-press `,` (2+ profiles) | Globe popup; release to cycle to the next profile |
+| Long-press `,` | Emoji picker with a category strip and scrollable grid; recents first |
+| Globe in the comma popup (2+ profiles) | Release on the globe to cycle to the next profile |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe left to size a selection then delete, or nothing. In Select mode a clear leftward swipe starts selecting immediately. |
@@ -376,7 +382,7 @@ untested.
 4. **Text tools** — clipboard panel, cursor arrows, word delete on long-press
    ⌫, double-space period.
 5. **Personalisation** — dictionary additions, themes, per-app page memory.
-6. **Later** — emoji/kaomoji panel, voice input hand-off, glide typing adapted
+6. **Later** — voice input hand-off, glide typing adapted
    to one line, iOS UI on the same core.
 
 ## Licence

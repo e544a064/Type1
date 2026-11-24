@@ -12,7 +12,7 @@
 	<string name="setup_hint">Appuyez longuement sur une lettre pour les accents. Glissez le long de la ligne de lettres pour corriger avant de relâcher.</string>
 	<string name="setup_profiles">Profils de clavier</string>
 	<string name="setup_profiles_manage">Gérer les profils</string>
-	<string name="setup_profiles_hint">Chaque profil associe une disposition à une ou plusieurs langues. Appuyez longuement sur la virgule pour passer au profil suivant.</string>
+	<string name="setup_profiles_hint">Chaque profil associe une disposition à une ou plusieurs langues. Appuyez longuement sur la virgule pour les émojis ; avec plusieurs profils, choisissez le globe pour passer au suivant.</string>
 	<string name="setup_profiles_none">Aucun profil configuré — AZERTY · Français par défaut.</string>
 	<string name="setup_demo_hint">Essayez le clavier ici…</string>
 	<string name="setup_space_cursor">Glisser sur l\'espace pour déplacer le curseur</string>
@@ -45,4 +45,17 @@
 	<string name="profile_delete_title">Supprimer ce profil ?</string>
 	<string name="profile_delete_message">Le profil « %1$s » sera supprimé.</string>
 	<string name="profile_delete_confirm">Supprimer</string>
+
+	<string name="emoji_recent">Récents</string>
+	<string name="emoji_smileys">Émoticônes</string>
+	<string name="emoji_people">Personnes</string>
+	<string name="emoji_activities">Activités</string>
+	<string name="emoji_objects">Objets</string>
+	<string name="emoji_travel">Voyages</string>
+	<string name="emoji_sports">Sports</string>
+	<string name="emoji_symbols">Symboles</string>
+	<string name="emoji_signs">Signes</string>
+	<string name="emoji_flags">Drapeaux</string>
+	<string name="emoji_text">Texte</string>
+	<string name="emoji_empty_recent">Aucun emoji récent.</string>
 </resources>

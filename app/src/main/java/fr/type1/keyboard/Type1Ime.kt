@@ -128,6 +128,20 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		Prefs.setActiveProfileId(this, next.id)
 	}
 
+	override fun onEmoji(emoji: String) {
+		val ic = currentInputConnection ?: return
+		ic.commitText(emoji, 1)
+		// Remember the pick for the recent tab before the panel refreshes it.
+		Prefs.addRecentEmoji(this, emoji)
+		keyboardView?.refresh()
+		keyboardView?.post { syncContextFromEditor() }
+	}
+
+	override fun onWindowHidden() {
+		keyboardView?.dismissEmojiPicker()
+		super.onWindowHidden()
+	}
+
 	override fun onFinishInput() {
 		super.onFinishInput()
 		controller.reset()
@@ -136,6 +150,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		allowNextSelection = false
 		selectAnchor = -1
 		selectWidth = 0
+		keyboardView?.dismissEmojiPicker()
 		keyboardView?.refresh()
 	}
 
