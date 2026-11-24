@@ -35,6 +35,17 @@ fn space_label(engine: &mut Engine) -> String {
 	. to_string()
 }
 
+fn suggestions(engine: &mut Engine) -> Vec<String> {
+	let json: serde_json::Value =
+		serde_json::from_str(&engine.render_json()).unwrap();
+	json["suggestions"]
+	. as_array()
+	. unwrap()
+	. iter()
+	. map(|value| value.as_str().unwrap().to_string())
+	. collect()
+}
+
 fn capitalize(word: &str) -> String {
 	let mut chars = word.chars();
 	match chars.next() {
@@ -133,6 +144,44 @@ fn spacebar_shows_the_active_language_codes() {
 	assert_eq!(space_label(&mut engine), "FR");
 	engine.set_profile(Profile::new(&layout::AZERTY, vec![&FRENCH, &ENGLISH]));
 	assert_eq!(space_label(&mut engine), "FR-EN");
+}
+
+#[test]
+fn single_letter_suggestions_put_french_words_before_neighbours() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("azerty", &["fr"]));
+	engine.on_key("q");
+	assert_eq!(suggestions(&mut engine), vec!["à", "a", "w"]);
+}
+
+#[test]
+fn single_letter_suggestions_capitalize_the_english_pronoun() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("m");
+	assert_eq!(suggestions(&mut engine), vec!["I", "j"]);
+}
+
+#[test]
+fn single_letter_tokens_are_not_auto_corrected() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("azerty", &["fr"]));
+	engine.on_key("q");
+	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+}
+
+#[test]
+fn tapping_a_single_letter_suggestion_replaces_the_letter() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("azerty", &["fr"]));
+	engine.on_key("q");
+	assert_eq!(
+		engine.on_key("sug:1"),
+		vec![
+			Action::DeleteChars(1),
+			Action::CommitSuggestion("a ".into()),
+		]
+	);
 }
 
 #[test]

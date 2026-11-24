@@ -96,6 +96,9 @@ public class NativeBridge {
 		for (String key : new String[] {"l", "a", "n", "g", "a", "u", "g", "e", "space"}) {
 			System.out.println(key + " -> " + nativeKey(handle, key));
 		}
+		nativeSetProfile(handle, "azerty", "fr");
+		System.out.println("q        -> " + nativeKey(handle, "q"));
+		System.out.println("q suggestions: " + nativeRender(handle));
 		nativeSetDefaultProfile(handle);
 		System.out.println("default  -> " + nativeRender(handle));
 

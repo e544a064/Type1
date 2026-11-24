@@ -4,7 +4,7 @@
 //! noisy-channel model: `P(typed | intended)` comes from the distance between
 //! the physical keys, `P(intended)` from the word frequency.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::dictionary::{self, Word};
 use crate::language::Language;
@@ -684,7 +684,13 @@ impl Corrector {
 	pub fn suggest(&self, typed: &str) -> Suggestion {
 		let lower = typed.to_lowercase();
 		let length = lower.chars().count();
-		if length < 2 || lower.contains('\'') {
+		if lower.contains('\'') {
+			return Suggestion::empty();
+		}
+		if length == 1 {
+			return self.single_letter_suggestions(&lower);
+		}
+		if length < 2 {
 			return Suggestion::empty();
 		}
 
@@ -754,6 +760,121 @@ impl Corrector {
 		Suggestion {
 			candidates: list,
 			apply,
+		}
+	}
+
+	/// Candidates for a single typed letter: one-letter words first (including
+	/// accented variants and real words among the neighbours), then the
+	/// neighbouring keys themselves.
+	fn single_letter_suggestions(&self, typed: &str) -> Suggestion {
+		let Some(letter) = typed.chars().next() else {
+			return Suggestion::empty();
+		};
+		let folded = fold(&letter.to_string());
+		if folded.chars().count() != 1 {
+			return Suggestion::empty();
+		}
+		let Some(base) = folded.chars().next() else {
+			return Suggestion::empty();
+		};
+		if !base.is_ascii_alphabetic() {
+			return Suggestion::empty();
+		}
+
+		let typed_index = char_index(base as u8);
+		let mut neighbours: Vec<(char, f32)> = Vec::new();
+		for (index, byte) in (b'a'..=b'z').enumerate() {
+			let neighbour = byte as char;
+			if neighbour == base {
+				continue;
+			}
+			let cost = self.costs[typed_index][index];
+			if cost > 0.0 && cost <= NEIGHBOUR_COST {
+				neighbours.push((neighbour, cost));
+			}
+		}
+		neighbours.sort_by(|a, b| {
+			a.1
+			.partial_cmp(&b.1)
+			.unwrap_or(std::cmp::Ordering::Equal)
+			.then_with(|| a.0.cmp(&b.0))
+		});
+		if neighbours.is_empty() {
+			// Defensive: keep at least the closest other letter.
+			let mut closest = None;
+			for (index, byte) in (b'a'..=b'z').enumerate() {
+				let neighbour = byte as char;
+				if neighbour == base {
+					continue;
+				}
+				let cost = self.costs[typed_index][index];
+				if closest.is_none_or(|(_, best)| cost < best) {
+					closest = Some((neighbour, cost));
+				}
+			}
+			if let Some(entry) = closest {
+				neighbours.push(entry);
+			}
+		}
+
+		let mut allowed: HashSet<char> = HashSet::new();
+		allowed.insert(base);
+		for (neighbour, _) in &neighbours {
+			allowed.insert(*neighbour);
+		}
+
+		let mut found: HashMap<String, Candidate> = HashMap::new();
+		let mut represented: HashSet<char> = HashSet::new();
+		for word in self.words() {
+			if word.folded.len() != 1 {
+				continue;
+			}
+			let Some(word_base) = word.folded.chars().next() else {
+				continue;
+			};
+			if !allowed.contains(&word_base) || word.text == typed {
+				continue;
+			}
+			represented.insert(word_base);
+			let key = word.text.to_lowercase();
+			let candidate = Candidate {
+				text: word.text.to_string(),
+				score: word.log_freq * AGGRESSIVE_WEIGHT,
+				tier: 1,
+			};
+			match found.get(&key) {
+				Some(existing) if existing.score >= candidate.score => {}
+				_ => {
+					found.insert(key, candidate);
+				}
+			}
+		}
+
+		let mut list: Vec<Candidate> = found.into_values().collect();
+		sort_candidates(&mut list);
+
+		let mut extras: Vec<Candidate> = Vec::new();
+		for (neighbour, cost) in neighbours {
+			if represented.contains(&neighbour) {
+				continue;
+			}
+			extras.push(Candidate {
+				text: neighbour.to_string(),
+				score: -cost,
+				tier: 2,
+			});
+		}
+		extras.sort_by(|a, b| {
+			b.score
+			.partial_cmp(&a.score)
+			.unwrap_or(std::cmp::Ordering::Equal)
+			.then_with(|| a.text.cmp(&b.text))
+		});
+		list.extend(extras);
+		list.truncate(MAX_RESULTS);
+		Suggestion {
+			candidates: list,
+			apply: false,
 		}
 	}
 }

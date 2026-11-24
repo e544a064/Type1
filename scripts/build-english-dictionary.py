@@ -233,7 +233,9 @@ def write_dictionary(freq: dict[str, float], path: Path, count: int) -> int:
 	for word, log_freq in selected:
 		per_million = math.exp(log_freq) * 1_000_000
 		score = round(math.log(per_million + 1) * 100)
-		lines.append(f"{word}\t{score}\t0")
+		# English always capitalises the pronoun.
+		display = "I" if word == "i" else word
+		lines.append(f"{display}\t{score}\t0")
 	path.parent.mkdir(parents=True, exist_ok=True)
 	path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 	return len(selected)

@@ -61,6 +61,10 @@ release on the letter you want.
   `ne` comes before `eu` for `ue`, and `t'aime` before the rare `tapie`.
 - Short tokens fill the strip with more candidates: up to six for two or three
   letters, five for four, four for five, and three for longer words.
+- Single-letter tokens get suggestions too: one-letter words and accents first,
+  then the neighbouring keys. In French, `q` offers `à`, `a`, then `w`; an
+  English neighbour of `I` offers `I` first. Single letters are suggestion-only,
+  never auto-corrected.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
   the same way (`pa` → `la`), while common words stay put.
@@ -206,10 +210,11 @@ synthetic typos and the random-string false-positive rate.
 `Lexique383.tsv`.
 
 `core/data/en.tsv` is derived from [wordfreq](https://github.com/rspeer/wordfreq)
-(CC BY-SA 4.0) through its 25k English export. It keeps lowercase single tokens
-and the 20,000 most frequent forms, converts common American spellings to
+(CC BY-SA 4.0) through its 25k English export. It keeps single alphabetic
+tokens and the 20,000 most frequent forms, converts common American spellings to
 British ones (`colour`, `centre`, `organise`, `favourite`) while keeping words
 valid in both varieties (`meter`/`metre`, `program`/`programme`, `tire`/`tyre`).
+The pronoun `I` is kept capitalised.
 Scores use the same hundredths of `ln(frequency per million + 1)` scale as
 French. `scripts/build-english-dictionary.py` regenerates it.
 
@@ -304,7 +309,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 167 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 171 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

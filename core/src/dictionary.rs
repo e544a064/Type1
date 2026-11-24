@@ -159,5 +159,6 @@ mod tests {
 		assert!(english.exact("centre").is_some());
 		assert!(english.exact("center").is_none());
 		assert!(english.exact("language").is_some());
+		assert_eq!(english.folded("i").map(|word| word.text), Some("I"));
 	}
 }

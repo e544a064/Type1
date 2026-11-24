@@ -849,7 +849,22 @@ impl Engine {
 		}
 		if !self.word.is_empty() || self.context_suffix.is_some() {
 			let typed = self.word_with_suffix();
-			if typed.chars().count() < 2 {
+			let length = typed.chars().count();
+			if length == 0 {
+				return Vec::new();
+			}
+			if length == 1 {
+				let suggestion = self.suggestion_for(&typed);
+				let limit = suggestion_limit(&typed);
+				return suggestion
+				. candidates
+				. iter()
+				.map(|candidate| apply_case(&typed, &candidate.text))
+				.filter(|text| text != &typed)
+				.take(limit)
+				.collect();
+			}
+			if length < 2 {
 				return Vec::new();
 			}
 			if matches!(
@@ -1136,7 +1151,9 @@ fn case_pattern(word: &str) -> CasePattern {
 }
 
 fn apply_case(typed: &str, candidate: &str) -> String {
-	if case_pattern(typed) == CasePattern::Capitalized {
+	let single_upper = typed.chars().count() == 1
+		&& typed.chars().next().is_some_and(|c| c.is_uppercase());
+	if case_pattern(typed) == CasePattern::Capitalized || single_upper {
 		let mut chars = candidate.chars();
 		match chars.next() {
 			Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
