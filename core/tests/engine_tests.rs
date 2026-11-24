@@ -151,7 +151,7 @@ fn single_letter_suggestions_put_french_words_before_neighbours() {
 	let mut engine = plain();
 	assert!(engine.set_profile_ids("azerty", &["fr"]));
 	engine.on_key("q");
-	assert_eq!(suggestions(&mut engine), vec!["à", "a", "w"]);
+	assert_eq!(suggestions(&mut engine), vec!["à", "a", "w", "z"]);
 }
 
 #[test]
@@ -159,7 +159,23 @@ fn single_letter_suggestions_capitalize_the_english_pronoun() {
 	let mut engine = plain();
 	assert!(engine.set_profile_ids("qwerty", &["en"]));
 	engine.on_key("m");
-	assert_eq!(suggestions(&mut engine), vec!["I", "j"]);
+	assert_eq!(suggestions(&mut engine), vec!["I", "j", "i", "k", "u"]);
+}
+
+#[test]
+fn single_letter_suggestions_keep_both_the_word_and_the_letter() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("k");
+	assert_eq!(suggestions(&mut engine), vec!["I", "i", "o", "l", "m"]);
+}
+
+#[test]
+fn single_letter_suggestions_are_deduplicated_at_sentence_start() {
+	let mut engine = Engine::new();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	engine.on_key("k");
+	assert_eq!(suggestions(&mut engine), vec!["I", "O", "L", "M"]);
 }
 
 #[test]

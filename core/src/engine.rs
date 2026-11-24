@@ -856,13 +856,18 @@ impl Engine {
 			if length == 1 {
 				let suggestion = self.suggestion_for(&typed);
 				let limit = suggestion_limit(&typed);
-				return suggestion
-				. candidates
-				. iter()
-				.map(|candidate| apply_case(&typed, &candidate.text))
-				.filter(|text| text != &typed)
-				.take(limit)
-				.collect();
+				let mut out = Vec::new();
+				for candidate in suggestion.candidates.iter() {
+					let text = apply_case(&typed, &candidate.text);
+					if text == typed || out.contains(&text) {
+						continue;
+					}
+					out.push(text);
+					if out.len() >= limit {
+						break;
+					}
+				}
+				return out;
 			}
 			if length < 2 {
 				return Vec::new();

@@ -62,8 +62,9 @@ release on the letter you want.
 - Short tokens fill the strip with more candidates: up to six for two or three
   letters, five for four, four for five, and three for longer words.
 - Single-letter tokens get suggestions too: one-letter words and accents first,
-  then the neighbouring keys. In French, `q` offers `à`, `a`, then `w`; an
-  English neighbour of `I` offers `I` first. Single letters are suggestion-only,
+  then the neighbouring keys, including the second ring. In French, `q` offers
+  `à`, `a`, then `w` and `z`; an English neighbour of `I` offers `I` first, then
+  both `i` and the other nearby letters. Single letters are suggestion-only,
   never auto-corrected.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
@@ -309,7 +310,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 171 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 173 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

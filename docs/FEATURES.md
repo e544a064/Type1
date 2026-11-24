@@ -46,7 +46,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Suggestion strip above the letters showing correction candidates
 - [x] Short tokens show more candidates (up to six for two or three letters)
 - [x] Single-letter suggestions: one-letter words and accents first, then the
-      neighbouring keys (`q` → `à`, `a`, `w`; an English neighbour of `I` → `I`)
+      neighbouring keys (one and two keys away). `q` → `à`, `a`, `w`, `z`; an
+      English neighbour of `I` → `I`, plus the raw letter `i` and further keys
 - [x] Per-field correction memory: moving back into a changed word re-opens
       the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement

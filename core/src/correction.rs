@@ -789,7 +789,7 @@ impl Corrector {
 				continue;
 			}
 			let cost = self.costs[typed_index][index];
-			if cost > 0.0 && cost <= NEIGHBOUR_COST {
+			if cost > 0.0 && cost <= TWO_KEY_COST {
 				neighbours.push((neighbour, cost));
 			}
 		}
@@ -823,8 +823,7 @@ impl Corrector {
 			allowed.insert(*neighbour);
 		}
 
-		let mut found: HashMap<String, Candidate> = HashMap::new();
-		let mut represented: HashSet<char> = HashSet::new();
+		let mut by_base: HashMap<char, HashMap<String, f32>> = HashMap::new();
 		for word in self.words() {
 			if word.folded.len() != 1 {
 				continue;
@@ -832,45 +831,70 @@ impl Corrector {
 			let Some(word_base) = word.folded.chars().next() else {
 				continue;
 			};
-			if !allowed.contains(&word_base) || word.text == typed {
+			if !allowed.contains(&word_base) {
 				continue;
 			}
-			represented.insert(word_base);
-			let key = word.text.to_lowercase();
-			let candidate = Candidate {
-				text: word.text.to_string(),
-				score: word.log_freq * AGGRESSIVE_WEIGHT,
-				tier: 1,
+			let entry = by_base.entry(word_base).or_default();
+			if entry.get(word.text).is_none_or(|freq| *freq < word.log_freq) {
+				entry.insert(word.text.to_string(), word.log_freq);
+			}
+		}
+
+		let mut list: Vec<Candidate> = Vec::new();
+		let mut added: HashSet<String> = HashSet::new();
+		for allowed_base in &allowed {
+			let Some(entries) = by_base.get(allowed_base) else {
+				continue;
 			};
-			match found.get(&key) {
-				Some(existing) if existing.score >= candidate.score => {}
-				_ => {
-					found.insert(key, candidate);
+			let base_text = allowed_base.to_string();
+			for (text, log_freq) in entries {
+				if text == &base_text || text.as_str() == typed {
+					continue;
 				}
+				if !added.insert(text.clone()) {
+					continue;
+				}
+				list.push(Candidate {
+					text: text.clone(),
+					score: *log_freq * AGGRESSIVE_WEIGHT,
+					tier: 1,
+				});
 			}
 		}
-
-		let mut list: Vec<Candidate> = found.into_values().collect();
-		sort_candidates(&mut list);
-
-		let mut extras: Vec<Candidate> = Vec::new();
-		for (neighbour, cost) in neighbours {
-			if represented.contains(&neighbour) {
-				continue;
+		// The typed letter itself as a word (`a` when typing `à`).
+		let typed_base_text = base.to_string();
+		if typed_base_text != typed && !added.contains(&typed_base_text) {
+			if let Some(log_freq) = by_base
+			. get(&base)
+			. and_then(|entries| entries.get(&typed_base_text))
+			{
+				added.insert(typed_base_text.clone());
+				list.push(Candidate {
+					text: typed_base_text,
+					score: *log_freq * AGGRESSIVE_WEIGHT,
+					tier: 1,
+				});
 			}
-			extras.push(Candidate {
-				text: neighbour.to_string(),
-				score: -cost,
-				tier: 2,
-			});
 		}
-		extras.sort_by(|a, b| {
+		list.sort_by(|a, b| {
 			b.score
 			.partial_cmp(&a.score)
 			.unwrap_or(std::cmp::Ordering::Equal)
 			.then_with(|| a.text.cmp(&b.text))
 		});
-		list.extend(extras);
+
+		// Keep the raw neighbour letters even when a word with the same base
+		// already exists (`I` and `i` are both useful for a mistyped `k`).
+		for (neighbour, cost) in neighbours {
+			let text = neighbour.to_string();
+			if added.insert(text.clone()) {
+				list.push(Candidate {
+					text,
+					score: -cost,
+					tier: 2,
+				});
+			}
+		}
 		list.truncate(MAX_RESULTS);
 		Suggestion {
 			candidates: list,
