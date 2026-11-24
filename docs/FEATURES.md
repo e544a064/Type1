@@ -8,8 +8,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Shift, caps lock (tap twice)
 - [x] Multi-touch rollover: overlapping presses are committed in down order
 - [x] AZERTY and QWERTY, all 26 letters on one line (column order, row-based vertical offsets)
-- [x] Alternates via long-press (accents, `'`, `-`, `«»`, `!`, `?`, `:`, `0`–`9` on the page key)
-- [x] Period key shows its `!`/`?`/`:` alternates greyed at the top
+- [x] Alternates via long-press (accents, the period's symbol set, `0`–`9` on the page key)
+- [x] Period key opens `& % + " - : ' @ ; / ( ) # ! ?`; a `…` hint marks the long list
 - [x] Page key long-press popup for a single digit without leaving the page
 - [x] Symbols / numbers replace the letter line
 - [x] Contextual enter key (`⏎`, `→`, `✓`, `🔍`, `➤`); an explicit action
@@ -17,7 +17,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       `IME_FLAG_NO_ENTER_ACTION`
 - [x] Shift and backspace pinned to the suggestion strip
 - [x] Hold-to-repeat backspace
-- [x] Comma left of the spacebar, period on its right with `!`/`?` on long-press
+- [x] Comma left of the spacebar, period on its right with its full symbol set on long-press
 - [ ] Key preview bubble
 - [~] Other layouts: AZERTY and QWERTY data; Sebeolsik/Korean pending
 - [ ] Landscape-specific tuning

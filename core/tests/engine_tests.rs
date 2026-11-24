@@ -1420,9 +1420,18 @@ fn render_exposes_three_bands() {
 	assert_eq!(json["keys"][0]["alts"][9], "0");
 	assert_eq!(json["keys"][1]["id"], "comma");
 	assert_eq!(json["keys"][3]["id"], "dot");
-	assert_eq!(json["keys"][3]["alts"][0], "!");
-	assert_eq!(json["keys"][3]["alts"][1], "?");
-	assert_eq!(json["keys"][3]["alts"][2], ":");
+	let dot_alts: Vec<&str> = json["keys"][3]["alts"]
+	. as_array()
+	. unwrap()
+	. iter()
+	. map(|value| value.as_str().unwrap())
+	. collect();
+	assert_eq!(
+		dot_alts,
+		vec![
+			"&", "%", "+", "\"", "-", ":", "'", "@", ";", "/", "(", ")", "#", "!", "?",
+		]
+	);
 	assert_eq!(json["keys"][4]["id"], "enter");
 	assert_eq!(json["strip"][0]["id"], "shift");
 	assert_eq!(json["strip"][1]["id"], "backspace");

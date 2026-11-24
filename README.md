@@ -122,10 +122,10 @@ release on the letter you want.
   shared by the spacebar caret drag and the backspace selection.
 - Spacebar row height is adjustable (36–72 dp, 48 dp by default).
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
-  page, comma, space, period and enter. Long-press the period for `!`, `?` and
-  `:`; the alternates are shown greyed at the top of the key. Long-press the
-  page key for a popup with `0`–`9` and slide to type one digit without
-  switching page.
+  page, comma, space, period and enter. Long-press the period for the full
+  symbol set (`& % + " - : ' @ ; / ( ) # ! ?`); a `…` hint marks the long
+  alternate list. Long-press the page key for a popup with `0`–`9` and slide to
+  type one digit without switching page.
 - Vector icons for shift, backspace and enter (the enter icon follows the editor
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
@@ -356,7 +356,7 @@ untested.
 | Drag on the spacebar | Move the cursor left/right (disable in the app) |
 | Move the caret into an existing word | Re-suggests corrections for that word; tap one to replace it |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
-| Long-press `.` | Popup with `!`, `?` and `:`; slide and release |
+| Long-press `.` | Popup with `& % + " - : ' @ ; / ( ) # ! ?`; slide and release |
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
 | Long-press `,` (2+ profiles) | Globe popup; release to cycle to the next profile |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |

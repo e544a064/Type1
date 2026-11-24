@@ -458,10 +458,14 @@ class KeyboardView(
 				continue
 			}
 
-			// The page key's alternates are digits for its long-press popup;
-			// showing all ten as a hint would be noise.
+			// The page key has ten digit alternates and the period key has a
+			// full symbol set; showing all of them as a hint would be noise.
 			if (key.alts.isNotEmpty() && key.kind != "page") {
-				val hint = key.alts.joinToString(" ")
+				val hint = if (key.alts.size <= 3) {
+					key.alts.joinToString(" ")
+				} else {
+					"…"
+				}
 				labelPaint.color = colors.muted
 				labelPaint.textAlign = Paint.Align.RIGHT
 				labelPaint.textSize = fitText(hint, rect.width() - dp(4f), dp(10f), dp(7f))

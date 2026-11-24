@@ -225,7 +225,9 @@ pub static UTILITIES: &[UtilityKey] = &[
 		weight: 0.90,
 		commit: ".",
 		icon: "",
-		alts: &["!", "?", ":"],
+		alts: &[
+			"&", "%", "+", "\"", "-", ":", "'", "@", ";", "/", "(", ")", "#", "!", "?",
+		],
 	},
 	UtilityKey {
 		id: "enter",
@@ -429,7 +431,12 @@ mod tests {
 		let page = UTILITIES.iter().find(|u| u.id == "page").unwrap();
 		assert_eq!(page.alts, &["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]);
 		let dot = UTILITIES.iter().find(|u| u.id == "dot").unwrap();
-		assert_eq!(dot.alts, &["!", "?", ":"]);
+		assert_eq!(
+			dot.alts,
+			&[
+				"&", "%", "+", "\"", "-", ":", "'", "@", ";", "/", "(", ")", "#", "!", "?",
+			]
+		);
 		let strip: Vec<&str> = STRIP.iter().map(|u| u.id).collect();
 		assert_eq!(strip, vec!["shift", "backspace"]);
 	}
