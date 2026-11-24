@@ -1438,6 +1438,24 @@ fn render_exposes_three_bands() {
 }
 
 #[test]
+fn render_distinguishes_shift_once_from_caps_lock() {
+	let mut engine = plain();
+	let off: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(off["shift"], 0);
+	assert_eq!(off["strip"][0]["on"], false);
+
+	engine.on_key("shift");
+	let once: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(once["shift"], 1);
+	assert_eq!(once["strip"][0]["on"], true);
+
+	engine.on_key("shift");
+	let locked: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert_eq!(locked["shift"], 2);
+	assert_eq!(locked["strip"][0]["on"], true);
+}
+
+#[test]
 fn dot_and_punctuation_alts_commit_at_the_boundary() {
 	let mut engine = plain();
 	engine.on_key("a");

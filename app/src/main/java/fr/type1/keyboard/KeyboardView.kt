@@ -138,6 +138,7 @@ class KeyboardView(
 			context.getDrawable(res)?.let { map[name] = it }
 		}
 		add("shift", R.drawable.ic_shift)
+		add("shift-locked", R.drawable.ic_shift_locked)
 		add("backspace", R.drawable.ic_backspace)
 		add("enter", R.drawable.ic_enter)
 		add("arrow-right", R.drawable.ic_arrow_right)
@@ -375,8 +376,8 @@ class KeyboardView(
 
 		labelPaint.color = colors.muted
 		labelPaint.textSize = suggestionHeight * 0.40f
-		drawStripKey(canvas, stripLeft, row.strip.getOrNull(0), 0)
-		drawStripKey(canvas, stripRight, row.strip.getOrNull(1), 1)
+		drawStripKey(canvas, stripLeft, row.strip.getOrNull(0), 0, row.shift)
+		drawStripKey(canvas, stripRight, row.strip.getOrNull(1), 1, row.shift)
 
 		for (i in row.suggestions.indices) {
 			val rect = suggestionRects.getOrNull(i) ?: continue
@@ -397,7 +398,7 @@ class KeyboardView(
 	}
 
 	/** Shift on the left, backspace on the right: real keys inside the strip. */
-	private fun drawStripKey(canvas: Canvas, rect: RectF, key: UtilityKey?, index: Int) {
+	private fun drawStripKey(canvas: Canvas, rect: RectF, key: UtilityKey?, index: Int, shift: Int) {
 		if (key == null) return
 		val pressed = pressedStrip == index
 		keyPaint.color = when {
@@ -406,9 +407,11 @@ class KeyboardView(
 			else -> colors.key
 		}
 		canvas.drawRoundRect(rect, corner, corner, keyPaint)
-		if (key.icon.isNotEmpty()) {
+		// Shift once highlights the arrow; caps lock adds a bar under it.
+		val icon = if (key.icon == "shift" && shift == SHIFT_LOCKED) "shift-locked" else key.icon
+		if (icon.isNotEmpty()) {
 			val tint = if (key.active || pressed) Color.WHITE else colors.muted
-			drawIcon(canvas, rect, key.icon, tint, 20f)
+			drawIcon(canvas, rect, icon, tint, 20f)
 			return
 		}
 		labelPaint.color = if (key.active || pressed) Color.WHITE else colors.muted
@@ -1121,5 +1124,7 @@ class KeyboardView(
 		const val PLANET_CELL_DP = 64f
 		const val PROFILE_NEXT = "profile:next"
 		const val EMOJI_PICKER = "emoji:picker"
+		// ShiftState::Locked in the core.
+		const val SHIFT_LOCKED = 2
 	}
 }

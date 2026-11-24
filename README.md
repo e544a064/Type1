@@ -106,9 +106,10 @@ release on the letter you want.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`), with sentence
-  case as the default for plain text. The caret's real position is re-read on
-  start, selection changes and after backspace, so a new sentence is capitalised
-  even when the space after the period was deleted.
+  case as the default for plain text. Caps lock adds a bar under the shift
+  arrow so it is distinct from one-shot shift. The caret's real position is
+  re-read on start, selection changes and after backspace, so a new sentence is
+  capitalised even when the space after the period was deleted.
 - French spacing: space before `? ! : ;`, automatic space after `. , ; : ! ?`
   when a new word starts. A stray space before `.` or `,` is removed, including
   the convenience space added by tapping a suggestion. Applying a suggestion or

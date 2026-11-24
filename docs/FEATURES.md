@@ -5,7 +5,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 
 ## 1. Core typing & layout
 - [x] Letters, digits, punctuation, space, enter, backspace
-- [x] Shift, caps lock (tap twice)
+- [x] Shift, caps lock (tap twice; a bar under the arrow marks the lock)
 - [x] Multi-touch rollover: overlapping presses are committed in down order
 - [x] AZERTY and QWERTY, all 26 letters on one line (column order, row-based vertical offsets)
 - [x] Alternates via long-press (accents, the period's symbol set, `0`–`9` on the page key)
