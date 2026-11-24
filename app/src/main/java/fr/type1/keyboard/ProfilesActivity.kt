@@ -152,12 +152,14 @@ class ProfilesActivity : Activity() {
 			container.addView(toggle)
 		}
 
-		val dialog = AlertDialog.Builder(this)
-		. setTitle(if (existing == null) R.string.profile_new else R.string.profile_edit)
-		. setView(container)
-		. setPositiveButton(R.string.profile_save, null)
-		. setNegativeButton(R.string.profile_cancel, null)
-		. create()
+		val dialog = (
+			AlertDialog.Builder(this)
+			. setTitle(if (existing == null) R.string.profile_new else R.string.profile_edit)
+			. setView(container)
+			. setPositiveButton(R.string.profile_save, null)
+			. setNegativeButton(R.string.profile_cancel, null)
+			. create()
+		)
 
 		dialog.setOnShowListener {
 			dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
@@ -208,8 +210,10 @@ class ProfilesActivity : Activity() {
 	}
 
 	private fun delete(profile: KeyboardProfile) {
-		val profiles = Prefs.profiles(this)
-		. filterNot { it.id == profile.id }
+		val profiles = (
+			Prefs.profiles(this)
+			. filterNot { it.id == profile.id }
+		)
 		if (Prefs.activeProfileId(this) == profile.id) {
 			Prefs.setActiveProfileId(this, profiles.firstOrNull()?.id)
 		}

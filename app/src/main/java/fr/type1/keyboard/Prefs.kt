@@ -36,8 +36,10 @@ object Prefs {
 
 	/** Long-press behaviour of the backspace key. Selects text by default. */
 	fun backspaceHold(context: Context): BackspaceHold {
-		val stored = preferences(context)
-		. getString(BACKSPACE_HOLD, null)
+		val stored = (
+			preferences(context)
+			. getString(BACKSPACE_HOLD, null)
+		)
 		return when (stored) {
 			BackspaceHold.None.name -> BackspaceHold.None
 			BackspaceHold.Repeat.name -> BackspaceHold.Repeat
@@ -97,8 +99,10 @@ object Prefs {
 	}
 
 	fun setActiveProfileId(context: Context, profileId: String?) {
-		val editor = preferences(context)
-		. edit()
+		val editor = (
+			preferences(context)
+			. edit()
+		)
 		if (profileId == null) {
 			editor.remove(ACTIVE_PROFILE)
 		} else {
@@ -116,9 +120,10 @@ object Prefs {
 
 	/** Recently inserted emoji, newest first. */
 	fun recentEmojis(context: Context): List<String> {
-		val raw = preferences(context)
-		. getString(RECENT_EMOJIS, null)
-		?: return emptyList()
+		val raw = (
+			preferences(context)
+			. getString(RECENT_EMOJIS, null)
+		) ?: return emptyList()
 		return try {
 			val array = JSONArray(raw)
 			List(array.length()) { array.getString(it) }
@@ -128,9 +133,11 @@ object Prefs {
 	}
 
 	fun addRecentEmoji(context: Context, emoji: String) {
-		val recent = recentEmojis(context)
-		. filterNot { it == emoji }
-		. toMutableList()
+		val recent = (
+			recentEmojis(context)
+			. filterNot { it == emoji }
+			. toMutableList()
+		)
 		recent.add(0, emoji)
 		while (recent.size > MAX_RECENT_EMOJIS) {
 			recent.removeAt(recent.lastIndex)

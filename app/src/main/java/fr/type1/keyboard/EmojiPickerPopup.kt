@@ -86,9 +86,11 @@ internal class EmojiPickerPopup(
 		val onScreen = IntArray(2)
 		anchor.getLocationOnScreen(onScreen)
 		val above = onScreen[1] - dp(6f)
-		val heightPx = min(dp(PREFERRED_HEIGHT_DP), above)
-			.coerceAtLeast(dp(MIN_HEIGHT_DP))
-			.toInt()
+		val heightPx = (
+			min(dp(PREFERRED_HEIGHT_DP), above)
+			. coerceAtLeast(dp(MIN_HEIGHT_DP))
+			. toInt()
+		)
 
 		val view = buildView(widthPx, heightPx)
 		val window = PopupWindow(view, widthPx, heightPx, false).apply {
