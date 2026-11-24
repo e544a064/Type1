@@ -180,12 +180,15 @@ core/                     Rust crate (no Android dependency)
   data/en.tsv             derived wordfreq list (20k British English forms)
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
-  examples/make_autocorrect_cases.rs  regenerate the bulk fixture
+  examples/make_autocorrect_cases.rs  regenerate the typo fixtures
+  examples/make_all_caps_cases.rs  regenerate the caps-lock fixture
   tests/engine_tests.rs   keyboard-engine behaviour tests
+  tests/english_bulk_tests.rs  contractions, caps-lock and single letters
   tests/autocorrect_tests.rs  bulk autocorrect regressions
   tests/data/autocorrect_cases.tsv  2,500 mixed typo cases
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
+  tests/data/all_caps_cases.tsv  2,000 all-caps typo cases
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -287,8 +290,9 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic, 6,500 autocorrect cases, ~30,000 full interaction sessions
-# and held-out accuracy floors
+# core logic: 8,500 fixture cases (6,500 typos + 2,000 all-caps),
+# ~30,000 full interaction sessions, 1,800 contraction cases and 1,488
+# single-letter checks
 cd core; cargo test
 
 # JNI contract: real JVM -> Rust -> JSON (uses the host build of the core)
@@ -305,6 +309,7 @@ The bulk fixtures are regenerated after tuning the corrector:
 
 ```powershell
 cd core; cargo run --release --example make_autocorrect_cases
+cd core; cargo run --release --example make_all_caps_cases
 ```
 
 `run.ps1` prints the row model and the actions for a few key presses. The Java
@@ -315,8 +320,9 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 178 tests, 6,500 fixture cases and
-  ~30,000 generated interaction sessions.
+- Rust 1.101 (nightly), `cargo test`: 181 tests, 8,500 fixture cases
+  (6,500 typos + 2,000 all-caps), ~30,000 generated interaction sessions,
+  1,800 contraction cases and 1,488 single-letter checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
