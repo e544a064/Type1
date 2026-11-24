@@ -1,6 +1,7 @@
 package fr.type1.keyboard
 
 import android.content.SharedPreferences
+import android.icu.text.BreakIterator
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.SystemClock
@@ -207,8 +208,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 					is KeyAction.Commit -> ic.commitText(action.text, 1)
 					is KeyAction.CommitSuggestion -> ic.commitText(action.text, 1)
 					is KeyAction.DeleteWord -> {
-						deleteWord(ic, action.word)
-						resyncContext = true
+						resyncContext = deleteWord(ic, action.word)
 					}
 					is KeyAction.DeleteChars -> if (action.count > 0) {
 						ic.deleteSurroundingText(action.count, 0)
@@ -360,10 +360,9 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		selectWidth = 0
 	}
 
-	private fun deleteWord(ic: InputConnection, word: Boolean) {
+	private fun deleteWord(ic: InputConnection, word: Boolean): Boolean {
 		if (!word) {
-			ic.deleteSurroundingText(1, 0)
-			return
+			return deleteBackward(ic)
 		}
 		val before = ic.getTextBeforeCursor(64, 0)?.toString().orEmpty()
 		var index = before.length
@@ -371,6 +370,35 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		while (index > 0 && !before[index - 1].isWhitespace()) index--
 		val count = before.length - index
 		if (count > 0) ic.deleteSurroundingText(count, 0) else ic.deleteSurroundingText(1, 0)
+		return true
+	}
+
+	/**
+	 * Delete one user-perceived character. [InputConnection] counts UTF-16
+	 * units, so deleting "one character" would split a surrogate pair (an
+	 * emoji) in half. Measure the last grapheme cluster instead, which also
+	 * removes skin-tone modifiers, flags and ZWJ sequences as one unit.
+	 *
+	 * Returns true when the editor context should be re-read: deleting an
+	 * emoji, punctuation or space can reveal a word that was already finished.
+	 */
+	private fun deleteBackward(ic: InputConnection): Boolean {
+		val before = ic.getTextBeforeCursor(BACKSPACE_LOOKBEHIND, 0)
+		if (before.isNullOrEmpty()) {
+			ic.deleteSurroundingText(1, 0)
+			return true
+		}
+		val end = before.length
+		val iterator = BreakIterator.getCharacterInstance()
+		iterator.setText(before.toString())
+		val start = iterator.preceding(end).coerceIn(0, end - 1)
+		val count = end - start
+		val wasWord = (start until start + count).all { index ->
+			val c = before[index]
+			c.isLetter() || c == '\'' || c == '’'
+		}
+		ic.deleteSurroundingText(count, 0)
+		return !wasWord
 	}
 
 	private fun performEditorAction(ic: InputConnection, action: String) {
@@ -392,6 +420,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private companion object {
 		const val MAX_SELECTION_CHARS = 10_000
+		const val BACKSPACE_LOOKBEHIND = 64
 		const val MAX_CONTEXT_CHARS = 64
 		const val SELECTION_IGNORE_MS = 200L
 	}
