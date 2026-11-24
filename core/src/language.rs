@@ -3,7 +3,9 @@
 //! A profile can combine several languages. Each language owns its dictionary
 //! and the correction rules that are specific to it.
 
-use crate::dictionary::{Dictionary, FRENCH as FRENCH_DICTIONARY};
+use crate::dictionary::{
+	Dictionary, ENGLISH as ENGLISH_DICTIONARY, FRENCH as FRENCH_DICTIONARY,
+};
 use crate::json;
 
 #[derive(Debug)]
@@ -25,9 +27,17 @@ pub static FRENCH: Language = Language {
 	elisions: true,
 };
 
-/// Languages with a correction model today. English and Korean can be added
-/// here once their dictionaries and rules exist.
-pub static LANGUAGES: &[&Language] = &[&FRENCH];
+pub static ENGLISH: Language = Language {
+	id: "en",
+	label: "English (UK)",
+	short: "EN",
+	dictionary: &ENGLISH_DICTIONARY,
+	elisions: false,
+};
+
+/// Languages with a correction model today. Korean can be added here once its
+/// dictionary and Hangul composition exist.
+pub static LANGUAGES: &[&Language] = &[&FRENCH, &ENGLISH];
 
 pub fn find(id: &str) -> Option<&'static Language> {
 	LANGUAGES.iter().copied().find(|language| language.id == id)
@@ -47,4 +57,27 @@ pub fn catalog_json() -> String {
 	}
 	out.push(']');
 	out
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn english_is_available() {
+		let english = find("en").unwrap();
+		assert_eq!(english.label, "English (UK)");
+		assert_eq!(english.short, "EN");
+		assert!(!english.elisions);
+		assert!(english.dictionary.words().len() >= 15_000);
+	}
+
+	#[test]
+	fn catalog_lists_both_languages() {
+		let json: serde_json::Value = serde_json::from_str(&catalog_json()).unwrap();
+		assert_eq!(json[0]["id"], "fr");
+		assert_eq!(json[0]["label"], "Français");
+		assert_eq!(json[1]["id"], "en");
+		assert_eq!(json[1]["label"], "English (UK)");
+	}
 }

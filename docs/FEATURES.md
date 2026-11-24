@@ -48,8 +48,11 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Per-field correction memory: moving back into a changed word re-opens
       the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
-- [x] Per-language dictionaries (French today) with a profile-scoped corrector
+- [x] Per-language dictionaries (French and English UK) with a profile-scoped
+      corrector
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
+- [x] British English autocorrect with British spelling preference
+      (`langauge` → `language`, `colour`, `centre`, `organise`)
 - [x] Elision (`jai`, `taime`, `lhomme`, `daccord`, `quil`, `jusqua`) with
       typos inside the elided word (`taimx` → `t'aime`) and grammar-aware
       validation (`j'aime`, not `t'est`)
@@ -66,8 +69,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       space before `.`/`,` (also after a suggestion tap)
 - [ ] Spell checking
 - [ ] Personal dictionary
-- [~] Multilingual typing: profiles can list several languages; English/Korean
-      dictionaries and mixed-language ranking are still pending
+- [~] Multilingual typing: profiles can list several languages and combine
+      their dictionaries; mixed-language ranking and Korean are still pending
 - [ ] Double-space period
 - [ ] Grammar/style hints
 

@@ -91,6 +91,11 @@ public class NativeBridge {
 		System.out.println("profile  -> " + nativeSetProfile(handle, "azerty", "fr"));
 		System.out.println("qwerty   -> " + nativeSetProfile(handle, "qwerty", "fr"));
 		System.out.println("qwerty row: " + nativeRender(handle));
+		System.out.println("english  -> " + nativeSetProfile(handle, "qwerty", "en"));
+		System.out.println("english row: " + nativeRender(handle));
+		for (String key : new String[] {"l", "a", "n", "g", "a", "u", "g", "e", "space"}) {
+			System.out.println(key + " -> " + nativeKey(handle, key));
+		}
 		nativeSetDefaultProfile(handle);
 		System.out.println("default  -> " + nativeRender(handle));
 

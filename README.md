@@ -32,17 +32,21 @@ release on the letter you want.
   shift/auto-caps is active). AZERTY is the default.
 - Profiles pair a layout with one or more languages. They are created in
   **Profils de clavier** (setup → Gérer les profils): the layout comes from a
-  dropdown and the languages are toggles. The list starts empty, and the
-  keyboard falls back to `AZERTY · Français` until a profile exists.
+  dropdown and the languages are toggles (Français, English (UK)). The list
+  starts empty, and the keyboard falls back to `AZERTY · Français` until a
+  profile exists.
 - Long-press `,` when at least two profiles exist: a single globe popup cycles
   to the next profile and wraps around at the end of the list.
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
   instead of the word “espace”. The layout itself is visible on the keys.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
-- Autocorrection at word boundaries from a 20k frequency-ranked French
-  dictionary with a layout-aware touch model: neighbouring-key slips,
-  transpositions, missing accents (`ecole` → `école`) and elision
+- Autocorrection at word boundaries from 20k frequency-ranked dictionaries,
+  with a layout-aware touch model: neighbouring-key slips, transpositions,
+  missing accents (`ecole` → `école`) and French elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
+- British English autocorrection (`langauge` → `language`, `recieve` →
+  `receive`) with British spellings preferred (`colour`, `centre`, `organise`,
+  `favourite`, `behaviour`).
 - Narrow-key rescue: when every typed key is one or two keys away from a
   word, the most frequent such word is offered (`geqnvx` → `beauté`,
   `vqjmd` → `t'aime`, `bknjpur` → `bonjour`). One-key candidates always rank
@@ -89,7 +93,8 @@ release on the letter you want.
 - French spacing: space before `? ! : ;`, automatic space after `. , ; : ! ?`
   when a new word starts. A stray space before `.` or `,` is removed, including
   the convenience space added by tapping a suggestion. Applying a suggestion or
-  correction never stacks a second space on an existing one.
+  correction never stacks a second space on an existing one. Profiles without
+  French use Latin spacing instead.
 - Backspace with a configurable long-press (repeat, swipe to size a selection,
   or nothing); enter adapts to the editor action (`→`, `✓`, `🔍`, `➤`).
   An explicit action wins even in multiline fields; a newline is used only when
@@ -161,8 +166,9 @@ core/                     Rust crate (no Android dependency)
   src/engine.rs           shift, caps, spacing, word buffer, correction, undo
   src/action.rs           actions emitted to the platform (commit/delete/ime)
   src/ffi.rs              JNI surface (create/render/key/inputType/layouts/languages/profile)
-  data/fr.tsv             derived Lexique 3.83 list (20k forms)
-  data/NOTICE.md          dictionary licence and attribution
+  data/fr.tsv             derived Lexique 3.83 list (20k French forms)
+  data/en.tsv             derived wordfreq list (20k British English forms)
+  data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
   examples/make_autocorrect_cases.rs  regenerate the bulk fixture
   tests/engine_tests.rs   keyboard-engine behaviour tests
@@ -183,6 +189,7 @@ app/                      Android app (Kotlin, no AndroidX needed)
     model/KeyboardProfile.kt  user profile and its JSON storage
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
+scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 ```
 
@@ -197,6 +204,14 @@ notice. `cargo run --release --example evaluate` reports top-1 accuracy on
 synthetic typos and the random-string false-positive rate.
 `scripts/build-dictionary.ps1` regenerates the list from an extracted
 `Lexique383.tsv`.
+
+`core/data/en.tsv` is derived from [wordfreq](https://github.com/rspeer/wordfreq)
+(CC BY-SA 4.0) through its 25k English export. It keeps lowercase single tokens
+and the 20,000 most frequent forms, converts common American spellings to
+British ones (`colour`, `centre`, `organise`, `favourite`) while keeping words
+valid in both varieties (`meter`/`metre`, `program`/`programme`, `tire`/`tyre`).
+Scores use the same hundredths of `ln(frequency per million + 1)` scale as
+French. `scripts/build-english-dictionary.py` regenerates it.
 
 The contract between the two halves is JSON over JNI:
 
@@ -289,7 +304,7 @@ fails immediately, without installing an APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 162 tests, 6,500 fixture cases and
+- Rust 1.101 (nightly), `cargo test`: 167 tests, 6,500 fixture cases and
   ~30,000 generated interaction sessions.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

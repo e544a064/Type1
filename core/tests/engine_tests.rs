@@ -1,5 +1,4 @@
-use type1_core::dictionary::Dictionary;
-use type1_core::language::{Language, FRENCH};
+use type1_core::language::{ENGLISH, FRENCH};
 use type1_core::layout;
 use type1_core::{Action, Engine, ImeActionKind, Page, Profile};
 
@@ -130,19 +129,27 @@ fn profiles_can_be_selected_from_layout_and_languages() {
 
 #[test]
 fn spacebar_shows_the_active_language_codes() {
-	static EMPTY: Dictionary = Dictionary::new("");
-	static ENGLISH: Language = Language {
-		id: "en",
-		label: "English",
-		short: "EN",
-		dictionary: &EMPTY,
-		elisions: false,
-	};
-
 	let mut engine = Engine::new();
 	assert_eq!(space_label(&mut engine), "FR");
 	engine.set_profile(Profile::new(&layout::AZERTY, vec![&FRENCH, &ENGLISH]));
 	assert_eq!(space_label(&mut engine), "FR-EN");
+}
+
+#[test]
+fn corrects_english_typos_on_qwerty() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["l", "a", "n", "g", "a", "u", "g", "e"] {
+		engine.on_key(key);
+	}
+	assert_eq!(
+		engine.on_key("space"),
+		vec![
+			Action::DeleteChars(8),
+			Action::Commit("language".into()),
+			Action::Commit(" ".into()),
+		]
+	);
 }
 
 #[test]

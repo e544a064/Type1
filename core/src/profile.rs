@@ -125,4 +125,10 @@ mod tests {
 		let profile = Profile::new(&layout::AZERTY, vec![&language::FRENCH]);
 		assert_eq!(profile.spacing, SpacingRules::French);
 	}
+
+	#[test]
+	fn english_profile_uses_latin_spacing() {
+		let profile = Profile::new(&layout::AZERTY, vec![&language::ENGLISH]);
+		assert_eq!(profile.spacing, SpacingRules::Latin);
+	}
 }

@@ -1,7 +1,8 @@
 //! Frequency-ranked dictionary shipped with the core.
 //!
 //! Each language owns its own [`Dictionary`]. The French data is derived from
-//! Lexique 3.83 (https://www.lexique.org), distributed under CC BY-SA 4.0.
+//! Lexique 3.83 (https://www.lexique.org) and the English data from wordfreq
+//! (https://github.com/rspeer/wordfreq), both distributed under CC BY-SA 4.0.
 //! See `data/NOTICE.md` for attribution.
 
 use std::collections::HashMap;
@@ -117,6 +118,9 @@ impl Dictionary {
 /// French dictionary (Lexique 3.83).
 pub static FRENCH: Dictionary = Dictionary::new(include_str!("../data/fr.tsv"));
 
+/// British English dictionary (wordfreq).
+pub static ENGLISH: Dictionary = Dictionary::new(include_str!("../data/en.tsv"));
+
 /// Compatibility wrappers for the default French dictionary.
 pub fn words() -> &'static [Word] {
 	FRENCH.words()
@@ -143,5 +147,17 @@ mod tests {
 		assert_eq!(folded("ecole").map(|w| w.text), Some("école"));
 		assert_ne!(exact("aime").unwrap().flags & VERB, 0);
 		assert_ne!(exact("action").unwrap().flags & NOUN, 0);
+	}
+
+	#[test]
+	fn loads_the_english_dictionary() {
+		let english = &ENGLISH;
+		assert!(english.words().len() >= 15_000);
+		assert!(english.exact("keyboard").is_some());
+		assert!(english.exact("colour").is_some());
+		assert!(english.exact("color").is_none());
+		assert!(english.exact("centre").is_some());
+		assert!(english.exact("center").is_none());
+		assert!(english.exact("language").is_some());
 	}
 }
