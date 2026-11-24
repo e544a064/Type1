@@ -128,6 +128,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Correct `inputType` handling (caps, numeric, multiline)
 - [x] Editor actions from `imeOptions`
 - [x] No fullscreen extraction
+- [x] Predictive back gestures in the setup and profiles activities
 - [ ] Physical keyboard passthrough
 - [~] Settings: profiles page plus the onboarding screen; other options are
       still inline in onboarding

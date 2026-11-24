@@ -39,6 +39,8 @@ release on the letter you want.
   to the next profile and wraps around at the end of the list.
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
   instead of the word “espace”. The layout itself is visible on the keys.
+- Predictive back gestures are enabled for the setup and profiles screens
+  (Android 13+), including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from 20k frequency-ranked dictionaries,
   with a layout-aware touch model: neighbouring-key slips, transpositions,
