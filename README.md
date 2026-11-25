@@ -46,7 +46,7 @@ release on the letter you want.
   (Android 13+), including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from frequency-ranked dictionaries (all
-  typable Lexique 3.83 French forms, 20k British English forms),
+  typable Lexique 3.83 French forms, full wordfreq English list),
   with a layout-aware touch model: neighbouring-key slips, transpositions,
   missing accents (`ecole` → `école`) and French elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
@@ -188,7 +188,7 @@ core/                     Rust crate (no Android dependency)
   src/action.rs           actions emitted to the platform (commit/delete/ime)
   src/ffi.rs              JNI surface (create/render/key/inputType/layouts/languages/profile)
   data/fr.tsv             derived Lexique 3.83 list (all typable French forms)
-  data/en.tsv             derived wordfreq list (20k British English forms)
+  data/en.tsv             derived wordfreq list (all single-token English forms)
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
   examples/make_autocorrect_cases.rs  regenerate the typo fixtures
@@ -202,8 +202,8 @@ core/                     Rust crate (no Android dependency)
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
   tests/data/all_caps_cases.tsv  2,000 all-caps typo cases
-  tests/data/fuzzy_contraction_cases.tsv  1,559 contraction typos
-  tests/data/fuzzy_contraction_extra_cases.tsv  2,037 wider contraction typos
+  tests/data/fuzzy_contraction_cases.tsv  3,064 contraction typos
+  tests/data/fuzzy_contraction_extra_cases.tsv  1,921 wider contraction typos
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -221,6 +221,7 @@ app/                      Android app (Kotlin, no AndroidX needed)
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
+scripts/export-wordfreq.py  export the full English wordfreq list
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
 docs/AUTOCORRECT.md       correction, ranking and auto-apply specification
@@ -242,13 +243,17 @@ an extracted `Lexique383.tsv`; `-MinFreq` can apply a frequency floor and
 `-Count` can cap the list.
 
 `core/data/en.tsv` is derived from [wordfreq](https://github.com/rspeer/wordfreq)
-(CC BY-SA 4.0) through its 25k English export. It keeps single alphabetic
-tokens and the 20,000 most frequent forms, converts common American spellings to
-British ones (`colour`, `centre`, `organise`, `favourite`) while keeping words
-valid in both varieties (`meter`/`metre`, `program`/`programme`, `tire`/`tyre`).
-The pronoun `I` is kept capitalised.
-Scores use the same hundredths of `ln(frequency per million + 1)` scale as
-French. `scripts/build-english-dictionary.py` regenerates it.
+(CC BY-SA 4.0). It keeps every single alphabetic token up to 31 characters with
+a positive wordfreq probability, including names, places, brands and modern
+terms such as `nike`, `covid` and `sncf`. Common American spellings are
+converted to British ones (`colour`, `centre`, `organise`, `favourite`) while
+words valid in both varieties (`meter`/`metre`, `program`/`programme`,
+`tire`/`tyre`) are kept. The pronoun `I` is kept capitalised. The resulting list
+has about 287,000 forms (3.6 MB). Scores use the same hundredths of
+`ln(frequency per million + 1)` scale as French.
+`scripts/export-wordfreq.py` exports the full package list (it requires the
+`wordfreq` Python package) and `scripts/build-english-dictionary.py` regenerates
+`en.tsv`.
 
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).
@@ -316,9 +321,9 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic: 12,096 fixture rows (6,500 typos + 2,000 all-caps + 1,559
-# fuzzy contractions + 2,037 wider contraction typos), ~30,000 full
-# interaction sessions, 1,800 exact contraction cases, 6,714 fuzzy
+# core logic: 13,485 fixture rows (6,500 typos + 2,000 all-caps + 3,064
+# fuzzy contractions + 1,921 wider contraction typos), ~30,000 full
+# interaction sessions, 1,800 exact contraction cases, 11,113 fuzzy
 # contraction executions and 1,488 single-letter checks
 cd core; cargo test
 
@@ -393,14 +398,14 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 194 tests, 12,096 fixture rows
-  (6,500 typos + 2,000 all-caps + 1,559 fuzzy contractions + 2,037 wider
+- Rust 1.101 (nightly), `cargo test`: 194 tests, 13,485 fixture rows
+  (6,500 typos + 2,000 all-caps + 3,064 fuzzy contractions + 1,921 wider
   contraction typos), ~30,000 generated interaction sessions, 1,800 exact
-  contraction cases, 6,714 fuzzy contraction executions and 1,488 single-letter
+  contraction cases, 11,113 fuzzy contraction executions and 1,488 single-letter
   checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
-- `./gradlew assembleDebug`: APK 9.7 MB, contains the three `.so` files.
+- `./gradlew assembleDebug`: APK 19.7 MB, contains the three `.so` files.
 - `./gradlew lintDebug`: 0 errors (3 typo false positives on "Type1").
 - JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 

@@ -198,13 +198,15 @@ mod tests {
 	#[test]
 	fn loads_the_english_dictionary() {
 		let english = &ENGLISH;
-		assert!(english.words().len() >= 15_000);
+		assert!(english.words().len() >= 280_000);
 		assert!(english.exact("keyboard").is_some());
 		assert!(english.exact("colour").is_some());
 		assert!(english.exact("color").is_none());
 		assert!(english.exact("centre").is_some());
 		assert!(english.exact("center").is_none());
 		assert!(english.exact("language").is_some());
+		assert!(english.exact("nike").is_some());
+		assert!(english.exact("covid").is_some());
 		assert_eq!(english.folded("i").map(|word| word.text), Some("I"));
 	}
 }

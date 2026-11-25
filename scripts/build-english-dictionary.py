@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Regenerate core/data/en.tsv from the wordfreq English export (CC BY-SA 4.0).
+"""Regenerate core/data/en.tsv from the full wordfreq English list (CC BY-SA 4.0).
 
-1. Download:
-     https://raw.githubusercontent.com/aparrish/wordfreq-en-25000/main/wordfreq-en-25000-log.json
-2. Run:
-     python scripts/build-english-dictionary.py path\\to\\wordfreq-en-25000-log.json
+The full wordfreq list is exported by ``scripts/export-wordfreq.py``:
+
+     python scripts/export-wordfreq.py path\\to\\wf.json
+     python scripts/build-english-dictionary.py path\\to\\wf.json
 
 The list is converted to British spellings: common American variants are
 dropped in favour of their British form, while words that are valid in both
@@ -18,8 +18,8 @@ import re
 import sys
 from pathlib import Path
 
-WORD_RE = re.compile(r"^[a-z]{1,24}$")
-DEFAULT_COUNT = 20_000
+WORD_RE = re.compile(r"^[a-z]{1,31}$")
+DEFAULT_COUNT = 0
 
 KEEP_BOTH = {
 	"meter", "meters", "program", "programs", "tire", "tires", "draft",
@@ -228,7 +228,7 @@ def build(freq: dict[str, float]) -> dict[str, float]:
 
 def write_dictionary(freq: dict[str, float], path: Path, count: int) -> int:
 	ranked = sorted(freq.items(), key=lambda item: (-item[1], item[0]))
-	selected = ranked[:count]
+	selected = ranked[:count] if count > 0 else ranked
 	lines = []
 	for word, log_freq in selected:
 		per_million = math.exp(log_freq) * 1_000_000
@@ -244,6 +244,7 @@ def write_dictionary(freq: dict[str, float], path: Path, count: int) -> int:
 def main() -> int:
 	if len(sys.argv) not in (1, 2, 3):
 		print("usage: build-english-dictionary.py [wordfreq.json] [count]", file=sys.stderr)
+		print("count 0 (the default) keeps every form", file=sys.stderr)
 		return 2
 	root = Path(__file__).resolve().parent.parent
 	default_source = (
