@@ -314,10 +314,12 @@ fn tapping_a_fuzzy_contraction_replaces_the_word() {
 		engine.on_key(key);
 	}
 	let options = suggestions(&mut engine);
-	let index = options
-	. iter()
-	. position(|text| text == "don't")
-	. expect("don't");
+	let index = (
+		options
+		. iter()
+		. position(|text| text == "don't")
+		. expect("don't")
+	);
 	assert_eq!(
 		engine.on_key(&format!("sug:{index}")),
 		vec![
@@ -373,10 +375,12 @@ fn tapping_an_exact_contraction_suggestion_replaces_the_word() {
 		engine.on_key(key);
 	}
 	let options = suggestions(&mut engine);
-	let index = options
-	. iter()
-	. position(|text| text == "don't")
-	. expect("don't");
+	let index = (
+		options
+		. iter()
+		. position(|text| text == "don't")
+		. expect("don't")
+	);
 	assert_eq!(
 		engine.on_key(&format!("sug:{index}")),
 		vec![
@@ -1309,12 +1313,14 @@ fn short_near_key_words_are_offered_and_corrected() {
 	engine.on_key("p");
 	engine.on_key("q");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	let suggestions: Vec<&str> = json["suggestions"]
-	.as_array()
-	.unwrap()
-	.iter()
-	.map(|value| value.as_str().unwrap())
-	.collect();
+	let suggestions: Vec<&str> = (
+		json["suggestions"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap())
+		. collect()
+	);
 	assert!(suggestions.contains(&"ma"), "suggestions: {suggestions:?}");
 	assert_eq!(
 		engine.on_key("space"),
@@ -1396,12 +1402,14 @@ fn short_word_suggestions_put_likely_words_first() {
 	engine.on_key("u");
 	engine.on_key("e");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	let suggestions: Vec<&str> = json["suggestions"]
-	.as_array()
-	.unwrap()
-	.iter()
-	.map(|value| value.as_str().unwrap())
-	.collect();
+	let suggestions: Vec<&str> = (
+		json["suggestions"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap())
+		. collect()
+	);
 	let position = |word: &str| suggestions.iter().position(|s| *s == word);
 	let ne = position("ne").expect("ne in suggestions");
 	let eu = position("eu");
@@ -1420,12 +1428,14 @@ fn render_exposes_three_bands() {
 	assert_eq!(json["keys"][0]["alts"][9], "0");
 	assert_eq!(json["keys"][1]["id"], "comma");
 	assert_eq!(json["keys"][3]["id"], "dot");
-	let dot_alts: Vec<&str> = json["keys"][3]["alts"]
-	. as_array()
-	. unwrap()
-	. iter()
-	. map(|value| value.as_str().unwrap())
-	. collect();
+	let dot_alts: Vec<&str> = (
+		json["keys"][3]["alts"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap())
+		. collect()
+	);
 	assert_eq!(
 		dot_alts,
 		vec![

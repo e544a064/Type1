@@ -399,7 +399,7 @@ mod tests {
 		let row = |index: u8| -> String {
 			QWERTY_LETTERS
 			. iter()
-			.filter(|letter| letter.row == index)
+			. filter(|letter| letter.row == index)
 			. map(|letter| letter.label)
 			. collect()
 		};

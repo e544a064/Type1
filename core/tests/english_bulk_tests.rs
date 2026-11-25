@@ -78,12 +78,13 @@ fn type_with_case(engine: &mut Engine, text: &str, case: Case) {
 /// One-key and two-key neighbours, using the same one-line geometry as the
 /// corrector's cost table.
 fn expected_neighbours(layout: &Layout, typed: char) -> Vec<char> {
-	let Some((typed_index, typed_letter)) = layout
-	. letters
-	. iter()
-	. enumerate()
-	. find(|(_, letter)| letter.id.starts_with(typed))
-	else {
+	let Some((typed_index, typed_letter)) = (
+		layout
+		. letters
+		. iter()
+		. enumerate()
+		. find(|(_, letter)| letter.id.starts_with(typed))
+	) else {
 		return Vec::new();
 	};
 	let mut neighbours: Vec<(char, f32)> = Vec::new();
@@ -103,9 +104,9 @@ fn expected_neighbours(layout: &Layout, typed: char) -> Vec<char> {
 	}
 	neighbours.sort_by(|a, b| {
 		a.1
-		.partial_cmp(&b.1)
-		.unwrap_or(std::cmp::Ordering::Equal)
-		.then_with(|| a.0.cmp(&b.0))
+		. partial_cmp(&b.1)
+		. unwrap_or(std::cmp::Ordering::Equal)
+		. then_with(|| a.0.cmp(&b.0))
 	});
 	neighbours.into_iter().map(|(letter, _)| letter).collect()
 }
@@ -351,9 +352,9 @@ fn every_single_letter_has_word_and_neighbour_suggestions() {
 		failures.len(),
 		failures
 		. iter()
-		.take(25)
-		.cloned()
-		.collect::<Vec<_>>()
+		. take(25)
+		. cloned()
+		. collect::<Vec<_>>()
 		. join("\n")
 	);
 }

@@ -159,16 +159,18 @@ pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeSetProfile
 			Ok(value) => value.to_string_lossy().into_owned(),
 			Err(_) => return false,
 		};
-		let language_ids: Vec<&str> = languages
-		.split(',')
-		.map(str::trim)
-		.filter(|id| !id.is_empty())
-		.collect();
+		let language_ids: Vec<&str> = (
+			languages
+			. split(',')
+			. map(str::trim)
+			. filter(|id| !id.is_empty())
+			. collect()
+		);
 		lock()
-		.as_mut()
-		.is_some_and(|engine| engine.set_profile_ids(&layout_id, &language_ids))
+		. as_mut()
+		. is_some_and(|engine| engine.set_profile_ids(&layout_id, &language_ids))
 	}))
-	.unwrap_or(false);
+	. unwrap_or(false);
 	if found {
 		1
 	} else {

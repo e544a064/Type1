@@ -181,9 +181,11 @@ impl Corrector {
 			let mut row_min = cur[0];
 			let ai = char_index(a[i - 1]);
 			for j in 1..=m {
-				let mut best = (prev[j - 1] + costs[ai][char_index(b[j - 1])])
-				. min(prev[j] + 1.0)
-				. min(cur[j - 1] + 1.0);
+				let mut best = (
+					(prev[j - 1] + costs[ai][char_index(b[j - 1])])
+					. min(prev[j] + 1.0)
+					. min(cur[j - 1] + 1.0)
+				);
 				if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
 					let transposed = prev2[j - 2] + 0.6;
 					if transposed < best {
@@ -769,11 +771,13 @@ impl Corrector {
 		self.add_contractions(&lower, &mut found);
 
 		let mut list: Vec<Candidate> = found.into_values().collect();
-		let best_tier2 = list
-		. iter()
-		. filter(|candidate| candidate.tier == 2)
-		. map(|candidate| candidate.score)
-		. fold(f32::NEG_INFINITY, f32::max);
+		let best_tier2 = (
+			list
+			. iter()
+			. filter(|candidate| candidate.tier == 2)
+			. map(|candidate| candidate.score)
+			. fold(f32::NEG_INFINITY, f32::max)
+		);
 		if best_tier2.is_finite() {
 			let known_text = known.map(|word| word.text);
 			list.retain(|candidate| {
@@ -857,9 +861,9 @@ impl Corrector {
 		}
 		neighbours.sort_by(|a, b| {
 			a.1
-			.partial_cmp(&b.1)
-			.unwrap_or(std::cmp::Ordering::Equal)
-			.then_with(|| a.0.cmp(&b.0))
+			. partial_cmp(&b.1)
+			. unwrap_or(std::cmp::Ordering::Equal)
+			. then_with(|| a.0.cmp(&b.0))
 		});
 		if neighbours.is_empty() {
 			// Defensive: keep at least the closest other letter.
@@ -923,10 +927,11 @@ impl Corrector {
 		// The typed letter itself as a word (`a` when typing `à`).
 		let typed_base_text = base.to_string();
 		if typed_base_text != typed && !added.contains(&typed_base_text) {
-			if let Some(log_freq) = by_base
-			. get(&base)
-			. and_then(|entries| entries.get(&typed_base_text))
-			{
+			if let Some(log_freq) = (
+				by_base
+				. get(&base)
+				. and_then(|entries| entries.get(&typed_base_text))
+			) {
 				added.insert(typed_base_text.clone());
 				list.push(Candidate {
 					text: typed_base_text,
@@ -937,9 +942,9 @@ impl Corrector {
 		}
 		list.sort_by(|a, b| {
 			b.score
-			.partial_cmp(&a.score)
-			.unwrap_or(std::cmp::Ordering::Equal)
-			.then_with(|| a.text.cmp(&b.text))
+			. partial_cmp(&a.score)
+			. unwrap_or(std::cmp::Ordering::Equal)
+			. then_with(|| a.text.cmp(&b.text))
 		});
 
 		// Keep the raw neighbour letters even when a word with the same base
@@ -1096,9 +1101,9 @@ mod tests {
 			"candidates: {:?}",
 			typo
 			. candidates
-			.iter()
-			.map(|candidate| candidate.text.as_str())
-			.collect::<Vec<_>>()
+			. iter()
+			. map(|candidate| candidate.text.as_str())
+			. collect::<Vec<_>>()
 		);
 	}
 

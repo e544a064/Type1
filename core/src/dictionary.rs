@@ -46,15 +46,19 @@ impl Index {
 			if text.is_empty() {
 				continue;
 			}
-			let log_freq = parts
-			. next()
-			. and_then(|score| score.parse::<i32>().ok())
-			. unwrap_or(0) as f32
-				/ 100.0;
-			let flags = parts
-			. next()
-			. and_then(|flags| flags.parse::<u8>().ok())
-			. unwrap_or(0);
+			let log_freq = (
+				parts
+				. next()
+				. and_then(|score| score.parse::<i32>().ok())
+				. unwrap_or(0) as f32
+					/ 100.0
+			);
+			let flags = (
+				parts
+				. next()
+				. and_then(|flags| flags.parse::<u8>().ok())
+				. unwrap_or(0)
+			);
 			words.push(Word {
 				text,
 				folded: fold(text),
@@ -174,15 +178,19 @@ mod tests {
 	fn length_index_matches_the_word_list() {
 		let all = words();
 		for length in [1, 2, 5, 8, 12, 20] {
-			let indexed: Vec<&str> = FRENCH
-			. words_of_len(length)
-			. map(|word| word.text)
-			. collect();
-			let expected: Vec<&str> = all
-			. iter()
-			. filter(|word| word.folded.len() == length)
-			.map(|word| word.text)
-			.collect();
+			let indexed: Vec<&str> = (
+				FRENCH
+				. words_of_len(length)
+				. map(|word| word.text)
+				. collect()
+			);
+			let expected: Vec<&str> = (
+				all
+				. iter()
+				. filter(|word| word.folded.len() == length)
+				. map(|word| word.text)
+				. collect()
+			);
 			assert_eq!(indexed, expected, "length {length}");
 		}
 	}

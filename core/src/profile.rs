@@ -51,8 +51,8 @@ impl Profile {
 		for id in language_ids {
 			let language = language::find(id)?;
 			if !languages
-			.iter()
-			.any(|existing: &&Language| std::ptr::eq(*existing, language))
+			. iter()
+			. any(|existing: &&Language| std::ptr::eq(*existing, language))
 			{
 				languages.push(language);
 			}
@@ -71,10 +71,10 @@ impl Profile {
 		std::ptr::eq(self.layout, other.layout)
 			&& self.languages.len() == other.languages.len()
 			&& self
-			.languages
-			.iter()
-			.zip(&other.languages)
-			.all(|(a, b)| std::ptr::eq(*a, *b))
+			. languages
+			. iter()
+			. zip(&other.languages)
+			. all(|(a, b)| std::ptr::eq(*a, *b))
 	}
 
 	pub(crate) fn corrector(&self) -> &Corrector {

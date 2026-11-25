@@ -41,9 +41,9 @@ impl Rng {
 
 fn letters() -> Vec<char> {
 	LETTERS
-	.iter()
-	.filter_map(|letter| letter.id.chars().next())
-	.collect()
+	. iter()
+	. filter_map(|letter| letter.id.chars().next())
+	. collect()
 }
 
 fn neighbour(c: char, rng: &mut Rng, order: &[char]) -> char {
@@ -93,9 +93,11 @@ fn spelling(word: &str, rng: &mut Rng, order: &[char]) -> String {
 	if chars.len() < 4 {
 		return word.to_string();
 	}
-	let positions: Vec<usize> = (0..chars.len())
-	.filter(|&index| order.contains(&chars[index]))
-	.collect();
+	let positions: Vec<usize> = (
+		(0..chars.len())
+		. filter(|&index| order.contains(&chars[index]))
+		. collect()
+	);
 	if positions.is_empty() {
 		return word.to_string();
 	}
@@ -103,12 +105,14 @@ fn spelling(word: &str, rng: &mut Rng, order: &[char]) -> String {
 	let Some(original) = order.iter().position(|&c| c == chars[i]) else {
 		return word.to_string();
 	};
-	let far: Vec<char> = order
-	.iter()
-	.enumerate()
-	.filter(|(index, _)| index.abs_diff(original) >= 3)
-	.map(|(_, &c)| c)
-	.collect();
+	let far: Vec<char> = (
+		order
+		. iter()
+		. enumerate()
+		. filter(|(index, _)| index.abs_diff(original) >= 3)
+		. map(|(_, &c)| c)
+		. collect()
+	);
 	if far.is_empty() {
 		return word.to_string();
 	}
@@ -184,14 +188,16 @@ fn write_cases(path: &str, cases: &mut [(String, &'static str)]) {
 fn main() {
 	let order = letters();
 	let mut rng = Rng(0x2545_f491_4f6c_dd1d);
-	let pool: Vec<&'static str> = dictionary::words()
-	.iter()
-	.filter(|w| {
-		let len = w.text.chars().count();
-		(4..=10).contains(&len) && w.log_freq > 2.5 && !w.text.contains('\'')
-	})
-	.map(|w| w.text)
-	.collect();
+	let pool: Vec<&'static str> = (
+		dictionary::words()
+		. iter()
+		. filter(|w| {
+			let len = w.text.chars().count();
+			(4..=10).contains(&len) && w.log_freq > 2.5 && !w.text.contains('\'')
+		})
+		. map(|w| w.text)
+		. collect()
+	);
 
 	let mut mixed = Vec::new();
 	let mut two_key = Vec::new();
@@ -229,10 +235,12 @@ fn main() {
 					continue;
 				}
 				let suggestion = suggest(&typed);
-				let best = suggestion
-				.candidates
-				.first()
-				.map(|candidate| candidate.text.as_str());
+				let best = (
+					suggestion
+					. candidates
+					. first()
+					. map(|candidate| candidate.text.as_str())
+				);
 				if suggestion.apply && best == Some(word) {
 					mixed.push((typed, word));
 					if mixed.len() >= MIXED_TARGET {

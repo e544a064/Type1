@@ -95,17 +95,19 @@ fn main() {
 	let order = letters();
 	let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
 	let profile = Profile::new(&QWERTY, vec![&ENGLISH_LANGUAGE]);
-	let pool: Vec<&'static str> = ENGLISH_DICTIONARY
-	. words()
-	. iter()
-	.filter(|word| {
-		let length = word.text.chars().count();
-		(4..=10).contains(&length)
-			&& word.log_freq > 2.5
-			&& word.text.chars().all(|c| c.is_ascii_alphabetic())
-	})
-	.map(|word| word.text)
-	.collect();
+	let pool: Vec<&'static str> = (
+		ENGLISH_DICTIONARY
+		. words()
+		. iter()
+		. filter(|word| {
+			let length = word.text.chars().count();
+			(4..=10).contains(&length)
+				&& word.log_freq > 2.5
+				&& word.text.chars().all(|c| c.is_ascii_alphabetic())
+		})
+		. map(|word| word.text)
+		. collect()
+	);
 
 	let mut cases: Vec<(String, String)> = Vec::new();
 	let mut seen = HashSet::new();
@@ -125,10 +127,12 @@ fn main() {
 				continue;
 			}
 			let suggestion = profile.suggest(&typed);
-			let best = suggestion
-			. candidates
-			. first()
-			.map(|candidate| candidate.text.as_str());
+			let best = (
+				suggestion
+				. candidates
+				. first()
+				. map(|candidate| candidate.text.as_str())
+			);
 			if suggestion.apply && best == Some(word) {
 				cases.push((typed.to_uppercase(), word.to_uppercase()));
 				if cases.len() >= TARGET {

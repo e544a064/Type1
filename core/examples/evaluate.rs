@@ -60,14 +60,16 @@ fn typo(word: &str, rng: &mut Rng) -> String {
 }
 
 fn main() {
-	let words: Vec<&'static str> = dictionary::words()
-	.iter()
-	.filter(|word| {
-		let len = word.text.chars().count();
-		word.log_freq > 3.0 && (4..=9).contains(&len) && !word.text.contains('\'')
-	})
-	.map(|word| word.text)
-	.collect();
+	let words: Vec<&'static str> = (
+		dictionary::words()
+		. iter()
+		. filter(|word| {
+			let len = word.text.chars().count();
+			word.log_freq > 3.0 && (4..=9).contains(&len) && !word.text.contains('\'')
+		})
+		. map(|word| word.text)
+		. collect()
+	);
 
 	let debug = std::env::args().any(|arg| arg == "--debug");
 	let mut rng = Rng(0x1234_5678_9abc_def0);
@@ -82,10 +84,12 @@ fn main() {
 			continue;
 		}
 		tested += 1;
-		let first = correction::suggest(&generated)
-		.candidates
-		.first()
-		.map(|candidate| candidate.text.clone());
+		let first = (
+			correction::suggest(&generated)
+			. candidates
+			. first()
+			. map(|candidate| candidate.text.clone())
+		);
 		let clitic = matches!(
 			word.chars().next(),
 			Some('c' | 'd' | 'j' | 'l' | 'm' | 'n' | 'q' | 's' | 't')

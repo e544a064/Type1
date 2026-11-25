@@ -37,10 +37,12 @@ fn main() {
 						continue;
 					}
 					let suggestion = profile.suggest(&variant);
-					let best = suggestion
-					. candidates
-					. first()
-					.map(|candidate| candidate.text.as_str());
+					let best = (
+						suggestion
+						. candidates
+						. first()
+						. map(|candidate| candidate.text.as_str())
+					);
 					if suggestion.apply && best == Some(contraction) {
 						rows.push((
 							layout.id.to_string(),

@@ -873,12 +873,14 @@ impl Engine {
 			}
 			let suggestion = self.suggestion_for(&typed);
 			let limit = suggestion_limit(&typed);
-			return suggestion
-			. candidates
-			. iter()
-			. take(limit)
-			. map(|candidate| apply_case(&typed, &candidate.text))
-			. collect();
+			return (
+				suggestion
+				. candidates
+				. iter()
+				. take(limit)
+				. map(|candidate| apply_case(&typed, &candidate.text))
+				. collect()
+			);
 		}
 
 		if let Some(record) = &self.last_correction {
@@ -941,13 +943,15 @@ impl Engine {
 
 	/// Spacebar label: the active language codes, e.g. `FR` or `FR-EN`.
 	fn language_label(&self) -> String {
-		let label = self
-		. profile
-		. languages
-		.iter()
-		.map(|language| language.short)
-		.collect::<Vec<_>>()
-		.join("-");
+		let label = (
+			self
+			. profile
+			. languages
+			. iter()
+			. map(|language| language.short)
+			. collect::<Vec<_>>()
+			. join("-")
+		);
 		if label.is_empty() {
 			"espace".to_string()
 		} else {

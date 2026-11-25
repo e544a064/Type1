@@ -44,15 +44,15 @@ fn neighbour(c: char, rng: &mut Rng, order: &[char]) -> char {
 
 fn parse_cases(source: &'static str) -> Vec<(&'static str, &'static str)> {
 	source
-	.lines()
-	.filter_map(|line| {
+	. lines()
+	. filter_map(|line| {
 		let (typed, expected) = line.split_once('\t')?;
 		if typed.is_empty() || expected.is_empty() {
 			return None;
 		}
 		Some((typed, expected))
 	})
-	.collect()
+	. collect()
 }
 
 fn cases() -> Vec<(&'static str, &'static str)> {
@@ -107,9 +107,9 @@ fn thousands_of_typos_reach_the_intended_word() {
 		cases.len(),
 		failures
 		. iter()
-		.take(25)
-		.cloned()
-		.collect::<Vec<_>>()
+		. take(25)
+		. cloned()
+		. collect::<Vec<_>>()
 		. join("\n")
 	);
 }
@@ -248,15 +248,15 @@ fn one_key_candidates_rank_before_two_key_candidates() {
 	);
 	assert!(
 		suggestion
-		.candidates
-		.windows(2)
-		.all(|pair| pair[0].tier <= pair[1].tier),
+		. candidates
+		. windows(2)
+		. all(|pair| pair[0].tier <= pair[1].tier),
 		"tiers are out of order: {:?}",
 		suggestion
-		.candidates
-		.iter()
-		.map(|candidate| (candidate.text.as_str(), candidate.tier))
-		.collect::<Vec<_>>()
+		. candidates
+		. iter()
+		. map(|candidate| (candidate.text.as_str(), candidate.tier))
+		. collect::<Vec<_>>()
 	);
 }
 
@@ -264,11 +264,13 @@ fn one_key_candidates_rank_before_two_key_candidates() {
 fn spelling_and_keyboard_variants_are_both_suggested() {
 	let suggestion = correction::suggest("commant");
 	assert!(suggestion.apply);
-	let texts: Vec<&str> = suggestion
-	.candidates
-	.iter()
-	.map(|candidate| candidate.text.as_str())
-	.collect();
+	let texts: Vec<&str> = (
+		suggestion
+		. candidates
+		. iter()
+		. map(|candidate| candidate.text.as_str())
+		. collect()
+	);
 	let position = |word: &str| texts.iter().position(|text| *text == word);
 	let comment = position("comment").expect("comment");
 	let collant = position("collant").expect("collant");
@@ -283,12 +285,14 @@ fn spelling_variant_is_offered_before_the_keyboard_variant() {
 		engine.on_key(key);
 	}
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
-	let suggestions: Vec<&str> = json["suggestions"]
-	.as_array()
-	.unwrap()
-	.iter()
-	.map(|value| value.as_str().unwrap())
-	.collect();
+	let suggestions: Vec<&str> = (
+		json["suggestions"]
+		. as_array()
+		. unwrap()
+		. iter()
+		. map(|value| value.as_str().unwrap())
+		. collect()
+	);
 	assert_eq!(suggestions[0], "comment");
 	assert!(suggestions.contains(&"collant"), "suggestions: {suggestions:?}");
 	assert_eq!(
@@ -334,14 +338,18 @@ fn check_rule_cases(cases: &[(&str, &str)]) -> (Vec<String>, usize) {
 	let mut applied = 0usize;
 	for (typed, expected) in cases {
 		let suggestion = correction::suggest(typed);
-		let tier_ordered = suggestion
-		.candidates
-		.windows(2)
-		.all(|pair| pair[0].tier <= pair[1].tier);
-		let found = suggestion
-		.candidates
-		.iter()
-		.position(|candidate| candidate.text == *expected);
+		let tier_ordered = (
+			suggestion
+			. candidates
+			. windows(2)
+			. all(|pair| pair[0].tier <= pair[1].tier)
+		);
+		let found = (
+			suggestion
+			. candidates
+			. iter()
+			. position(|candidate| candidate.text == *expected)
+		);
 		let visible = found.is_some_and(|index| {
 			index < visible_limit(typed) && suggestion.candidates[index].tier == 2
 		});
@@ -349,10 +357,10 @@ fn check_rule_cases(cases: &[(&str, &str)]) -> (Vec<String>, usize) {
 			failures.push(format!(
 				"{typed} -> want {expected}, got {:?}",
 				suggestion
-				.candidates
-				.iter()
-				.map(|candidate| (candidate.text.as_str(), candidate.tier))
-				.collect::<Vec<_>>()
+				. candidates
+				. iter()
+				. map(|candidate| (candidate.text.as_str(), candidate.tier))
+				. collect::<Vec<_>>()
 			));
 		}
 		if suggestion.apply {
@@ -374,9 +382,9 @@ fn thousands_of_two_key_typos_are_suggested() {
 		cases.len(),
 		failures
 		. iter()
-		.take(20)
-		.cloned()
-		.collect::<Vec<_>>()
+		. take(20)
+		. cloned()
+		. collect::<Vec<_>>()
 		. join("\n")
 	);
 	assert!(applied >= 100, "only {applied} two-key cases auto-applied");
@@ -394,9 +402,9 @@ fn thousands_of_spelling_variants_are_suggested() {
 		cases.len(),
 		failures
 		. iter()
-		.take(20)
-		.cloned()
-		.collect::<Vec<_>>()
+		. take(20)
+		. cloned()
+		. collect::<Vec<_>>()
 		. join("\n")
 	);
 }
@@ -428,10 +436,10 @@ fn last_resort_does_not_run_when_closer_rules_match() {
 		suggestion.candidates.iter().all(|candidate| candidate.tier < 3),
 		"unexpected last-resort candidates: {:?}",
 		suggestion
-		.candidates
-		.iter()
-		.map(|candidate| (candidate.text.as_str(), candidate.tier))
-		.collect::<Vec<_>>()
+		. candidates
+		. iter()
+		. map(|candidate| (candidate.text.as_str(), candidate.tier))
+		. collect::<Vec<_>>()
 	);
 }
 
@@ -449,18 +457,22 @@ fn very_last_resort_is_offered_but_not_applied() {
 
 #[test]
 fn held_out_neighbour_typos_stay_above_the_floor() {
-	let order: Vec<char> = LETTERS
-	.iter()
-	.filter_map(|letter| letter.id.chars().next())
-	.collect();
-	let pool: Vec<&'static str> = dictionary::words()
-	.iter()
-	.filter(|word| {
-		let len = word.text.chars().count();
-		(4..=9).contains(&len) && word.log_freq > 4.0 && !word.text.contains('\'')
-	})
-	.map(|word| word.text)
-	.collect();
+	let order: Vec<char> = (
+		LETTERS
+		. iter()
+		. filter_map(|letter| letter.id.chars().next())
+		. collect()
+	);
+	let pool: Vec<&'static str> = (
+		dictionary::words()
+		. iter()
+		. filter(|word| {
+			let len = word.text.chars().count();
+			(4..=9).contains(&len) && word.log_freq > 4.0 && !word.text.contains('\'')
+		})
+		. map(|word| word.text)
+		. collect()
+	);
 
 	let mut rng = Rng(0x1234_5678_9abc_def0);
 	let mut total = 0usize;

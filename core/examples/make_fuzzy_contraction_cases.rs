@@ -14,11 +14,12 @@ use type1_core::layout::{Layout, AZERTY, QWERTY};
 use type1_core::Profile;
 
 fn neighbours(letter: char, layout: &Layout) -> Vec<char> {
-	let Some(index) = layout
-	. letters
-	. iter()
-	. position(|entry| entry.id.starts_with(letter))
-	else {
+	let Some(index) = (
+		layout
+		. letters
+		. iter()
+		. position(|entry| entry.id.starts_with(letter))
+	) else {
 		return Vec::new();
 	};
 	let mut out = Vec::new();
@@ -57,10 +58,12 @@ fn variants(key: &str, layout: &Layout) -> Vec<String> {
 		variant.swap(position, position + 1);
 		out.push(variant.into_iter().collect());
 	}
-	let first_neighbour: Vec<Option<char>> = chars
-	. iter()
-	. map(|&c| neighbours(c, layout).first().copied())
-	. collect();
+	let first_neighbour: Vec<Option<char>> = (
+		chars
+		. iter()
+		. map(|&c| neighbours(c, layout).first().copied())
+		. collect()
+	);
 	for a in 0..chars.len() {
 		for b in (a + 1)..chars.len() {
 			if let (Some(left), Some(right)) = (first_neighbour[a], first_neighbour[b]) {
@@ -102,10 +105,12 @@ fn main() {
 					continue;
 				}
 				let suggestion = profile.suggest(&variant);
-				let best = suggestion
-				. candidates
-				. first()
-				.map(|candidate| candidate.text.as_str());
+				let best = (
+					suggestion
+					. candidates
+					. first()
+					. map(|candidate| candidate.text.as_str())
+				);
 				if suggestion.apply && best == Some(contraction) {
 					rows.push((layout.id.to_string(), variant, contraction.to_string()));
 				}
