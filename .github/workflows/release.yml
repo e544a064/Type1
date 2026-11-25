@@ -44,12 +44,16 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # cmdline-tools 16 no longer ships the legacy `tools` package that
+          # this action installs by default; install what we need explicitly.
+          packages: ''
+          log-accepted-android-sdk-licenses: false
 
       - name: Install Android platform, build tools and NDK
         run: |
           set -euo pipefail
           SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?Android SDK root is not set}}"
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager --install \
             "platforms;android-35" \
             "build-tools;35.0.0" \
