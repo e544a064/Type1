@@ -324,6 +324,14 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		if (delta == 0) return
 		val keyCode = if (delta < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
 		repeat(abs(delta)) {
+			// DPAD at a field edge can move focus to the next/previous view.
+			// Stop before that edge: the spacebar gesture only moves the caret.
+			val hasRoom = if (delta < 0) {
+				!ic.getTextBeforeCursor(1, 0).isNullOrEmpty()
+			} else {
+				!ic.getTextAfterCursor(1, 0).isNullOrEmpty()
+			}
+			if (!hasRoom) return
 			ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
 			ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
 		}

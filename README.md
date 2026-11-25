@@ -120,8 +120,8 @@ release on the letter you want.
   An explicit action wins even in multiline fields; a newline is used only when
   the editor has no action or sets `IME_FLAG_NO_ENTER_ACTION`.
 - Drag along the letter line to correct a press before releasing.
-- Drag horizontally on the spacebar to move the caret; the setup screen has a
-  switch to turn this off.
+- Drag horizontally on the spacebar to move the caret without leaving the
+  current field; the setup screen has a switch to turn this off.
 - Swipe sensitivity (8–40 dp per character) is adjustable with a slider and
   shared by the spacebar caret drag and the backspace selection.
 - Spacebar row height is adjustable (36–72 dp, 48 dp by default).
@@ -409,7 +409,7 @@ untested.
 | --- | --- |
 | Tap a letter | Type it (respects shift / auto-caps) |
 | Drag along the letter line | Move the highlight, release to type |
-| Drag on the spacebar | Move the cursor left/right (disable in the app) |
+| Drag on the spacebar | Move the cursor left/right without leaving the field (disable in the app) |
 | Move the caret into an existing word | Re-suggests corrections for that word; tap one to replace it |
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `& % + " - : ' @ ; / ( ) # ! ?`; slide and release |
