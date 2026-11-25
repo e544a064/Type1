@@ -222,6 +222,7 @@ scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
+docs/AUTOCORRECT.md       correction, ranking and auto-apply specification
 ```
 
 ## Dictionary
@@ -244,6 +245,9 @@ valid in both varieties (`meter`/`metre`, `program`/`programme`, `tire`/`tyre`).
 The pronoun `I` is kept capitalised.
 Scores use the same hundredths of `ln(frequency per million + 1)` scale as
 French. `scripts/build-english-dictionary.py` regenerates it.
+
+The complete correction, ranking and auto-apply specification is in
+[docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).
 
 The contract between the two halves is JSON over JNI:
 
