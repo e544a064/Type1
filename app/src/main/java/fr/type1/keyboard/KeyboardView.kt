@@ -44,6 +44,8 @@ class KeyboardView(
 		fun onActions(actions: List<KeyAction>)
 		fun onCycleProfile()
 		fun onEmoji(emoji: String)
+		/** Grapheme-cluster room left and right of the caret for a spacebar drag. */
+		fun onSpaceDragStart(): Pair<Int, Int>
 	}
 
 	var listener: Listener? = null
@@ -105,6 +107,10 @@ class KeyboardView(
 	private var spaceDragging = false
 	private var spaceAnchorX = 0f
 	private var spaceMoved = false
+	private var spaceRoomLeft = 0
+	private var spaceRoomRight = 0
+	private var spaceSteps = 0
+	private var spaceBudgetLoaded = false
 	private var backspaceHold = BackspaceHold.Select
 	private var selecting = false
 	private var selectAnchorX = 0f
@@ -781,6 +787,10 @@ class KeyboardView(
 					if (spaceDragging) {
 						spaceAnchorX = x
 						spaceMoved = false
+						spaceSteps = 0
+						spaceRoomLeft = 0
+						spaceRoomRight = 0
+						spaceBudgetLoaded = false
 					}
 				}
 				invalidate()
@@ -1009,9 +1019,29 @@ class KeyboardView(
 	private fun dragSpaceCursor(x: Float) {
 		val step = dp(swipeStepDp.toFloat())
 		var delta = x - spaceAnchorX
+		if (!spaceBudgetLoaded && abs(delta) >= step) {
+			// Read the caret room on the first actual drag, not on every tap.
+			val room = listener?.onSpaceDragStart()
+			spaceRoomLeft = room?.first ?: 0
+			spaceRoomRight = room?.second ?: 0
+			spaceBudgetLoaded = true
+		}
 		while (abs(delta) >= step) {
 			val direction = if (delta > 0f) 1 else -1
+			val blocked = (
+				(direction > 0 && spaceSteps >= spaceRoomRight)
+				|| (direction < 0 && spaceSteps <= -spaceRoomLeft)
+			)
+			if (blocked) {
+				// There is no room for another caret step. Follow the finger so
+				// reversing direction responds immediately, and suppress the
+				// space tap because this was a drag gesture.
+				spaceMoved = true
+				spaceAnchorX = x
+				break
+			}
 			spaceAnchorX += direction * step
+			spaceSteps += direction
 			listener?.onActions(
 				controller.press(if (direction > 0) "cursor_right" else "cursor_left")
 			)
@@ -1083,6 +1113,10 @@ class KeyboardView(
 		spaceDragging = false
 		spaceMoved = false
 		spaceAnchorX = 0f
+		spaceRoomLeft = 0
+		spaceRoomRight = 0
+		spaceSteps = 0
+		spaceBudgetLoaded = false
 		selecting = false
 		selectSteps = 0
 		selectAnchorX = 0f

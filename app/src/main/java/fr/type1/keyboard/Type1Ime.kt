@@ -138,6 +138,27 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		keyboardView?.post { syncContextFromEditor() }
 	}
 
+	override fun onSpaceDragStart(): Pair<Int, Int> {
+		val ic = currentInputConnection ?: return 0 to 0
+		val before = ic.getTextBeforeCursor(MAX_CURSOR_DRAG_CHARS, 0)
+		val after = ic.getTextAfterCursor(MAX_CURSOR_DRAG_CHARS, 0)
+		return (before?.graphemeCount() ?: 0) to (after?.graphemeCount() ?: 0)
+	}
+
+	/** Number of user-perceived characters in a text window. */
+	private fun CharSequence.graphemeCount(): Int {
+		if (isEmpty()) return 0
+		val iterator = BreakIterator.getCharacterInstance()
+		iterator.setText(toString())
+		var count = 0
+		var boundary = iterator.first()
+		while (boundary != BreakIterator.DONE) {
+			boundary = iterator.next()
+			if (boundary != BreakIterator.DONE) count++
+		}
+		return count
+	}
+
 	override fun onWindowHidden() {
 		keyboardView?.dismissEmojiPicker()
 		super.onWindowHidden()
@@ -426,6 +447,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private companion object {
 		const val MAX_SELECTION_CHARS = 10_000
+		const val MAX_CURSOR_DRAG_CHARS = 10_000
 		const val BACKSPACE_LOOKBEHIND = 64
 		const val MAX_CONTEXT_CHARS = 64
 		const val SELECTION_IGNORE_MS = 200L
