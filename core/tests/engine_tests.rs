@@ -247,6 +247,42 @@ fn corrects_english_contractions() {
 }
 
 #[test]
+fn lets_only_autocorrects_at_sentence_start() {
+	let mut start = plain();
+	assert!(start.set_profile_ids("qwerty", &["en"]));
+	for key in ["l", "e", "t", "s"] {
+		start.on_key(key);
+	}
+	assert_eq!(
+		start.on_key("space"),
+		vec![
+			Action::DeleteChars(4),
+			Action::Commit("let's".into()),
+			Action::Commit(" ".into()),
+		]
+	);
+
+	let mut middle = plain();
+	assert!(middle.set_profile_ids("qwerty", &["en"]));
+	for key in ["h", "e"] {
+		middle.on_key(key);
+	}
+	middle.on_key("space");
+	for key in ["l", "e", "t", "s"] {
+		middle.on_key(key);
+	}
+	assert!(
+		suggestions(&mut middle).iter().any(|text| text == "let's"),
+		"let's should still be suggested"
+	);
+	assert_eq!(
+		middle.on_key("space"),
+		vec![Action::Commit(" ".into())],
+		"lets must not be replaced mid-sentence"
+	);
+}
+
+#[test]
 fn contraction_aliases_the_ordinary_candidate() {
 	let mut engine = plain();
 	assert!(engine.set_profile_ids("qwerty", &["en"]));

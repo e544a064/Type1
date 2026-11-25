@@ -446,6 +446,12 @@ candidate_score + 4.0
 The alias rule means a typo whose best ordinary candidate is `dont` can still
 produce `don't`.
 
+Some keys are also ordinary words. A language lists these as ambiguous
+contractions (`lets` in English). They still produce the contraction candidate
+and suggestion, but the engine only auto-applies the contraction when the word
+started at a sentence boundary. Mid-sentence `lets` is left as typed while
+`let's` remains available in the strip.
+
 A contraction's surface form may contain an apostrophe and may have canonical
 capitalisation. Case is applied to it like any other candidate.
 

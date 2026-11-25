@@ -137,6 +137,8 @@ pub struct Engine {
 	caps: CapsMode,
 	/// True when the next letter starts a sentence (or a word in Words mode).
 	at_start: bool,
+	/// True when the current word began at the start of a sentence.
+	word_starts_sentence: bool,
 	last_char: Option<char>,
 	/// Letters (and inner apostrophes) committed since the last boundary.
 	word: String,
@@ -175,6 +177,7 @@ impl Engine {
 			shift: ShiftState::Off,
 			caps: CapsMode::Sentences,
 			at_start: true,
+			word_starts_sentence: true,
 			last_char: None,
 			word: String::new(),
 			ime_action: ImeActionKind::None,
@@ -252,6 +255,7 @@ impl Engine {
 	pub fn reset(&mut self) {
 		self.shift = ShiftState::Off;
 		self.at_start = true;
+		self.word_starts_sentence = true;
 		self.last_char = None;
 		self.word.clear();
 		self.clear_correction_state();
@@ -354,6 +358,7 @@ impl Engine {
 		// space after punctuation even when no word sits there.
 		self.last_char = before.chars().last().or_else(|| after.chars().last());
 		let word_start = self.word.is_empty();
+		self.word_starts_sentence = sentence_start;
 		self.at_start = sentence_start || (self.caps == CapsMode::Words && word_start);
 	}
 
@@ -456,6 +461,9 @@ impl Engine {
 		out.push(Action::Commit(rendered.clone()));
 
 		if is_letter {
+			if self.word.is_empty() {
+				self.word_starts_sentence = self.at_start;
+			}
 			self.word.push_str(&rendered);
 			self.reverted = false;
 			if self.shift == ShiftState::Once {
@@ -621,12 +629,23 @@ impl Engine {
 		if case_pattern(&typed) == CasePattern::Mixed {
 			return None;
 		}
-
-		let suggestion = self.suggestion_for(&typed);
-		if !suggestion.apply {
+		let lower = typed.to_lowercase();
+		let ambiguous = self.ambiguous_contraction(&lower);
+		if ambiguous.is_some() && !self.word_starts_sentence {
 			return None;
 		}
-		let best = suggestion.candidates.first()?;
+
+		let suggestion = self.suggestion_for(&typed);
+		let forced = ambiguous.and_then(|contraction| {
+			suggestion
+			. candidates
+			. iter()
+			. find(|candidate| candidate.text.to_lowercase() == contraction)
+		});
+		if !suggestion.apply && forced.is_none() {
+			return None;
+		}
+		let best = forced.or_else(|| suggestion.candidates.first())?;
 		let corrected = apply_case(&typed, &best.text);
 		if corrected == typed {
 			return None;
@@ -643,6 +662,26 @@ impl Engine {
 			}
 		}
 		Some((corrected, alternatives))
+	}
+
+	/// Contraction for a typed key that is also an ordinary word (`lets` ->
+	/// `let's`). Such keys only auto-apply at the start of a sentence.
+	fn ambiguous_contraction(&self, lower: &str) -> Option<&'static str> {
+		self
+		. profile
+		. languages
+		. iter()
+		.find_map(|language| {
+			if !language.ambiguous_contractions.contains(&lower) {
+				return None;
+			}
+			language
+			. contractions
+			. iter()
+			.find_map(|&(key, contraction)| {
+				(key == lower).then_some(contraction)
+			})
+		})
 	}
 
 	fn suggestion_for(&mut self, typed: &str) -> Suggestion {
@@ -900,6 +939,7 @@ impl Engine {
 
 	fn drop_word(&mut self) {
 		self.word.clear();
+		self.word_starts_sentence = false;
 		self.last_char = None;
 		self.clear_correction_state();
 		self.context_suffix = None;

@@ -59,7 +59,8 @@ release on the letter you want.
   `douv` and `eont` also become `don't` the same way French elisions work.
   A strong ordinary correction still wins when clearly better
   (`therde` → `there`). Ambiguous forms such as `its`/`it's`, `well`/`we'll`
-  and `ill`/`I'll` are left alone.
+  and `ill`/`I'll` are left alone. `lets` is corrected to `let's` only at the
+  start of a sentence; mid-sentence it stays `lets` but `let's` is offered.
 - Narrow-key rescue: when every typed key is one or two keys away from a
   word, the most frequent such word is offered (`geqnvx` → `beauté`,
   `vqjmd` → `t'aime`, `bknjpur` → `bonjour`). One-key candidates always rank
@@ -202,8 +203,8 @@ core/                     Rust crate (no Android dependency)
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
   tests/data/all_caps_cases.tsv  2,000 all-caps typo cases
-  tests/data/fuzzy_contraction_cases.tsv  3,064 contraction typos
-  tests/data/fuzzy_contraction_extra_cases.tsv  1,921 wider contraction typos
+  tests/data/fuzzy_contraction_cases.tsv  3,121 contraction typos
+  tests/data/fuzzy_contraction_extra_cases.tsv  1,946 wider contraction typos
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -321,9 +322,9 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic: 13,485 fixture rows (6,500 typos + 2,000 all-caps + 3,064
-# fuzzy contractions + 1,921 wider contraction typos), ~30,000 full
-# interaction sessions, 1,800 exact contraction cases, 11,113 fuzzy
+# core logic: 13,567 fixture rows (6,500 typos + 2,000 all-caps + 3,121
+# fuzzy contractions + 1,946 wider contraction typos), ~30,000 full
+# interaction sessions, 1,836 exact contraction cases, 11,309 fuzzy
 # contraction executions and 1,488 single-letter checks
 cd core; cargo test
 
@@ -398,10 +399,10 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 194 tests, 13,485 fixture rows
-  (6,500 typos + 2,000 all-caps + 3,064 fuzzy contractions + 1,921 wider
-  contraction typos), ~30,000 generated interaction sessions, 1,800 exact
-  contraction cases, 11,113 fuzzy contraction executions and 1,488 single-letter
+- Rust 1.101 (nightly), `cargo test`: 195 tests, 13,567 fixture rows
+  (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
+  contraction typos), ~30,000 generated interaction sessions, 1,836 exact
+  contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter
   checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.

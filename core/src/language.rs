@@ -19,6 +19,9 @@ pub struct Language {
 	pub elisions: bool,
 	/// Missing-apostrophe forms and their contraction (`dont` -> `don't`).
 	pub contractions: &'static [(&'static str, &'static str)],
+	/// Contraction keys that are also ordinary words and should only auto-apply
+	/// at the start of a sentence (`lets` -> `let's`).
+	pub ambiguous_contractions: &'static [&'static str],
 }
 
 pub static FRENCH: Language = Language {
@@ -28,6 +31,7 @@ pub static FRENCH: Language = Language {
 	dictionary: &FRENCH_DICTIONARY,
 	elisions: true,
 	contractions: &[],
+	ambiguous_contractions: &[],
 };
 
 pub static ENGLISH_CONTRACTIONS: &[(&str, &str)] = &[
@@ -72,6 +76,7 @@ pub static ENGLISH_CONTRACTIONS: &[(&str, &str)] = &[
 	("theyll", "they'll"),
 	("theyd", "they'd"),
 	("itll", "it'll"),
+	("lets", "let's"),
 	("itd", "it'd"),
 	("therell", "there'll"),
 	("thered", "there'd"),
@@ -90,6 +95,7 @@ pub static ENGLISH: Language = Language {
 	dictionary: &ENGLISH_DICTIONARY,
 	elisions: false,
 	contractions: ENGLISH_CONTRACTIONS,
+	ambiguous_contractions: &["lets"],
 };
 
 /// Languages with a correction model today. Korean can be added here once its
