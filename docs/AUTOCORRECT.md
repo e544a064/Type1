@@ -518,6 +518,13 @@ appearing beside it.
 
 ### 6.2 Final order
 
+Before sorting, if at least one tier-2 candidate exists, discard any tier-1
+candidate other than the exact known-word baseline whose score is more than
+`5.5` below the best tier-2 score. This prevents a rare word that happens to be
+one key away from crowding out a much more likely spelling variant. The
+known-word baseline is exempt so a valid rare word is not displaced by a merely
+common spelling variant.
+
 Sort all retained candidates by:
 
 1. tier ascending (1 before 2 before 3);
@@ -595,11 +602,12 @@ Let `best` be the first candidate after ranking.
    `1.5 * L(known)`, require
 
    ```
-   best.score - 1.5 * L(known) >= 2.0
+   best.score - 1.5 * L(known) >= 5.5
    ```
 
-   This protects common words: `la` stays `la`, while a much more likely
-   neighbour can replace a rare word such as `pa → la`.
+   This protects common words and, with a large lexicon, rare but valid words:
+   `la` stays `la`, `radiologie` stays `radiologie`, while a much more likely
+   neighbour can still replace a rare word such as `pa → la`.
 3. **Runner-up margin**: if another candidate has the same tier as `best`,
    require
 
@@ -744,7 +752,8 @@ The correction memory:
 | One-letter spelling-variant cost | 4.0 |
 | Tier-1 minimum score | 0.5 |
 | Tier-2 minimum score | 2.0 |
-| Known-word margin | 2.0 |
+| Known-word margin | 5.5 |
+| Tier-1 fallback margin | 5.5 |
 | Same-tier runner-up margin | 0.25 |
 | Maximum token length for weighted distance | 31 symbols |
 | Last-resort minimum length | 4 symbols |
@@ -772,6 +781,7 @@ result is valid. Exact output can change if the lexicons or layouts change.
 | `dont` | `don't` | exact English contraction |
 | `pa` | `la` | rare known word displaced by a much more frequent neighbour |
 | `la` | `la` | common known word stays |
+| `radiologie` | `radiologie` | rare known word stays |
 | `geqnvx` | `beauté` | whole-word neighbour rescue despite many key slips |
 | `commant` | `comment` | one-letter spelling variant, tier 2 |
 | `xqzv` | no auto-correction | nothing passes the strong channels; any fallback is tier 3 |
@@ -794,6 +804,8 @@ result is valid. Exact output can change if the lexicons or layouts change.
 - The last-resort channel is used only when no other channel produced a
   candidate.
 - Tier-3 candidates are never auto-applied.
+- A one-key candidate more than `5.5` score units below the best tier-2
+  candidate is discarded, except for the exact known-word baseline.
 - A known word that is already the best candidate produces an empty suggestion
   list.
 - Duplicate surface forms keep the lower tier, and then the higher score.

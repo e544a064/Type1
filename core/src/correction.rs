@@ -21,8 +21,9 @@ const AGGRESSIVE_WEIGHT: f32 = 1.5;
 /// Changing the word length is less likely than pressing a neighbouring key.
 const LENGTH_PENALTY: f32 = 2.0;
 /// A known word is only overridden when a near-key candidate is this much more
-/// likely (`pa` -> `la`, but `la` stays `la`).
-const KNOWN_WORD_MARGIN: f32 = 2.0;
+/// likely (`pa` -> `la`, but `la` stays `la`). With the expanded dictionary a
+/// rare but valid form must not be replaced by a merely common neighbour.
+const KNOWN_WORD_MARGIN: f32 = 5.5;
 /// The top candidate must lead the runner-up by this much.
 const AGGRESSIVE_MARGIN: f32 = 0.25;
 /// A substituted letter must be this close to count as a neighbouring key.
@@ -36,6 +37,10 @@ const TRANSPOSE_COST: f32 = 0.6;
 const APOSTROPHE_COST: f32 = 0.15;
 /// Two-key candidates are shown but need more confidence before auto-apply.
 const TWO_KEY_MIN_SCORE: f32 = 2.0;
+/// A low-confidence tier-1 candidate is discarded when the best tier-2
+/// candidate is this much more likely. Otherwise a rare word that happens to be
+/// one key away can hide a much more plausible spelling variant.
+const TIER1_FALLBACK_MARGIN: f32 = 5.5;
 /// Very last resort: closest same-length word by weighted edit distance.
 const LAST_RESORT_MIN_LEN: usize = 4;
 const LAST_RESORT_TIE: f32 = 0.5;
@@ -108,10 +113,10 @@ impl Corrector {
 		}
 	}
 
-	fn words(&self) -> impl Iterator<Item = &'static Word> + '_ {
+	fn words_of_len(&self, length: usize) -> impl Iterator<Item = &'static Word> + '_ {
 		self.languages
 		. iter()
-		. flat_map(|language| language.dictionary.words().iter())
+		. flat_map(move |language| language.dictionary.words_of_len(length))
 	}
 
 	fn exact(&self, word: &str) -> Option<&'static Word> {
@@ -405,10 +410,7 @@ impl Corrector {
 					if folded_rest.len() < 3 {
 						continue;
 					}
-					for word in language.dictionary.words() {
-						if word.folded.len() < 2 || word.folded.len() != folded_rest.len() {
-							continue;
-						}
+					for word in language.dictionary.words_of_len(folded_rest.len()) {
 						if !elision_allowed(clitic, word) {
 							continue;
 						}
@@ -437,26 +439,29 @@ impl Corrector {
 		}
 
 		// Typographical and neighbouring-key errors.
-		for word in self.words() {
-			let word_bytes = word.folded.as_bytes();
-			if word_bytes.len() < 2 {
-				continue;
-			}
-			if let Some(cost) = self.distance(typed_bytes, word_bytes, MAX_COST) {
-				if cost == 0.0 {
+		let typed_len = typed_bytes.len();
+		for length in typed_len.saturating_sub(1)..=typed_len.saturating_add(1) {
+			for word in self.words_of_len(length) {
+				let word_bytes = word.folded.as_bytes();
+				if word_bytes.len() < 2 {
 					continue;
 				}
-				let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
-				insert(
-					&mut found,
-					Candidate {
-						text: word.text.to_string(),
-						score: word.log_freq * AGGRESSIVE_WEIGHT
-							- cost
-							- LENGTH_PENALTY * length_diff,
-						tier: 1,
-					},
-				);
+				if let Some(cost) = self.distance(typed_bytes, word_bytes, MAX_COST) {
+					if cost == 0.0 {
+						continue;
+					}
+					let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
+					insert(
+						&mut found,
+						Candidate {
+							text: word.text.to_string(),
+							score: word.log_freq * AGGRESSIVE_WEIGHT
+								- cost
+								- LENGTH_PENALTY * length_diff,
+							tier: 1,
+						},
+					);
+				}
 			}
 		}
 
@@ -551,10 +556,7 @@ impl Corrector {
 
 		let mut best = f32::INFINITY;
 		let mut matches: Vec<(&dictionary::Word, f32)> = Vec::new();
-		for word in self.words() {
-			if word.folded.len() != length {
-				continue;
-			}
+		for word in self.words_of_len(length) {
 			let Some(distance) = self.distance(typed_bytes, word.folded.as_bytes(), max) else {
 				continue;
 			};
@@ -649,10 +651,7 @@ impl Corrector {
 	fn add_neighbour_candidates(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
 		let folded_typed = fold(lower);
 		let typed_bytes = folded_typed.as_bytes();
-		for word in self.words() {
-			if word.folded.len() != typed_bytes.len() {
-				continue;
-			}
+		for word in self.words_of_len(typed_bytes.len()) {
 			let Some((distance, tier)) =
 				self.candidate_distance(typed_bytes, word.folded.as_bytes())
 			else {
@@ -699,8 +698,8 @@ impl Corrector {
 				if rest.len() < shortest {
 					continue;
 				}
-				for word in language.dictionary.words() {
-					if word.folded.len() != rest.len() || !elision_allowed(clitic, word) {
+				for word in language.dictionary.words_of_len(rest.len()) {
+					if !elision_allowed(clitic, word) {
 						continue;
 					}
 					let Some((rest_cost, rest_tier)) =
@@ -770,6 +769,19 @@ impl Corrector {
 		self.add_contractions(&lower, &mut found);
 
 		let mut list: Vec<Candidate> = found.into_values().collect();
+		let best_tier2 = list
+		. iter()
+		. filter(|candidate| candidate.tier == 2)
+		. map(|candidate| candidate.score)
+		. fold(f32::NEG_INFINITY, f32::max);
+		if best_tier2.is_finite() {
+			let known_text = known.map(|word| word.text);
+			list.retain(|candidate| {
+				candidate.tier != 1
+					|| Some(candidate.text.as_str()) == known_text
+					|| candidate.score >= best_tier2 - TIER1_FALLBACK_MARGIN
+			});
+		}
 		sort_candidates(&mut list);
 		if list.is_empty() {
 			list = self.last_resort_candidates(&lower);
@@ -874,10 +886,7 @@ impl Corrector {
 		}
 
 		let mut by_base: HashMap<char, HashMap<String, f32>> = HashMap::new();
-		for word in self.words() {
-			if word.folded.len() != 1 {
-				continue;
-			}
+		for word in self.words_of_len(1) {
 			let Some(word_base) = word.folded.chars().next() else {
 				continue;
 			};
@@ -1072,6 +1081,25 @@ mod tests {
 	fn known_words_have_no_candidates() {
 		assert!(candidates("test").is_empty());
 		assert!(candidates("dire").is_empty());
+	}
+
+	#[test]
+	fn rare_dictionary_words_are_known() {
+		assert!(suggest("radiologie").candidates.is_empty());
+		assert!(suggest("radiologue").candidates.is_empty());
+		let typo = suggest("radiologir");
+		assert!(
+			typo
+			. candidates
+			. iter()
+			. any(|candidate| candidate.text == "radiologie"),
+			"candidates: {:?}",
+			typo
+			. candidates
+			.iter()
+			.map(|candidate| candidate.text.as_str())
+			.collect::<Vec<_>>()
+		);
 	}
 
 	#[test]

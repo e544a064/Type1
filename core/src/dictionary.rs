@@ -31,11 +31,13 @@ struct Index {
 	words: Vec<Word>,
 	by_text: HashMap<&'static str, usize>,
 	by_fold: HashMap<String, usize>,
+	/// Word indices grouped by folded byte length.
+	by_len: Vec<Vec<usize>>,
 }
 
 impl Index {
 	fn load(source: &'static str) -> Self {
-		let mut words = Vec::with_capacity(20_000);
+		let mut words = Vec::with_capacity(source.len() / 16);
 		for line in source.lines() {
 			let mut parts = line.split('\t');
 			let Some(text) = parts.next() else {
@@ -63,6 +65,7 @@ impl Index {
 
 		let mut by_text = HashMap::with_capacity(words.len());
 		let mut by_fold: HashMap<String, usize> = HashMap::with_capacity(words.len());
+		let mut by_len: Vec<Vec<usize>> = Vec::new();
 		for (i, word) in words.iter().enumerate() {
 			by_text.insert(word.text, i);
 			match by_fold.get(&word.folded) {
@@ -71,12 +74,18 @@ impl Index {
 					by_fold.insert(word.folded.clone(), i);
 				}
 			}
+			let length = word.folded.len();
+			if by_len.len() <= length {
+				by_len.resize_with(length + 1, Vec::new);
+			}
+			by_len[length].push(i);
 		}
 
 		Index {
 			words,
 			by_text,
 			by_fold,
+			by_len,
 		}
 	}
 }
@@ -102,6 +111,17 @@ impl Dictionary {
 
 	pub fn words(&self) -> &[Word] {
 		&self.index().words
+	}
+
+	/// Words whose folded form has exactly `length` bytes.
+	pub fn words_of_len(&self, length: usize) -> impl Iterator<Item = &Word> + '_ {
+		let index = self.index();
+		index
+		. by_len
+		. get(length)
+		. into_iter()
+		. flatten()
+		. map(move |&i| &index.words[i])
 	}
 
 	/// Exact lookup. `word` must already be lowercase.
@@ -140,13 +160,31 @@ mod tests {
 
 	#[test]
 	fn loads_the_shipped_dictionary() {
-		assert!(words().len() >= 10_000);
+		assert!(words().len() >= 120_000);
 		assert!(exact("test").is_some());
 		assert!(exact("dire").is_some());
+		assert!(exact("radiologie").is_some());
 		assert!(exact("ecole").is_none());
 		assert_eq!(folded("ecole").map(|w| w.text), Some("école"));
 		assert_ne!(exact("aime").unwrap().flags & VERB, 0);
 		assert_ne!(exact("action").unwrap().flags & NOUN, 0);
+	}
+
+	#[test]
+	fn length_index_matches_the_word_list() {
+		let all = words();
+		for length in [1, 2, 5, 8, 12, 20] {
+			let indexed: Vec<&str> = FRENCH
+			. words_of_len(length)
+			. map(|word| word.text)
+			. collect();
+			let expected: Vec<&str> = all
+			. iter()
+			. filter(|word| word.folded.len() == length)
+			.map(|word| word.text)
+			.collect();
+			assert_eq!(indexed, expected, "length {length}");
+		}
 	}
 
 	#[test]

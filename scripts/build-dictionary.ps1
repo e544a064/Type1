@@ -4,9 +4,13 @@
 # 2. Extract Lexique383.tsv.
 # 3. Run:
 #      powershell -File scripts/build-dictionary.ps1 -Lexique path\to\Lexique383.tsv
+#
+# By default this keeps every single-token form that the keyboard can type.
+# Use -MinFreq to apply a frequency floor, or -Count to cap the list.
 param(
 	[string]$Lexique = "$env:TEMP\opencode\lexique\Lexique383\Lexique383.tsv",
-	[int]$Count = 20000
+	[double]$MinFreq = 0.0,
+	[int]$Count = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,12 +28,12 @@ try {
 		if ($c.Count -lt 10) { continue }
 		$w = $c[0]
 		if ($w -notmatch "^[a-z\u00e0-\u00ff\u0153\u00e6']+$") { continue }
-		if ($w.Length -lt 1 -or $w.Length -gt 24) { continue }
+		if ($w.Length -lt 1 -or $w.Length -gt 31) { continue }
 		if ($w.StartsWith("'") -or $w.EndsWith("'")) { continue }
 		$f1 = if ($c[8]) { [double]::Parse($c[8], [Globalization.CultureInfo]::InvariantCulture) } else { 0.0 }
 		$f2 = if ($c[9]) { [double]::Parse($c[9], [Globalization.CultureInfo]::InvariantCulture) } else { 0.0 }
 		$f = $f1 + $f2
-		if ($f -le 0) { continue }
+		if ($f -lt $MinFreq -or $f -le 0) { continue }
 		if ($freq.ContainsKey($w)) { $freq[$w] += $f } else { $freq[$w] = $f }
 		$flag = switch -Regex ($c[3]) {
 			'^(VER|AUX)$' { 1 }
@@ -44,7 +48,8 @@ try {
 	$reader.Close()
 }
 
-$top = $freq.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First $Count
+$ranked = @($freq.GetEnumerator() | Sort-Object Value -Descending)
+$top = if ($Count -gt 0) { $ranked | Select-Object -First $Count } else { $ranked }
 $lines = foreach ($e in $top) {
 	# Hundredths of ln(frequency per million + 1), then POS flags:
 	# 1 verb, 2 noun, 4 adjective, 8 adverb.

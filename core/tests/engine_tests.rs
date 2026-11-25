@@ -749,7 +749,7 @@ fn alternates_follow_shift() {
 
 #[test]
 fn short_tokens_show_more_suggestions() {
-	for (typed, expected) in [("ue", 6), ("pqr", 4), ("ropp", 5), ("commant", 2)] {
+	for (typed, expected) in [("ue", 6), ("pqr", 6), ("ropp", 5), ("commant", 3)] {
 		let mut engine = plain();
 		for key in typed.chars() {
 			engine.on_key(&key.to_string());

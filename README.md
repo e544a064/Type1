@@ -45,7 +45,8 @@ release on the letter you want.
 - Predictive back gestures are enabled for the setup and profiles screens
   (Android 13+), including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
-- Autocorrection at word boundaries from 20k frequency-ranked dictionaries,
+- Autocorrection at word boundaries from frequency-ranked dictionaries (all
+  typable Lexique 3.83 French forms, 20k British English forms),
   with a layout-aware touch model: neighbouring-key slips, transpositions,
   missing accents (`ecole` → `école`) and French elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
@@ -169,8 +170,8 @@ plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
 - the active languages and layout in `core/src/profile.rs`,
-- `MIN_SCORE`, `TWO_KEY_MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY` and
-  `KNOWN_WORD_MARGIN` in `core/src/correction.rs`,
+- `MIN_SCORE`, `TWO_KEY_MIN_SCORE`, `AGGRESSIVE_WEIGHT`, `LENGTH_PENALTY`,
+  `KNOWN_WORD_MARGIN` and `TIER1_FALLBACK_MARGIN` in `core/src/correction.rs`,
 - the dictionaries in `core/data/` (see `core/data/NOTICE.md`).
 
 ## Repository layout
@@ -186,7 +187,7 @@ core/                     Rust crate (no Android dependency)
   src/engine.rs           shift, caps, spacing, word buffer, correction, undo
   src/action.rs           actions emitted to the platform (commit/delete/ime)
   src/ffi.rs              JNI surface (create/render/key/inputType/layouts/languages/profile)
-  data/fr.tsv             derived Lexique 3.83 list (20k French forms)
+  data/fr.tsv             derived Lexique 3.83 list (all typable French forms)
   data/en.tsv             derived wordfreq list (20k British English forms)
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
@@ -201,8 +202,8 @@ core/                     Rust crate (no Android dependency)
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
   tests/data/all_caps_cases.tsv  2,000 all-caps typo cases
-  tests/data/fuzzy_contraction_cases.tsv  1,534 contraction typos
-  tests/data/fuzzy_contraction_extra_cases.tsv  1,986 single-letter typos
+  tests/data/fuzzy_contraction_cases.tsv  1,559 contraction typos
+  tests/data/fuzzy_contraction_extra_cases.tsv  2,037 wider contraction typos
 app/                      Android app (Kotlin, no AndroidX needed)
   src/main/java/fr/type1/keyboard/
     Type1Ime.kt           InputMethodService
@@ -228,14 +229,17 @@ docs/AUTOCORRECT.md       correction, ranking and auto-apply specification
 ## Dictionary
 
 `core/data/fr.tsv` is derived from [Lexique 3.83](http://www.lexique.org)
-(CC BY-SA 4.0): the 20,000 most frequent lowercase forms, film and book
-frequencies summed per form, stored as hundredths of `ln(freq + 1)` plus a
-part-of-speech flag used to validate elisions (`j'aime` but not `t'est`). The
-setup screen shows the attribution and `core/data/NOTICE.md` carries the full
-notice. `cargo run --release --example evaluate` reports top-1 accuracy on
-synthetic typos and the random-string false-positive rate.
-`scripts/build-dictionary.ps1` regenerates the list from an extracted
-`Lexique383.tsv`.
+(CC BY-SA 4.0): all single-token forms the keyboard can type — lowercase
+letters and inner apostrophes, with no spaces, hyphens or other punctuation —
+with film and book frequencies summed per form, stored as hundredths of
+`ln(freq + 1)` plus a part-of-speech flag used to validate elisions (`j'aime`
+but not `t'est`). The resulting list has about 121,000 forms (1.85 MB) and
+includes inflected forms. The setup screen shows the attribution and
+`core/data/NOTICE.md` carries the full notice. `cargo run --release --example
+evaluate` reports top-1 accuracy on synthetic typos and the random-string
+false-positive rate. `scripts/build-dictionary.ps1` regenerates the list from
+an extracted `Lexique383.tsv`; `-MinFreq` can apply a frequency floor and
+`-Count` can cap the list.
 
 `core/data/en.tsv` is derived from [wordfreq](https://github.com/rspeer/wordfreq)
 (CC BY-SA 4.0) through its 25k English export. It keeps single alphabetic
@@ -312,9 +316,9 @@ keyboard switcher.
 ### 3. Test without a device
 
 ```powershell
-# core logic: 12,020 fixture rows (6,500 typos + 2,000 all-caps + 1,534
-# fuzzy contractions + 1,986 wider contraction typos), ~30,000 full
-# interaction sessions, 1,800 exact contraction cases, 6,588 fuzzy
+# core logic: 12,096 fixture rows (6,500 typos + 2,000 all-caps + 1,559
+# fuzzy contractions + 2,037 wider contraction typos), ~30,000 full
+# interaction sessions, 1,800 exact contraction cases, 6,714 fuzzy
 # contraction executions and 1,488 single-letter checks
 cd core; cargo test
 
@@ -389,14 +393,14 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 192 tests, 12,020 fixture rows
-  (6,500 typos + 2,000 all-caps + 1,534 fuzzy contractions + 1,986 wider
+- Rust 1.101 (nightly), `cargo test`: 194 tests, 12,096 fixture rows
+  (6,500 typos + 2,000 all-caps + 1,559 fuzzy contractions + 2,037 wider
   contraction typos), ~30,000 generated interaction sessions, 1,800 exact
-  contraction cases, 6,588 fuzzy contraction executions and 1,488 single-letter
+  contraction cases, 6,714 fuzzy contraction executions and 1,488 single-letter
   checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
-- `./gradlew assembleDebug`: APK 1.9 MB, contains the three `.so` files.
+- `./gradlew assembleDebug`: APK 9.7 MB, contains the three `.so` files.
 - `./gradlew lintDebug`: 0 errors (3 typo false positives on "Type1").
 - JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 

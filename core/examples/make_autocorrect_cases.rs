@@ -149,16 +149,25 @@ fn accentless(word: &str) -> String {
 	type1_core::lexicon::fold(word)
 }
 
-fn accepted(typed: &str, word: &str, top: usize, tier: u8) -> bool {
+fn visible_limit(typed: &str) -> usize {
+	match typed.chars().count() {
+		0..=3 => 6,
+		4 => 5,
+		5 => 4,
+		_ => 3,
+	}
+}
+
+fn accepted(typed: &str, word: &str, tier: u8) -> bool {
 	if typed == word || typed.is_empty() || dictionary::exact(typed).is_some() {
 		return false;
 	}
 	let suggestion = suggest(typed);
 	suggestion
-	.candidates
-	.iter()
-	.take(top)
-	.any(|candidate| candidate.text == word && candidate.tier == tier)
+	. candidates
+	. iter()
+	. take(visible_limit(typed))
+	. any(|candidate| candidate.text == word && candidate.tier == tier)
 }
 
 fn write_cases(path: &str, cases: &mut [(String, &'static str)]) {
@@ -243,7 +252,7 @@ fn main() {
 				if !two_key_seen.insert(typed.clone()) {
 					continue;
 				}
-				if accepted(&typed, word, 3, 2) {
+				if accepted(&typed, word, 2) {
 					two_key.push((typed, word));
 					if two_key.len() >= TWO_KEY_TARGET {
 						break;
@@ -262,7 +271,7 @@ fn main() {
 				if !spelling_seen.insert(typed.clone()) {
 					continue;
 				}
-				if accepted(&typed, word, 3, 2) {
+				if accepted(&typed, word, 2) {
 					spelling_cases.push((typed, word));
 					if spelling_cases.len() >= SPELLING_TARGET {
 						break;

@@ -320,6 +320,15 @@ fn two_key_typo_is_suggested_and_applied() {
 	);
 }
 
+fn visible_limit(typed: &str) -> usize {
+	match typed.chars().count() {
+		0..=3 => 6,
+		4 => 5,
+		5 => 4,
+		_ => 3,
+	}
+}
+
 fn check_rule_cases(cases: &[(&str, &str)]) -> (Vec<String>, usize) {
 	let mut failures = Vec::new();
 	let mut applied = 0usize;
@@ -334,7 +343,7 @@ fn check_rule_cases(cases: &[(&str, &str)]) -> (Vec<String>, usize) {
 		.iter()
 		.position(|candidate| candidate.text == *expected);
 		let visible = found.is_some_and(|index| {
-			index < 3 && suggestion.candidates[index].tier == 2
+			index < visible_limit(typed) && suggestion.candidates[index].tier == 2
 		});
 		if !tier_ordered || !visible {
 			failures.push(format!(
