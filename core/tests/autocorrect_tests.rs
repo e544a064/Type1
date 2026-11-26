@@ -150,8 +150,8 @@ fn named_regressions() {
 			assert!(
 				suggestion
 				. candidates
-				.iter()
-				.all(|candidate| candidate.text != typed),
+				. iter()
+				. all(|candidate| candidate.text != typed),
 				"{typed} should not suggest itself"
 			);
 			continue;
@@ -173,8 +173,8 @@ fn common_words_are_not_autocorrected() {
 		assert!(
 			suggestion
 			. candidates
-			.iter()
-			.all(|candidate| candidate.text != word),
+			. iter()
+			. all(|candidate| candidate.text != word),
 			"{word} should not suggest itself"
 		);
 	}

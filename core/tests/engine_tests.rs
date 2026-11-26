@@ -326,7 +326,7 @@ fn tapping_the_ordinary_lets_keeps_it() {
 		options
 		. iter()
 		. position(|text| text == "lets")
-		.expect("lets")
+		. expect("lets")
 	);
 	assert_eq!(
 		engine.on_key(&format!("sug:{index}")),

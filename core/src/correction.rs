@@ -609,9 +609,9 @@ impl Corrector {
 	/// candidate is kept alongside the contraction.
 	fn is_ambiguous_contraction(&self, lower: &str) -> bool {
 		self
-		.languages
-		.iter()
-		.any(|language| {
+		. languages
+		. iter()
+		. any(|language| {
 			let language = *language;
 			language.ambiguous_contractions.contains(&lower)
 				&& !self.languages.iter().any(|other| {
@@ -1091,7 +1091,7 @@ mod tests {
 			. candidates
 			. iter()
 			. map(|candidate| candidate.text.as_str())
-			.collect::<Vec<_>>()
+			. collect::<Vec<_>>()
 		);
 	}
 
@@ -1103,8 +1103,8 @@ mod tests {
 			assert!(
 				suggestion
 				. candidates
-				.iter()
-				.all(|candidate| candidate.text != word),
+				. iter()
+				. all(|candidate| candidate.text != word),
 				"{word} should not suggest itself"
 			);
 		}
@@ -1138,7 +1138,7 @@ mod tests {
 			assert!(
 				candidates(word)
 				. iter()
-				.all(|candidate| candidate.text != word)
+				. all(|candidate| candidate.text != word)
 			);
 		}
 	}
@@ -1150,9 +1150,9 @@ mod tests {
 			assert!(!suggestion.apply);
 			assert!(
 				suggestion
-				.candidates
-				.iter()
-				.all(|candidate| candidate.text != word)
+				. candidates
+				. iter()
+				. all(|candidate| candidate.text != word)
 			);
 		}
 		let typo = suggest("radiologir");

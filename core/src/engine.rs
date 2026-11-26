@@ -671,14 +671,14 @@ impl Engine {
 		. profile
 		. languages
 		. iter()
-		.find_map(|language| {
+		. find_map(|language| {
 			if !language.ambiguous_contractions.contains(&lower) {
 				return None;
 			}
 			language
 			. contractions
 			. iter()
-			.find_map(|&(key, contraction)| {
+			. find_map(|&(key, contraction)| {
 				(key == lower).then_some(contraction)
 			})
 		})
