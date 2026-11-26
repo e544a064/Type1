@@ -2,9 +2,10 @@
 
 Every letter sits on **one horizontal line**, between a suggestion strip and a
 row of utility keys: ~154 dp of screen instead of the usual ~250 dp. The typing
-logic is written in **Rust** and shared through a tiny JNI bridge; Android only
-draws the three bands and applies editor actions. That split is deliberate: an
-iOS port later only needs a new UI + FFI shim.
+logic is written in **Rust** and shared through a tiny JNI bridge; Android draws
+the three bands, applies editor actions, and supplies editor metadata plus the
+system personal dictionary. That split is deliberate: an iOS port later only
+needs a new UI + FFI shim.
 
 <p align="center">
   <img src="docs/type1-keyboard.png" alt="Type1 keyboard" width="540">
@@ -25,19 +26,18 @@ release on the letter you want.
   order with row-based vertical offsets, uniform size and case (uppercase while
   shift/auto-caps is active). AZERTY is the default.
 - Profiles pair a layout with one or more languages. They are created in
-  **Profils de clavier** (setup → Gérer les profils): the layout comes from a
-  dropdown and the languages are toggles (Français, English (UK)). The list
-  starts empty, and the keyboard falls back to `AZERTY · Français` until a
-  profile exists.
+  **Keyboard profiles** (setup → Manage profiles; *Profils de clavier* in
+  French): the layout comes from a dropdown and the languages are toggles
+  (Français, English (UK)). The list starts empty, and the keyboard falls back
+  to `AZERTY · Français` until a profile exists.
 - The setup and profile screens have English and French resources, with English
   as the default and French in `values-fr`. Android 13+ lists both in the
   system's per-app language setting.
-- Long-press `,` for the emoji picker: a scrollable grid with a category strip
-  (recent emoji first, then smileys, people, activities, objects, travel,
-  sports, symbols, signs, flags and text emoticons). The long-press bubble also
-  has a gear button that opens the keyboard settings. With at least two
-  profiles, the same popup also shows a globe that cycles to the next profile
-  and wraps around at the end of the list.
+- Long-press `,` to open a small shortcut bubble. It offers the emoji panel,
+  the settings gear, and—when at least two profiles exist—a globe that cycles
+  to the next profile. The emoji panel itself has a scrollable grid with a
+  category strip (recent emoji first, then smileys, people, activities, objects,
+  travel, sports, symbols, signs, flags and text emoticons).
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
   instead of the word “espace”. The layout itself is visible on the keys.
 - Predictive back gestures are enabled for the setup and profiles screens
@@ -84,7 +84,8 @@ release on the letter you want.
   when the known-word margin is exceeded.
 - Android's personal dictionary is loaded while the keyboard is enabled. Exact
   entries are protected from autocorrection, close typos are offered as
-  suggestions, and entries follow their language.
+  suggestions, and entries follow their language. Only single-token entries are
+  used for now; whitespace/hyphen entries and personal shortcuts are ignored.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
   the same way (`pa` → `la`), while common words stay put.
@@ -143,8 +144,8 @@ release on the letter you want.
   action: return, arrow, search, send, check).
 - Sounds, haptics, pressed-letter highlight.
 
-Not in the MVP: next-word prediction (context model),
-personal dictionary, dictionary imports, glide typing, emoji panel, clipboard
+Not in the MVP: next-word prediction (context model), an in-app
+personal-dictionary editor, dictionary imports, glide typing, clipboard
 manager, voice input, themes, physical keyboard.
 
 ## Why one line?
@@ -191,10 +192,12 @@ core/                     Rust crate (no Android dependency)
   src/dictionary.rs       lazily loaded per-language word lists
   src/correction.rs       profile-scoped candidates and scoring
   src/profile.rs          runtime layout + language configuration
+  src/personal.rs         dynamic host personal-word overlay
   src/lexicon.rs          accent folding
+  src/json.rs             tiny JSON writer for the render payload
   src/engine.rs           shift, caps, spacing, word buffer, correction, undo
   src/action.rs           actions emitted to the platform (commit/delete/ime)
-  src/ffi.rs              JNI surface (create/render/key/inputType/layouts/languages/profile)
+  src/ffi.rs              JNI surface (create/render/key/inputType/personalWords/layouts/languages/profile)
   data/fr.tsv             derived Lexique 3.83 list (all typable French forms)
   data/en.tsv             derived wordfreq list (all single-token English forms)
   data/NOTICE.md          dictionary licences and attribution
@@ -204,6 +207,7 @@ core/                     Rust crate (no Android dependency)
   examples/make_fuzzy_contraction_cases.rs  regenerate contraction typos
   examples/make_fuzzy_contraction_extra_cases.rs  wider contraction typos
   tests/engine_tests.rs   keyboard-engine behaviour tests
+  tests/interaction_tests.rs  full editing sessions through a small editor model
   tests/english_bulk_tests.rs  contractions, caps-lock and single letters
   tests/autocorrect_tests.rs  bulk autocorrect regressions
   tests/data/autocorrect_cases.tsv  2,500 mixed typo cases
@@ -222,6 +226,7 @@ app/                      Android app (Kotlin, no AndroidX needed)
     ProfilesActivity.kt   create/edit/delete and select profiles
     core/NativeBridge.kt  external fun declarations
     core/KeyboardController.kt
+    core/PersonalDictionary.kt  reads Android's user dictionary
     model/RowModel.kt     JSON model (suggestions, letters, keys)
     model/KeyAction.kt    JSON action model
     model/KeyboardProfile.kt  user profile and its JSON storage
@@ -233,6 +238,7 @@ scripts/export-wordfreq.py  export the full English wordfreq list
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
 docs/AUTOCORRECT.md       correction, ranking and auto-apply specification
+docs/type1-keyboard.png   keyboard screenshot used above
 ```
 
 ## Dictionary
@@ -266,7 +272,8 @@ has about 287,000 forms (3.6 MB). Scores use the same hundredths of
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).
 
-The contract between the two halves is JSON over JNI:
+The row/action contract between the two halves is JSON over JNI; input type and
+personal words use primitive JNI values and string arrays.
 
 ```jsonc
 // render(handle) -> the three bands
@@ -414,7 +421,7 @@ This snapshot was built and linted on Windows with:
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 19.7 MB, contains the three `.so` files.
-- `./gradlew lintDebug`: 0 errors (5 typo false positives on "Type1").
+- `./gradlew lintDebug`: 0 errors, 10 warnings (5 “Type1” typo false positives and 5 launcher-icon shape warnings).
 - JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 
 No device was attached, so on-device behaviour (touch, IME lifecycle, sound) is
@@ -431,8 +438,9 @@ untested.
 | Long-press a letter | Popup above the key with its own and neighbouring accents; slide and release |
 | Long-press `.` | Popup with `& % + " - : ' @ ; / ( ) # ! ?`; slide and release |
 | Long-press the page key | Popup with `0`–`9`; slide and release to type a digit without changing page |
-| Long-press `,` | Emoji picker with a category strip and scrollable grid; recents first |
-| Globe in the comma popup (2+ profiles) | Release on the globe to cycle to the next profile |
+| Long-press `,` | Shortcut bubble with the emoji panel, the settings gear and (with 2+ profiles) the profile globe; release on the emoji to open the panel |
+| Gear in the comma bubble | Open the keyboard settings |
+| Globe in the comma bubble (2+ profiles) | Release on the globe to cycle to the next profile |
 | Tap a suggestion | Replace the typed or corrected word with the candidate |
 | ⌫ right after a correction | Undo the correction, restore the typed word and keep the space or punctuation |
 | Hold ⌫ | Depends on the setting: repeat delete, swipe left to size a selection then delete, or nothing. In Select mode a clear leftward swipe starts selecting immediately. |
@@ -449,7 +457,8 @@ untested.
    capitalisation.
 4. **Text tools** — clipboard panel, cursor arrows, word delete on long-press
    ⌫, double-space period.
-5. **Personalisation** — dictionary additions, themes, per-app page memory.
+5. **Personalisation** — an in-app personal-dictionary editor, themes, per-app
+   page memory.
 6. **Later** — voice input hand-off, glide typing adapted
    to one line, iOS UI on the same core.
 
