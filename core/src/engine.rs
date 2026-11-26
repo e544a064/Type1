@@ -7,6 +7,8 @@ use crate::action::{Action, ImeActionKind};
 use crate::correction::Suggestion;
 use crate::json;
 use crate::layout::{Letter, Page, ShiftState};
+use crate::lexicon::fold;
+use crate::personal::{PersonalLexicon, PersonalWord};
 use crate::profile::Profile;
 
 const STRIP_SUGGESTIONS: usize = 3;
@@ -149,6 +151,8 @@ pub struct Engine {
 	suggestions_enabled: bool,
 	/// Whether word boundaries may replace the typed word automatically.
 	autocorrect_enabled: bool,
+	/// Host-provided personal words, usually Android's user dictionary.
+	personal: PersonalLexicon,
 	last_correction: Option<CorrectionRecord>,
 	/// Words changed in this field, keyed by their visible form.
 	correction_memory: CorrectionMemory,
@@ -187,6 +191,7 @@ impl Engine {
 			no_enter_action: false,
 			suggestions_enabled: true,
 			autocorrect_enabled: true,
+			personal: PersonalLexicon::default(),
 			last_correction: None,
 			correction_memory: CorrectionMemory::default(),
 			suggestion_word: None,
@@ -226,6 +231,13 @@ impl Engine {
 		};
 		self.set_profile(profile);
 		true
+	}
+
+	/// Replace the host-provided personal words. Suggestion results are cached
+	/// per typed token, so a change invalidates the cache.
+	pub fn set_personal_words(&mut self, words: Vec<PersonalWord>) {
+		self.personal = PersonalLexicon::new(words);
+		self.suggestion_cache = None;
 	}
 
 	/// Return to the built-in layout and languages when no user profile is
@@ -656,12 +668,22 @@ impl Engine {
 		}
 
 		let suggestion = self.suggestion_for(&typed);
-		let forced = ambiguous.and_then(|contraction| {
-			suggestion
-			. candidates
-			. iter()
-			. find(|candidate| candidate.text.to_lowercase() == contraction)
-		});
+		let personal_exact = (
+			self
+			. personal
+			. exact(&fold(&lower), &self.profile.languages)
+			. is_some()
+		);
+		let forced = if personal_exact {
+			None
+		} else {
+			ambiguous.and_then(|contraction| {
+				suggestion
+				. candidates
+				. iter()
+				. find(|candidate| candidate.text.to_lowercase() == contraction)
+			})
+		};
 		if !suggestion.apply && forced.is_none() {
 			return None;
 		}
@@ -710,7 +732,7 @@ impl Engine {
 				return suggestion.clone();
 			}
 		}
-		let suggestion = self.profile.suggest(typed);
+		let suggestion = self.profile.suggest_with_personal(typed, &self.personal);
 		self.suggestion_cache = Some((typed.to_string(), suggestion.clone()));
 		suggestion
 	}

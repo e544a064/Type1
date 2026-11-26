@@ -1,18 +1,25 @@
 package fr.type1.keyboard
 
 import android.content.SharedPreferences
+import android.database.ContentObserver
 import android.icu.text.BreakIterator
 import android.inputmethodservice.InputMethodService
+import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.provider.UserDictionary
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import fr.type1.keyboard.core.KeyboardController
+import fr.type1.keyboard.core.PersonalDictionary
 import fr.type1.keyboard.model.KeyAction
+import java.util.concurrent.Executors
 import kotlin.math.abs
 
 /**
@@ -22,6 +29,8 @@ import kotlin.math.abs
 class Type1Ime : InputMethodService(), KeyboardView.Listener {
 
 	private val controller = KeyboardController()
+	private val personalDictionaryExecutor = Executors.newSingleThreadExecutor()
+	private var personalDictionaryObserver: ContentObserver? = null
 	private var keyboardView: KeyboardView? = null
 	private var selectAnchor = -1
 	private var selectWidth = 0
@@ -42,11 +51,37 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onCreate() {
 		super.onCreate()
 		Prefs.preferences(this).registerOnSharedPreferenceChangeListener(profileListener)
+		val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+			override fun onChange(selfChange: Boolean, uri: Uri?) {
+				refreshPersonalDictionary()
+			}
+		}
+		personalDictionaryObserver = observer
+		contentResolver.registerContentObserver(
+			UserDictionary.Words.CONTENT_URI,
+			true,
+			observer,
+		)
+		refreshPersonalDictionary()
 	}
 
 	override fun onDestroy() {
 		Prefs.preferences(this).unregisterOnSharedPreferenceChangeListener(profileListener)
+		personalDictionaryObserver?.let {
+			contentResolver.unregisterContentObserver(it)
+		}
+		personalDictionaryObserver = null
+		personalDictionaryExecutor.shutdownNow()
 		super.onDestroy()
+	}
+
+	/** Reload the system personal dictionary off the main thread. */
+	private fun refreshPersonalDictionary() {
+		personalDictionaryExecutor.execute {
+			val entries = PersonalDictionary.load(this)
+			controller.setPersonalWords(entries)
+			keyboardView?.post { keyboardView?.refresh() }
+		}
 	}
 
 	override fun onCreateInputView(): View {
@@ -88,6 +123,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		selectAnchor = -1
 		selectWidth = 0
 		applyProfile()
+		refreshPersonalDictionary()
 		updateProfileAvailability()
 		// Some editors set imeOptions just before the view appears.
 		if (info != null) controller.setImeOptions(info.imeOptions)

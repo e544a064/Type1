@@ -10,6 +10,7 @@ use crate::dictionary::{self, Word};
 use crate::language::Language;
 use crate::layout;
 use crate::lexicon::fold;
+use crate::personal::PersonalLexicon;
 use crate::profile::Profile;
 
 /// Minimum score a candidate needs before it may replace the typed word.
@@ -64,6 +65,9 @@ pub struct Candidate {
 	/// 1 for a one-key slip, 2 for a farther slip or spelling variant,
 	/// 3 for the closest word by edit distance when nothing else matches.
 	pub tier: u8,
+	/// True for a host personal-dictionary candidate. Such candidates are
+	/// suggestions only and never trigger automatic replacement.
+	pub personal: bool,
 }
 
 /// The candidates to show for a typed token, and whether the best one is
@@ -274,15 +278,15 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 		}
 		"d" => {
 			word.flags & (dictionary::NOUN | dictionary::ADV) != 0
-				|| (word.flags & dictionary::VERB != 0 && is_infinitive(text))
-				|| matches!(
-					text,
-					"où" | "ici" | "ailleurs" | "abord" | "après" | "avant" | "ores"
-				)
+			|| (word.flags & dictionary::VERB != 0 && is_infinitive(text))
+			|| matches!(
+				text,
+				"où" | "ici" | "ailleurs" | "abord" | "après" | "avant" | "ores"
+			)
 		}
 		"l" => {
 			word.flags & (dictionary::NOUN | dictionary::VERB | dictionary::ADJ) != 0
-				|| text == "on"
+			|| text == "on"
 		}
 		_ => true,
 	}
@@ -290,10 +294,10 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 
 fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	match found.get(&candidate.text) {
-		Some(existing)
-			if existing.tier < candidate.tier
-				|| (existing.tier == candidate.tier
-					&& existing.score >= candidate.score) => {}
+		Some(existing) if existing.tier < candidate.tier || (
+			existing.tier == candidate.tier
+			&& existing.score >= candidate.score
+		) => {}
 		_ => {
 			found.insert(candidate.text.clone(), candidate);
 		}
@@ -330,6 +334,7 @@ fn insert_elision(
 			text,
 			score: log_freq * AGGRESSIVE_WEIGHT - penalty - cost,
 			tier,
+			personal: false,
 		},
 	);
 }
@@ -366,6 +371,7 @@ impl Corrector {
 					text: word.text.to_string(),
 					score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
 					tier: 1,
+					personal: false,
 				},
 			);
 		}
@@ -393,8 +399,7 @@ impl Corrector {
 					let folded_rest = fold(rest);
 					if let Some(word) = language.dictionary.folded(&folded_rest) {
 						if elision_allowed(clitic, word) {
-							let (remainder, log_freq) =
-								elision_remainder(clitic, word, language.dictionary);
+							let (remainder, log_freq) = elision_remainder(clitic, word, language.dictionary);
 							insert_elision(
 								&mut found,
 								clitic,
@@ -424,8 +429,7 @@ impl Corrector {
 						if distance == 0.0 {
 							continue;
 						}
-						let (remainder, log_freq) =
-							elision_remainder(clitic, word, language.dictionary);
+						let (remainder, log_freq) = elision_remainder(clitic, word, language.dictionary);
 						insert_elision(
 							&mut found,
 							clitic,
@@ -457,10 +461,13 @@ impl Corrector {
 						&mut found,
 						Candidate {
 							text: word.text.to_string(),
-							score: word.log_freq * AGGRESSIVE_WEIGHT
+							score: (
+								word.log_freq * AGGRESSIVE_WEIGHT
 								- cost
-								- LENGTH_PENALTY * length_diff,
+								- LENGTH_PENALTY * length_diff
+							),
 							tier: 1,
+							personal: false,
 						},
 					);
 				}
@@ -590,6 +597,7 @@ impl Corrector {
 			text: word.text.to_string(),
 			score: -distance + word.log_freq * 0.001,
 			tier: 3,
+			personal: false,
 		})
 		. collect()
 	}
@@ -614,10 +622,10 @@ impl Corrector {
 		. any(|language| {
 			let language = *language;
 			language.ambiguous_contractions.contains(&lower)
-				&& !self.languages.iter().any(|other| {
-					!std::ptr::eq(*other, language)
-						&& other.dictionary.exact(lower).is_some()
-				})
+			&& !self.languages.iter().any(|other| {
+				!std::ptr::eq(*other, language)
+				&& other.dictionary.exact(lower).is_some()
+			})
 		})
 	}
 
@@ -633,7 +641,7 @@ impl Corrector {
 			// other language's valid word alone.
 			let conflicted = self.languages.iter().any(|other| {
 				!std::ptr::eq(*other, language)
-					&& other.dictionary.exact(lower).is_some()
+				&& other.dictionary.exact(lower).is_some()
 			});
 			if conflicted {
 				continue;
@@ -647,6 +655,7 @@ impl Corrector {
 							text: contraction.to_string(),
 							score: CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
 							tier: 1,
+							personal: false,
 						},
 					);
 				}
@@ -660,6 +669,7 @@ impl Corrector {
 								text: contraction.to_string(),
 								score: candidate.score + CONTRACTION_ALIAS_BONUS,
 								tier: candidate.tier,
+								personal: false,
 							},
 						);
 					}
@@ -670,10 +680,50 @@ impl Corrector {
 							text: contraction.to_string(),
 							score: candidate.score + CONTRACTION_ALIAS_BONUS,
 							tier: candidate.tier,
+							personal: false,
 						},
 					);
 				}
 			}
+		}
+	}
+
+	/// Close personal-dictionary entries. They are suggestions only; the
+	/// candidate flag prevents automatic replacement.
+	fn add_personal_candidates(
+		&self,
+		lower: &str,
+		personal: &PersonalLexicon,
+		found: &mut HashMap<String, Candidate>,
+	) {
+		if personal.is_empty() {
+			return;
+		}
+		let folded_typed = fold(lower);
+		let typed_bytes = folded_typed.as_bytes();
+		for word in personal.words_of_len(typed_bytes.len()) {
+			if !word.matches(&self.languages) {
+				continue;
+			}
+			let folded = word.folded();
+			if folded == folded_typed {
+				continue;
+			}
+			let Some((distance, tier)) = self.candidate_distance(
+				typed_bytes,
+				folded.as_bytes(),
+			) else {
+				continue;
+			};
+			insert(
+				found,
+				Candidate {
+					text: word.text().to_string(),
+					score: word.score() - distance,
+					tier,
+					personal: true,
+				},
+			);
 		}
 	}
 
@@ -695,6 +745,7 @@ impl Corrector {
 					text: word.text.to_string(),
 					score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
 					tier,
+					personal: false,
 				},
 			);
 		}
@@ -762,6 +813,17 @@ impl Corrector {
 	/// kept unless a near-key candidate is much more likely; unknown words always
 	/// get the best near-key interpretation, even when every letter is wrong.
 	pub fn suggest(&self, typed: &str) -> Suggestion {
+		self.suggest_with_personal(typed, &PersonalLexicon::default())
+	}
+
+	/// Same as [`Self::suggest`], with a host-provided personal dictionary.
+	/// Personal exact matches are protected known words; close personal matches
+	/// are suggestion-only candidates.
+	pub fn suggest_with_personal(
+		&self,
+		typed: &str,
+		personal: &PersonalLexicon,
+	) -> Suggestion {
 		let lower = typed.to_lowercase();
 		let length = lower.chars().count();
 		if lower.contains('\'') {
@@ -774,9 +836,14 @@ impl Corrector {
 			return Suggestion::empty();
 		}
 
-		let known = self.exact(&lower);
+		let dictionary_known = self.exact(&lower);
+		let personal_known = personal.exact(&fold(&lower), &self.languages);
+		let personal_exact = personal_known.is_some();
+		let mut known_texts: Vec<&str> = Vec::new();
 		let mut found: HashMap<String, Candidate> = HashMap::new();
-		let typed_score = known.map(|word| {
+		let mut typed_score: Option<f32> = None;
+
+		if let Some(word) = dictionary_known {
 			let score = word.log_freq * AGGRESSIVE_WEIGHT;
 			insert(
 				&mut found,
@@ -784,18 +851,36 @@ impl Corrector {
 					text: word.text.to_string(),
 					score,
 					tier: 1,
+					personal: false,
 				},
 			);
-			score
-		});
+			known_texts.push(word.text);
+			typed_score = Some(score);
+		}
+		if let Some(word) = personal_known {
+			let score = word.score();
+			insert(
+				&mut found,
+				Candidate {
+					text: word.text().to_string(),
+					score,
+					tier: 1,
+					personal: true,
+				},
+			);
+			known_texts.push(word.text());
+			typed_score = Some(typed_score.map_or(score, |existing| existing.max(score)));
+		}
+		let is_known = !known_texts.is_empty();
 
-		if known.is_none() {
+		if !is_known {
 			for candidate in self.candidates_inner(&lower) {
 				insert(&mut found, candidate);
 			}
 		}
 		self.add_neighbour_candidates(&lower, &mut found);
-		if known.is_none() && length >= 3 {
+		self.add_personal_candidates(&lower, personal, &mut found);
+		if !is_known && length >= 3 {
 			self.add_aggressive_elisions(&lower, &mut found);
 		}
 		self.add_contractions(&lower, &mut found);
@@ -809,11 +894,14 @@ impl Corrector {
 			. fold(f32::NEG_INFINITY, f32::max)
 		);
 		if best_tier2.is_finite() {
-			let known_text = known.map(|word| word.text);
 			list.retain(|candidate| {
 				candidate.tier != 1
-					|| Some(candidate.text.as_str()) == known_text
-					|| candidate.score >= best_tier2 - TIER1_FALLBACK_MARGIN
+				|| (
+					known_texts
+					. iter()
+					. any(|text| *text == candidate.text)
+				)
+				|| candidate.score >= best_tier2 - TIER1_FALLBACK_MARGIN
 			});
 		}
 		sort_candidates(&mut list);
@@ -824,10 +912,12 @@ impl Corrector {
 		if list.is_empty() {
 			return Suggestion::empty();
 		}
-		if let Some(word) = known {
-			if !self.is_ambiguous_contraction(&lower) {
-				list.retain(|candidate| candidate.text != word.text);
+		if !self.is_ambiguous_contraction(&lower) {
+			for text in &known_texts {
+				list.retain(|candidate| candidate.text != *text);
 			}
+		}
+		if is_known {
 			// Keep the strip useful when the typed word happens to be valid:
 			// only offer alternatives with a plausible score.
 			list.retain(|candidate| candidate.score >= MIN_SCORE);
@@ -852,6 +942,9 @@ impl Corrector {
 					apply = false;
 				}
 			}
+		}
+		if personal_exact || best.personal {
+			apply = false;
 		}
 		Suggestion {
 			candidates: list,
@@ -951,6 +1044,7 @@ impl Corrector {
 					text: text.clone(),
 					score: *log_freq * AGGRESSIVE_WEIGHT,
 					tier: 1,
+					personal: false,
 				});
 			}
 		}
@@ -967,6 +1061,7 @@ impl Corrector {
 					text: typed_base_text,
 					score: *log_freq * AGGRESSIVE_WEIGHT,
 					tier: 1,
+					personal: false,
 				});
 			}
 		}
@@ -986,6 +1081,7 @@ impl Corrector {
 					text,
 					score: -cost,
 					tier: 2,
+					personal: false,
 				});
 			}
 		}
@@ -1000,6 +1096,7 @@ impl Corrector {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::personal::PersonalWord;
 
 	fn best(typed: &str) -> Option<String> {
 		candidates(typed).into_iter().next().map(|c| c.text)
@@ -1175,6 +1272,53 @@ mod tests {
 		let list = candidates("mmm");
 		let best = list.first().expect("a weak candidate");
 		assert!(best.score < MIN_SCORE, "score {}", best.score);
+	}
+
+	#[test]
+	fn personal_words_are_protected_and_suggested() {
+		let profile = Profile::from_ids("qwerty", &["en"]).unwrap();
+		let personal = PersonalLexicon::new(vec![PersonalWord::new("zorblat", None, 200)]);
+
+		let exact = profile.suggest_with_personal("zorblat", &personal);
+		assert!(!exact.apply);
+		assert!(
+			exact
+			. candidates
+			. iter()
+			. all(|candidate| candidate.text != "zorblat")
+		);
+
+		let typo = profile.suggest_with_personal("zorbkat", &personal);
+		assert!(!typo.apply);
+		assert!(
+			typo
+			. candidates
+			. iter()
+			. any(|candidate| candidate.text == "zorblat"),
+			"candidates: {:?}",
+			typo
+			. candidates
+			. iter()
+			. map(|candidate| candidate.text.as_str())
+			. collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn personal_words_follow_their_locale() {
+		let profile = Profile::from_ids("qwerty", &["en"]).unwrap();
+		let personal = PersonalLexicon::new(vec![PersonalWord::new(
+			"zorblat",
+			Some("fr_FR".into()),
+			200,
+		)]);
+		let suggestion = profile.suggest_with_personal("zorbkat", &personal);
+		assert!(
+			suggestion
+			. candidates
+			. iter()
+			. all(|candidate| candidate.text != "zorblat")
+		);
 	}
 
 	#[test]

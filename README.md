@@ -87,6 +87,9 @@ release on the letter you want.
 - A word that is already a dictionary word still gets nearby alternatives in
   the strip (`falk` → `talk`, `to` → `go`); it is replaced automatically only
   when the known-word margin is exceeded.
+- Android's personal dictionary is loaded while the keyboard is enabled. Exact
+  entries are protected from autocorrection, close typos are offered as
+  suggestions, and entries follow their language.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
   the same way (`pa` → `la`), while common words stay put.
@@ -408,7 +411,7 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 200 tests, 13,567 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 205 tests, 13,567 fixture rows
   (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
   contraction typos), ~30,000 generated interaction sessions, 1,836 exact
   contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter

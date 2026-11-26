@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 use crate::correction::{Corrector, Suggestion};
 use crate::language::{self, Language};
 use crate::layout::{self, Layout};
+use crate::personal::PersonalLexicon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpacingRules {
@@ -83,6 +84,14 @@ impl Profile {
 
 	pub fn suggest(&self, typed: &str) -> Suggestion {
 		self.corrector().suggest(typed)
+	}
+
+	pub fn suggest_with_personal(
+		&self,
+		typed: &str,
+		personal: &PersonalLexicon,
+	) -> Suggestion {
+		self.corrector().suggest_with_personal(typed, personal)
 	}
 }
 

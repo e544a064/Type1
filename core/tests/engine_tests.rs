@@ -1,6 +1,6 @@
 use type1_core::language::{ENGLISH, FRENCH};
 use type1_core::layout;
-use type1_core::{Action, Engine, ImeActionKind, Page, Profile};
+use type1_core::{Action, Engine, ImeActionKind, Page, PersonalWord, Profile};
 
 const TEXT: i32 = 0x0000_0001;
 const CAP_SENTENCES: i32 = 0x0000_4000;
@@ -63,35 +63,31 @@ fn original_suggestions(
 ) -> Vec<String> {
 	let visible_key = visible.to_lowercase();
 	let typed_key = typed.to_lowercase();
-	(
-		type1_core::correction::suggest(typed)
-		. candidates
-		. iter()
-		. map(|candidate| {
-			if caps {
-				capitalize(&candidate.text)
-			} else {
-				candidate.text.clone()
-			}
-		})
-		. filter(|text| {
-			let key = text.to_lowercase();
-			key != visible_key && key != typed_key
-		})
-		. take(limit)
-		. collect()
-	)
+	type1_core::correction::suggest(typed)
+	. candidates
+	. iter()
+	. map(|candidate| {
+		if caps {
+			capitalize(&candidate.text)
+		} else {
+			candidate.text.clone()
+		}
+	})
+	. filter(|text| {
+		let key = text.to_lowercase();
+		key != visible_key && key != typed_key
+	})
+	. take(limit)
+	. collect()
 }
 
 fn suggestion_texts(json: &serde_json::Value) -> Vec<String> {
-	(
-		json["suggestions"]
-		. as_array()
-		. unwrap()
-		. iter()
-		. map(|value| value.as_str().unwrap().to_string())
-		. collect()
-	)
+	json["suggestions"]
+	. as_array()
+	. unwrap()
+	. iter()
+	. map(|value| value.as_str().unwrap().to_string())
+	. collect()
 }
 
 #[test]
@@ -1526,6 +1522,38 @@ fn known_words_still_suggest_nearby_words() {
 			"{typed} is a valid word and must not be replaced"
 		);
 	}
+}
+
+#[test]
+fn personal_words_are_protected_and_suggested() {
+	let mut exact = plain();
+	assert!(exact.set_profile_ids("qwerty", &["en"]));
+	exact.set_personal_words(vec![PersonalWord::new("zorblat", None, 200)]);
+	for key in ["z", "o", "r", "b", "l", "a", "t"] {
+		exact.on_key(key);
+	}
+	assert_eq!(
+		exact.on_key("space"),
+		vec![Action::Commit(" ".into())],
+		"a personal word must not be corrected"
+	);
+
+	let mut typo = plain();
+	assert!(typo.set_profile_ids("qwerty", &["en"]));
+	typo.set_personal_words(vec![PersonalWord::new("zorblat", None, 200)]);
+	for key in ["z", "o", "r", "b", "k", "a", "t"] {
+		typo.on_key(key);
+	}
+	let options = suggestions(&mut typo);
+	assert!(
+		options.iter().any(|text| text == "zorblat"),
+		"personal word should be suggested: {options:?}"
+	);
+	assert_eq!(
+		typo.on_key("space"),
+		vec![Action::Commit(" ".into())],
+		"personal suggestions must not be auto-applied"
+	);
 }
 
 #[test]

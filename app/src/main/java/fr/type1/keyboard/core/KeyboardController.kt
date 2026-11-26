@@ -55,6 +55,15 @@ class KeyboardController {
 
 	fun setImeOptions(imeOptions: Int) = NativeBridge.nativeSetImeOptions(handle, imeOptions)
 
+	internal fun setPersonalWords(entries: List<PersonalDictionaryEntry>) {
+		NativeBridge.nativeSetPersonalWords(
+			handle,
+			entries.map { it.word }.toTypedArray(),
+			entries.map { it.locale ?: "" }.toTypedArray(),
+			entries.map { it.frequency }.toIntArray(),
+		)
+	}
+
 	fun setProfile(layoutId: String, languageIds: List<String>): Boolean =
 		NativeBridge.nativeSetProfile(handle, layoutId, languageIds.joinToString(","))
 

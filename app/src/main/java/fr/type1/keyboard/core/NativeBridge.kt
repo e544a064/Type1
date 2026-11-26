@@ -27,6 +27,13 @@ internal object NativeBridge {
 
 	external fun nativeSetImeOptions(handle: Long, imeOptions: Int)
 
+	external fun nativeSetPersonalWords(
+		handle: Long,
+		words: Array<String>,
+		locales: Array<String>,
+		frequencies: IntArray,
+	)
+
 	/** JSON catalog of selectable layouts. */
 	external fun nativeLayouts(): String
 

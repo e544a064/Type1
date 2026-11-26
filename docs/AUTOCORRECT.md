@@ -517,6 +517,26 @@ The result is therefore one-letter words and accented variants first, followed
 by the keys that were probably intended. No single-letter candidate is applied
 automatically.
 
+### 5.10 Host personal dictionary
+
+A host may supply a small dynamic personal lexicon, such as Android's user
+dictionary. It is an overlay on the embedded dictionaries, not part of them.
+
+- An exact folded match is inserted as a tier-1 known word. The word is
+  protected from automatic replacement, and alternatives remain suggestions.
+- Other personal entries of the same folded length are added when they are
+  within the one-key, two-key or one-letter spelling-variant rules. They keep
+  their host frequency in the score and are marked as personal candidates.
+- Personal candidates are suggestion-only: they never trigger automatic
+  replacement, even when they rank first.
+- A missing locale applies to every profile. Otherwise the locale's language
+  prefix (`fr` in `fr_FR`, for example) must match an active language.
+- Entries containing whitespace or hyphens are skipped for now because the
+  tokenizer treats those as separate tokens. Personal shortcuts are a separate
+  feature and are not expanded by this path.
+- Changing the personal lexicon invalidates the cached suggestion for the
+  current token.
+
 ## 6. Merging and ranking
 
 ### 6.1 Duplicate handling
@@ -634,6 +654,8 @@ Let `best` be the first candidate after ranking.
 
    Otherwise the correction is ambiguous and is not applied automatically. A
    lower-tier candidate does not block the best candidate.
+4. **Personal words**: a typed personal word is never replaced automatically.
+   A personal candidate is suggestion-only even when it ranks first.
 
 The tier thresholds and both margins operate on the same score scale. The
 known-word margin is the likelihood ratio between the typed word and the
@@ -779,6 +801,8 @@ The correction memory:
 | Maximum candidates generated | 6 |
 | Contraction exact log-frequency | 8.0 |
 | Contraction alias bonus | 4.0 |
+| Personal word base score | 8.0 |
+| Personal frequency bonus | 0.01 per frequency unit |
 | Correction memory entries | 1000 |
 | Correction memory bytes | 256 KiB |
 
@@ -812,6 +836,8 @@ result is valid. Exact output can change if the lexicons or layouts change.
 - A token with mixed capitalisation is never corrected or suggested.
 - A token of one character uses only the single-letter path and is never
   auto-corrected.
+- Exact personal-dictionary words are never replaced automatically, and
+  personal candidates are never auto-applied.
 - A token longer than 31 folded symbols is not considered by the weighted
   distance.
 - The general weighted distance rejects length differences greater than two.

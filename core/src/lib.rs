@@ -15,6 +15,7 @@ pub mod json;
 pub mod language;
 pub mod layout;
 pub mod lexicon;
+pub mod personal;
 pub mod profile;
 
 mod ffi;
@@ -23,4 +24,5 @@ pub use action::{Action, ImeActionKind};
 pub use engine::{CapsMode, Engine};
 pub use language::Language;
 pub use layout::{Layout, Page, ShiftState};
+pub use personal::{PersonalLexicon, PersonalWord};
 pub use profile::{Profile, SpacingRules};
