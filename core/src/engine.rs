@@ -145,7 +145,10 @@ pub struct Engine {
 	ime_action: ImeActionKind,
 	/// True when the editor asked the enter key to stay a newline.
 	no_enter_action: bool,
+	/// Whether the suggestion strip and suggestion taps are enabled.
 	suggestions_enabled: bool,
+	/// Whether word boundaries may replace the typed word automatically.
+	autocorrect_enabled: bool,
 	last_correction: Option<CorrectionRecord>,
 	/// Words changed in this field, keyed by their visible form.
 	correction_memory: CorrectionMemory,
@@ -183,6 +186,7 @@ impl Engine {
 			ime_action: ImeActionKind::None,
 			no_enter_action: false,
 			suggestions_enabled: true,
+			autocorrect_enabled: true,
 			last_correction: None,
 			correction_memory: CorrectionMemory::default(),
 			suggestion_word: None,
@@ -270,14 +274,25 @@ impl Engine {
 	pub fn set_input_type(&mut self, input_type: i32, ime_options: i32) {
 		let class = input_type & 0x0000_000f;
 		let variation = input_type & 0x0000_0ff0;
-		let blocked_variation = matches!(
+		// Password fields stay private: no suggestions and no correction.
+		let password_variation = matches!(variation, 0x80 | 0x90 | 0xe0);
+		// Prose fields where replacing a word would be unhelpful. Suggestions
+		// still help the user type a URL, address or search query.
+		let no_autocorrect_variation = matches!(
 			variation,
-			0x10 | 0x20 | 0x30 | 0x60 | 0x70 | 0x80 | 0x90 | 0xd0 | 0xe0
+			0x10 | 0x20 | 0x30 | 0x60 | 0x70 | 0xb0 | 0xd0
 		);
 		let no_suggestions = input_type & 0x0008_0000 != 0;
 
 		let numeric = matches!(class, 0x2..=0x4);
-		self.suggestions_enabled = class == 0x1 && !blocked_variation && !no_suggestions;
+		// Non-prose fields keep suggestions even when the editor sets the
+		// no-suggestions flag (browsers do this for URL bars). Passwords never
+		// do, and the flag still hides the strip for plain text.
+		let suppress_suggestions = no_suggestions && !no_autocorrect_variation;
+		self.suggestions_enabled =
+			class == 0x1 && !password_variation && !suppress_suggestions;
+		self.autocorrect_enabled =
+			self.suggestions_enabled && !no_autocorrect_variation;
 		self.caps = if input_type & 0x0000_1000 != 0 {
 			CapsMode::Characters
 		} else if input_type & 0x0000_2000 != 0 {
@@ -501,7 +516,7 @@ impl Engine {
 		}
 
 		let mut out = Vec::new();
-		let correction = if self.suggestions_enabled {
+		let correction = if self.autocorrect_enabled {
 			self.try_correction()
 		} else {
 			None
@@ -546,7 +561,7 @@ impl Engine {
 		};
 
 		// Correct first, while the caret still sits right after the typed word.
-		let correction = if self.suggestions_enabled {
+		let correction = if self.autocorrect_enabled {
 			self.try_correction()
 		} else {
 			None

@@ -27,8 +27,12 @@ For a typed token `t`:
    (space, punctuation or an editor action), or when the user taps a
    suggestion.
 
-Autocorrection can be disabled by the host for non-prose fields. When it is
-disabled, the entire pipeline is skipped: no candidates and no replacement.
+Autocorrection can be disabled by the host for non-prose fields. In URL,
+email, name, address and search/filter fields the suggestion strip stays
+active while automatic replacement is skipped. These fields keep suggestions
+even when the editor sets the no-suggestions flag, which browsers commonly do
+for URL bars. Password fields never show suggestions. Plain-text fields honor
+the no-suggestions flag and skip the pipeline entirely.
 
 In one sentence: every multi-character candidate is a dictionary word or an
 apostrophe-restored form of one; its score is `1.5 × log-frequency` minus a

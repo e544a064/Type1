@@ -1284,6 +1284,30 @@ fn name_fields_are_not_rescued() {
 }
 
 #[test]
+fn non_prose_fields_suggest_without_autocorrecting() {
+	for variation in [0x10, 0x20, 0x30, 0x60, 0x70, 0xb0, 0xd0] {
+		for no_suggestions in [0, 0x0008_0000] {
+			let mut engine = Engine::new();
+			assert!(engine.set_profile_ids("qwerty", &["en"]));
+			engine.set_input_type(TEXT | variation | no_suggestions, 0);
+			for key in ["l", "a", "n", "g", "a", "u", "g", "e"] {
+				engine.on_key(key);
+			}
+			let options = suggestions(&mut engine);
+			assert!(
+				options.iter().any(|text| text == "language"),
+				"variation {variation:#x}, no-suggestions {no_suggestions:#x}: {options:?}"
+			);
+			assert_eq!(
+				engine.on_key("space"),
+				vec![Action::Commit(" ".into())],
+				"variation {variation:#x}, no-suggestions {no_suggestions:#x} must not autocorrect"
+			);
+		}
+	}
+}
+
+#[test]
 fn corrects_before_punctuation_without_doubling_the_boundary() {
 	let mut engine = plain();
 	for key in ["j", "a", "i"] {
@@ -1315,6 +1339,8 @@ fn correction_is_skipped_when_the_editor_asks_for_none() {
 		engine.on_key(key);
 	}
 	assert_eq!(engine.on_key("space"), vec![Action::Commit(" ".into())]);
+	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();
+	assert!(json["suggestions"].as_array().unwrap().is_empty());
 }
 
 #[test]
