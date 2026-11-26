@@ -109,10 +109,10 @@ release on the letter you want.
 - Conservative application: a confidence margin (stricter for two-letter
   tokens), mixed-case words are left alone, and all-caps words are corrected
   while keeping their capitals (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`). No
-  autocorrection in email, URI, name, address or search fields, though the
-  strip still offers suggestions there, even when the app sets the
-  no-suggestions flag. Password fields always hide the strip; plain-text fields
-  honor that flag.
+  autocorrection in email, URI, name, address or search fields (including
+  plain-text fields that use the Search action), though the strip still offers
+  suggestions there, even when the app sets the no-suggestions flag. Password
+  fields always hide the strip; other plain-text fields honor that flag.
 - French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`), with sentence
@@ -407,7 +407,7 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 199 tests, 13,567 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 200 tests, 13,567 fixture rows
   (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
   contraction typos), ~30,000 generated interaction sessions, 1,836 exact
   contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter

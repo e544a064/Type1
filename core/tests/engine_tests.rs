@@ -1308,6 +1308,31 @@ fn non_prose_fields_suggest_without_autocorrecting() {
 }
 
 #[test]
+fn search_action_fields_suggest_without_autocorrecting() {
+	for (input_type, ime_options) in [
+		(TEXT | 0x0008_0000, 0x0000_0003),
+		(TEXT | 0x0008_0000 | 0x0001_0000, 0),
+	] {
+		let mut engine = Engine::new();
+		assert!(engine.set_profile_ids("qwerty", &["en"]));
+		engine.set_input_type(input_type, ime_options);
+		for key in ["l", "a", "n", "g", "a", "u", "g", "e"] {
+			engine.on_key(key);
+		}
+		let options = suggestions(&mut engine);
+		assert!(
+			options.iter().any(|text| text == "language"),
+			"search field {input_type:#x}/{ime_options:#x} should suggest: {options:?}"
+		);
+		assert_eq!(
+			engine.on_key("space"),
+			vec![Action::Commit(" ".into())],
+			"search field {input_type:#x}/{ime_options:#x} must not autocorrect"
+		);
+	}
+}
+
+#[test]
 fn corrects_before_punctuation_without_doubling_the_boundary() {
 	let mut engine = plain();
 	for key in ["j", "a", "i"] {

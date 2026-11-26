@@ -29,10 +29,13 @@ For a typed token `t`:
 
 Autocorrection can be disabled by the host for non-prose fields. In URL,
 email, name, address and search/filter fields the suggestion strip stays
-active while automatic replacement is skipped. These fields keep suggestions
-even when the editor sets the no-suggestions flag, which browsers commonly do
-for URL bars. Password fields never show suggestions. Plain-text fields honor
-the no-suggestions flag and skip the pipeline entirely.
+active while automatic replacement is skipped. Fields whose IME action is
+Search, or which manage their own completion while suppressing dictionary
+suggestions, are treated the same way even when their input type is plain
+text. These fields keep suggestions even when the editor sets the no-suggestions
+flag, which browsers and search views commonly do. Password fields never show
+suggestions. Other plain-text fields honor the no-suggestions flag and skip the
+pipeline entirely.
 
 In one sentence: every multi-character candidate is a dictionary word or an
 apostrophe-restored form of one; its score is `1.5 × log-frequency` minus a

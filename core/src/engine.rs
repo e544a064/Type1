@@ -282,17 +282,22 @@ impl Engine {
 			variation,
 			0x10 | 0x20 | 0x30 | 0x60 | 0x70 | 0xb0 | 0xd0
 		);
+		// Android's search views often use plain text plus the search action
+		// or their own completion, and set the no-suggestions flag.
+		let search_action = ime_options & 0x0000_00ff == 0x0000_0003;
 		let no_suggestions = input_type & 0x0008_0000 != 0;
+		let own_completion = input_type & 0x0001_0000 != 0 && no_suggestions;
+		let search_field = no_autocorrect_variation || search_action || own_completion;
 
 		let numeric = matches!(class, 0x2..=0x4);
 		// Non-prose fields keep suggestions even when the editor sets the
 		// no-suggestions flag (browsers do this for URL bars). Passwords never
 		// do, and the flag still hides the strip for plain text.
-		let suppress_suggestions = no_suggestions && !no_autocorrect_variation;
+		let suppress_suggestions = no_suggestions && !search_field;
 		self.suggestions_enabled =
 			class == 0x1 && !password_variation && !suppress_suggestions;
 		self.autocorrect_enabled =
-			self.suggestions_enabled && !no_autocorrect_variation;
+			self.suggestions_enabled && !search_field;
 		self.caps = if input_type & 0x0000_1000 != 0 {
 			CapsMode::Characters
 		} else if input_type & 0x0000_2000 != 0 {
