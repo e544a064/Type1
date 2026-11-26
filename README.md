@@ -6,15 +6,9 @@ logic is written in **Rust** and shared through a tiny JNI bridge; Android only
 draws the three bands and applies editor actions. That split is deliberate: an
 iOS port later only needs a new UI + FFI shim.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ ⇧        best     very     beat     nest            ⌫        │  38 dp
-├──────────────────────────────────────────────────────────────┤
-│ A q w Z s x E d c R f v T g b Y h n U j I k O l P m          │  56 dp
-├──────────────────────────────────────────────────────────────┤
-│ 123      ,         FR           .        ⏎                 │  48 dp
-└──────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/type1-keyboard.png" alt="Type1 keyboard" width="540">
+</p>
 
 The middle band has **no key boxes and no groups**: 26 evenly spaced letters in
 physical column order (AZERTY `A Q W`, `Z S X`, ...; QWERTY `Q A Z`, `W S X`,
