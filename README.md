@@ -37,6 +37,9 @@ release on the letter you want.
   - **Behaviour** — spacebar drag, long-press backspace and swipe sensitivity.
   - **Appearance** — space-row height.
   - **About** — dictionary credits and clickable GPL/CC BY-SA notices.
+
+  A final **Personal dictionary** row opens Android’s system user-dictionary
+  settings.
 - The settings screens have English and French resources, with English as the
   default and French in `values-fr`. Android 13+ lists both in the system's
   per-app language setting.

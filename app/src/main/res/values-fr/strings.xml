@@ -31,6 +31,8 @@
 	<string name="settings_behaviour_summary">Glissement de l\'espace, appui long sur ⌫ et sensibilité.</string>
 	<string name="settings_appearance_summary">Hauteur de la rangée d\'espace.</string>
 	<string name="settings_about_summary">Licences et crédits des dictionnaires.</string>
+	<string name="settings_personal_dictionary">Dictionnaire personnel</string>
+	<string name="settings_personal_dictionary_summary">Gérer les mots personnalisés d\'Android.</string>
 	<string name="settings_appearance_hint">Modifie la hauteur de la rangée du bas sans changer les lettres.</string>
 	<string name="settings_licenses">Licences</string>
 	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>

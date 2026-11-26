@@ -2,6 +2,7 @@ package fr.type1.keyboard
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -47,6 +48,17 @@ class SettingsActivity : SettingsPageActivity() {
 			R.string.settings_about,
 			R.string.settings_about_summary,
 		) { startActivity(Intent(this, AboutActivity::class.java)) }
+		addSpacer(rows)
+		addRow(
+			rows,
+			R.drawable.ic_settings_dictionary,
+			R.string.settings_personal_dictionary,
+			R.string.settings_personal_dictionary_summary,
+		) {
+			runCatching {
+				startActivity(Intent(Settings.ACTION_USER_DICTIONARY_SETTINGS))
+			}
+		}
 	}
 
 	private fun addRow(
