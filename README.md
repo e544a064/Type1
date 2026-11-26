@@ -40,6 +40,8 @@ release on the letter you want.
 - The settings screens have English and French resources, with English as the
   default and French in `values-fr`. Android 13+ lists both in the system's
   per-app language setting.
+- The settings activities are resizeable for split-screen, freeform/desktop
+  windows and keyboard-driven resizing.
 - Long-press `,` to open a small shortcut bubble. It offers the emoji panel,
   the settings gear, and—when at least two profiles exist—a globe that cycles
   to the next profile. The emoji panel itself has a scrollable grid with a
