@@ -253,6 +253,15 @@ fn lets_only_autocorrects_at_sentence_start() {
 	for key in ["l", "e", "t", "s"] {
 		start.on_key(key);
 	}
+	let options = suggestions(&mut start);
+	assert!(
+		options.iter().any(|text| text == "let's"),
+		"let's should be suggested: {options:?}"
+	);
+	assert!(
+		options.iter().any(|text| text == "lets"),
+		"lets should stay suggested: {options:?}"
+	);
 	assert_eq!(
 		start.on_key("space"),
 		vec![
@@ -271,14 +280,60 @@ fn lets_only_autocorrects_at_sentence_start() {
 	for key in ["l", "e", "t", "s"] {
 		middle.on_key(key);
 	}
+	let options = suggestions(&mut middle);
 	assert!(
-		suggestions(&mut middle).iter().any(|text| text == "let's"),
-		"let's should still be suggested"
+		options.iter().any(|text| text == "let's"),
+		"let's should still be suggested: {options:?}"
+	);
+	assert!(
+		options.iter().any(|text| text == "lets"),
+		"lets should still be suggested: {options:?}"
 	);
 	assert_eq!(
 		middle.on_key("space"),
 		vec![Action::Commit(" ".into())],
 		"lets must not be replaced mid-sentence"
+	);
+}
+
+#[test]
+fn ambiguous_contraction_typos_offer_both_forms() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["l", "e", "t", "x"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	assert!(
+		options.iter().any(|text| text == "let's"),
+		"let's should be suggested: {options:?}"
+	);
+	assert!(
+		options.iter().any(|text| text == "lets"),
+		"lets should be suggested: {options:?}"
+	);
+}
+
+#[test]
+fn tapping_the_ordinary_lets_keeps_it() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["en"]));
+	for key in ["l", "e", "t", "s"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	let index = (
+		options
+		. iter()
+		. position(|text| text == "lets")
+		.expect("lets")
+	);
+	assert_eq!(
+		engine.on_key(&format!("sug:{index}")),
+		vec![
+			Action::DeleteChars(4),
+			Action::CommitSuggestion("lets ".into()),
+		]
 	);
 }
 

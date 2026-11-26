@@ -59,8 +59,9 @@ release on the letter you want.
   `douv` and `eont` also become `don't` the same way French elisions work.
   A strong ordinary correction still wins when clearly better
   (`therde` → `there`). Ambiguous forms such as `its`/`it's`, `well`/`we'll`
-  and `ill`/`I'll` are left alone. `lets` is corrected to `let's` only at the
-  start of a sentence; mid-sentence it stays `lets` but `let's` is offered.
+  and `ill`/`I'll` are left alone. `lets` keeps `lets` and `let's` side by
+  side in the strip; it autocorrects to `let's` only at the start of a sentence,
+  and stays `lets` mid-sentence unless `let's` is picked.
 - Narrow-key rescue: when every typed key is one or two keys away from a
   word, the most frequent such word is offered (`geqnvx` → `beauté`,
   `vqjmd` → `t'aime`, `bknjpur` → `bonjour`). One-key candidates always rank
@@ -399,7 +400,7 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 195 tests, 13,567 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 197 tests, 13,567 fixture rows
   (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
   contraction typos), ~30,000 generated interaction sessions, 1,836 exact
   contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter

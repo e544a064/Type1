@@ -436,21 +436,23 @@ Two cases are applied:
 ```
 
 - **Alias**: if any already-generated candidate has the contraction key as its
-  surface text, remove that candidate and re-insert the contraction with the
-  same tier and score
+  surface text, re-insert the contraction with the same tier and score
 
 ```
 candidate_score + 4.0
 ```
 
+For an unambiguous key the ordinary candidate is removed; for an ambiguous key
+it is kept (see below).
+
 The alias rule means a typo whose best ordinary candidate is `dont` can still
 produce `don't`.
 
 Some keys are also ordinary words. A language lists these as ambiguous
-contractions (`lets` in English). They still produce the contraction candidate
-and suggestion, but the engine only auto-applies the contraction when the word
-started at a sentence boundary. Mid-sentence `lets` is left as typed while
-`let's` remains available in the strip.
+contractions (`lets` in English). The ordinary candidate is kept alongside the
+contraction, so both `lets` and `let's` stay in the strip and either can be
+picked. The engine only auto-applies the contraction when the word started at a
+sentence boundary; mid-sentence `lets` is left as typed.
 
 A contraction's surface form may contain an apostrophe and may have canonical
 capitalisation. Case is applied to it like any other candidate.

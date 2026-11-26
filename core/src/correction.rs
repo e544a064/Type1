@@ -605,6 +605,22 @@ fn sort_candidates(list: &mut [Candidate]) {
 }
 
 impl Corrector {
+	/// A contraction key that is also an ordinary word (`lets`). Its ordinary
+	/// candidate is kept alongside the contraction.
+	fn is_ambiguous_contraction(&self, lower: &str) -> bool {
+		self
+		.languages
+		.iter()
+		.any(|language| {
+			let language = *language;
+			language.ambiguous_contractions.contains(&lower)
+				&& !self.languages.iter().any(|other| {
+					!std::ptr::eq(*other, language)
+						&& other.dictionary.exact(lower).is_some()
+				})
+		})
+	}
+
 	/// Restore the apostrophe in curated contractions (`dont` -> `don't`).
 	///
 	/// Any normal candidate that equals a contraction key is renamed to the
@@ -623,6 +639,7 @@ impl Corrector {
 				continue;
 			}
 			for &(key, contraction) in language.contractions {
+				let ambiguous = language.ambiguous_contractions.contains(&key);
 				if lower == key {
 					insert(
 						found,
@@ -633,7 +650,20 @@ impl Corrector {
 						},
 					);
 				}
-				if let Some(candidate) = found.remove(key) {
+				if ambiguous {
+					// Keep the ordinary word as well: `lets` must stay
+					// available next to `let's`.
+					if let Some(candidate) = found.get(key).cloned() {
+						insert(
+							found,
+							Candidate {
+								text: contraction.to_string(),
+								score: candidate.score + CONTRACTION_ALIAS_BONUS,
+								tier: candidate.tier,
+							},
+						);
+					}
+				} else if let Some(candidate) = found.remove(key) {
 					insert(
 						found,
 						Candidate {
@@ -800,7 +830,9 @@ impl Corrector {
 		}
 
 		if let Some(word) = known {
-			list.retain(|candidate| candidate.text != word.text);
+			if !self.is_ambiguous_contraction(&lower) {
+				list.retain(|candidate| candidate.text != word.text);
+			}
 		}
 		list.truncate(MAX_RESULTS);
 

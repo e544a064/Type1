@@ -6,7 +6,7 @@
 //! single-letter suites are generated from the live language/layout data so a
 //! new contraction or layout is covered automatically.
 
-use type1_core::language::ENGLISH_CONTRACTIONS;
+use type1_core::language::{ENGLISH, ENGLISH_CONTRACTIONS};
 use type1_core::layout::{Layout, AZERTY, QWERTY};
 use type1_core::lexicon::fold;
 use type1_core::{Action, Engine};
@@ -166,10 +166,13 @@ fn thousands_of_fuzzy_contractions_are_corrected() {
 					options.iter().any(|text| text == &wanted),
 					"typing {typed} ({case:?}) on {layout}: missing {wanted} in {options:?}"
 				);
-				assert!(
-					!options.iter().any(|text| text == &bare),
-					"typing {typed} ({case:?}) on {layout}: bare {bare} in {options:?}"
-				);
+				let bare_key = bare.to_lowercase();
+				if !ENGLISH.ambiguous_contractions.contains(&bare_key.as_str()) {
+					assert!(
+						!options.iter().any(|text| text == &bare),
+						"typing {typed} ({case:?}) on {layout}: bare {bare} in {options:?}"
+					);
+				}
 				assert_eq!(
 					engine.on_key("space"),
 					vec![
@@ -221,10 +224,13 @@ fn more_fuzzy_contractions_are_corrected() {
 				options.iter().any(|text| text.as_str() == expected),
 				"typing {typed} on {layout}: missing {expected} in {options:?}"
 			);
-			assert!(
-				!options.iter().any(|text| text.as_str() == bare.as_str()),
-				"typing {typed} on {layout}: bare {bare} in {options:?}"
-			);
+			let bare_key = bare.to_lowercase();
+			if !ENGLISH.ambiguous_contractions.contains(&bare_key.as_str()) {
+				assert!(
+					!options.iter().any(|text| text.as_str() == bare.as_str()),
+					"typing {typed} on {layout}: bare {bare} in {options:?}"
+				);
+			}
 			assert_eq!(
 				engine.on_key("space"),
 				vec![
