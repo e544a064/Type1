@@ -1,5 +1,6 @@
 package fr.type1.keyboard
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.database.ContentObserver
 import android.icu.text.BreakIterator
@@ -172,6 +173,15 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		Prefs.addRecentEmoji(this, emoji)
 		// Re-read the context once the editor has accepted the emoji.
 		keyboardView?.post { syncContextFromEditor() }
+	}
+
+	override fun onOpenSettings() {
+		requestHideSelf(0)
+		val intent = (
+			Intent(this, SetupActivity::class.java)
+			. addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+		)
+		startActivity(intent)
 	}
 
 	override fun onSpaceDragStart(): Pair<Int, Int> {

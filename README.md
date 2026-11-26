@@ -40,7 +40,8 @@ release on the letter you want.
   system's per-app language setting.
 - Long-press `,` for the emoji picker: a scrollable grid with a category strip
   (recent emoji first, then smileys, people, activities, objects, travel,
-  sports, symbols, signs, flags and text emoticons). With at least two
+  sports, symbols, signs, flags and text emoticons). The long-press bubble also
+  has a gear button that opens the keyboard settings. With at least two
   profiles, the same popup also shows a globe that cycles to the next profile
   and wraps around at the end of the list.
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)

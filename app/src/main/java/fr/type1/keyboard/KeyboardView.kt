@@ -44,6 +44,7 @@ class KeyboardView(
 		fun onActions(actions: List<KeyAction>)
 		fun onCycleProfile()
 		fun onEmoji(emoji: String)
+		fun onOpenSettings()
 		/** Grapheme-cluster room left and right of the caret for a spacebar drag. */
 		fun onSpaceDragStart(): Pair<Int, Int>
 	}
@@ -575,6 +576,7 @@ class KeyboardView(
 			entries += AltEntry(PROFILE_NEXT, "", "planet")
 		}
 		entries += AltEntry(EMOJI_PICKER, "🙂")
+		entries += AltEntry(SETTINGS_OPEN, "\u2699")
 		return showAltEntries(
 			entries,
 			rect,
@@ -819,10 +821,12 @@ class KeyboardView(
 			)
 			val cycleProfile = entry?.keyId == PROFILE_NEXT
 			val openEmoji = entry?.keyId == EMOJI_PICKER
+			val openSettings = entry?.keyId == SETTINGS_OPEN
 			dismissAltPopup()
 			when {
 				cycleProfile -> listener?.onCycleProfile()
 				openEmoji -> openEmojiPicker()
+				openSettings -> listener?.onOpenSettings()
 				entry != null -> emit(controller.press(entry.keyId))
 				switchPage -> emit(controller.press("page"))
 			}
@@ -1151,6 +1155,7 @@ class KeyboardView(
 		const val PLANET_CELL_DP = 64f
 		const val PROFILE_NEXT = "profile:next"
 		const val EMOJI_PICKER = "emoji:picker"
+		const val SETTINGS_OPEN = "settings:open"
 		// ShiftState::Locked in the core.
 		const val SHIFT_LOCKED = 2
 	}
