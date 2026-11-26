@@ -146,10 +146,13 @@ fn named_regressions() {
 	for (typed, expected) in cases {
 		if typed == expected {
 			let suggestion = correction::suggest(typed);
+			assert!(!suggestion.apply, "{typed} should not be corrected");
 			assert!(
-				suggestion.candidates.is_empty(),
-				"{typed} should be left alone, got {:?}",
-				suggestion.candidates.first().map(|c| &c.text)
+				suggestion
+				. candidates
+				.iter()
+				.all(|candidate| candidate.text != typed),
+				"{typed} should not suggest itself"
 			);
 			continue;
 		}
@@ -160,16 +163,19 @@ fn named_regressions() {
 }
 
 #[test]
-fn common_words_stay_put() {
+fn common_words_are_not_autocorrected() {
 	for word in [
 		"test", "la", "ma", "bonjour", "maison", "personne", "vraiment", "toutes",
 		"comment",
 	] {
 		let suggestion = correction::suggest(word);
+		assert!(!suggestion.apply, "{word} should not be corrected");
 		assert!(
-			suggestion.candidates.is_empty(),
-			"{word} should be left alone, got {:?}",
-			suggestion.candidates.first().map(|c| &c.text)
+			suggestion
+			. candidates
+			.iter()
+			.all(|candidate| candidate.text != word),
+			"{word} should not suggest itself"
 		);
 	}
 }

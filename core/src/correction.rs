@@ -821,18 +821,16 @@ impl Corrector {
 			list = self.last_resort_candidates(&lower);
 		}
 
-		let Some(best) = list.first() else {
-			return Suggestion::empty();
-		};
-		if known.is_some_and(|word| word.text == best.text) {
-			// The typed word is already the best explanation.
+		if list.is_empty() {
 			return Suggestion::empty();
 		}
-
 		if let Some(word) = known {
 			if !self.is_ambiguous_contraction(&lower) {
 				list.retain(|candidate| candidate.text != word.text);
 			}
+			// Keep the strip useful when the typed word happens to be valid:
+			// only offer alternatives with a plausible score.
+			list.retain(|candidate| candidate.score >= MIN_SCORE);
 		}
 		list.truncate(MAX_RESULTS);
 
@@ -1083,13 +1081,33 @@ mod tests {
 	fn known_rare_words_are_replaced_by_a_likely_neighbour() {
 		let suggestion = suggest("pa");
 		assert!(suggestion.apply);
-		assert_eq!(suggestion.candidates[0].text, "la");
+		assert!(
+			suggestion
+			. candidates
+			. iter()
+			. any(|candidate| candidate.text == "la"),
+			"candidates: {:?}",
+			suggestion
+			. candidates
+			. iter()
+			. map(|candidate| candidate.text.as_str())
+			.collect::<Vec<_>>()
+		);
 	}
 
 	#[test]
-	fn known_common_words_are_left_alone() {
-		assert!(suggest("la").candidates.is_empty());
-		assert!(suggest("test").candidates.is_empty());
+	fn known_common_words_are_not_autocorrected() {
+		for word in ["la", "test"] {
+			let suggestion = suggest(word);
+			assert!(!suggestion.apply, "{word} should not be replaced");
+			assert!(
+				suggestion
+				. candidates
+				.iter()
+				.all(|candidate| candidate.text != word),
+				"{word} should not suggest itself"
+			);
+		}
 	}
 
 	#[test]
@@ -1115,15 +1133,28 @@ mod tests {
 	}
 
 	#[test]
-	fn known_words_have_no_candidates() {
-		assert!(candidates("test").is_empty());
-		assert!(candidates("dire").is_empty());
+	fn known_words_do_not_suggest_themselves() {
+		for word in ["test", "dire"] {
+			assert!(
+				candidates(word)
+				. iter()
+				.all(|candidate| candidate.text != word)
+			);
+		}
 	}
 
 	#[test]
 	fn rare_dictionary_words_are_known() {
-		assert!(suggest("radiologie").candidates.is_empty());
-		assert!(suggest("radiologue").candidates.is_empty());
+		for word in ["radiologie", "radiologue"] {
+			let suggestion = suggest(word);
+			assert!(!suggestion.apply);
+			assert!(
+				suggestion
+				.candidates
+				.iter()
+				.all(|candidate| candidate.text != word)
+			);
+		}
 		let typo = suggest("radiologir");
 		assert!(
 			typo

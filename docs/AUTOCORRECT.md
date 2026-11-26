@@ -545,10 +545,10 @@ This sort applies to the normal candidate pool. The last-resort list is the
 exception: it is already ordered by distance, then frequency, then text, and is
 not re-sorted by score.
 
-If the typed token is an exact known word and that known word is the best
-candidate, the suggestion list is empty: the corrector has nothing to offer.
-If the known word is not the best, remove the known surface form from the list
-before truncation, so the strip does not repeat the typed word as a “correction”.
+If the typed token is an exact known word, remove the known surface form before
+truncation, so the strip does not repeat the typed word as a “correction”. Its
+near-key and spelling alternatives stay in the list; if none pass the
+known-word confidence filter, the strip is empty.
 
 ### 6.3 What each tier means
 
@@ -616,6 +616,8 @@ Let `best` be the first candidate after ranking.
    This protects common words and, with a large lexicon, rare but valid words:
    `la` stays `la`, `radiologie` stays `radiologie`, while a much more likely
    neighbour can still replace a rare word such as `pa → la`.
+   When the margin is not met, the alternatives remain suggestions: `falk`
+   stays `falk` and offers `talk`, while `to` offers `go`.
 3. **Runner-up margin**: if another candidate has the same tier as `best`,
    require
 
@@ -673,7 +675,8 @@ For the current word, the strip:
   it, duplicate display forms;
 - keeps the first few according to the table above.
 
-For a known word that is already the best explanation, the strip is empty.
+For a known word, the strip shows nearby alternatives with a plausible score
+and omits the typed form itself. If no alternative passes, the strip is empty.
 
 ### 9.3 After an automatic correction
 
@@ -814,8 +817,8 @@ result is valid. Exact output can change if the lexicons or layouts change.
 - Tier-3 candidates are never auto-applied.
 - A one-key candidate more than `5.5` score units below the best tier-2
   candidate is discarded, except for the exact known-word baseline.
-- A known word that is already the best candidate produces an empty suggestion
-  list.
+- A known word is omitted from its own suggestion list; nearby alternatives
+  remain, but only those above the minimum score.
 - Duplicate surface forms keep the lower tier, and then the higher score.
 - Final ordering is deterministic: tier, then score, then text for the normal
   pool; the last-resort pool keeps its distance-first order.

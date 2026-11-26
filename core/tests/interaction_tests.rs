@@ -53,16 +53,8 @@ static SAFE_WORDS: OnceLock<Vec<&'static str>> = OnceLock::new();
 
 fn is_safe_word(word: &str) -> bool {
 	type1_core::dictionary::exact(word).is_some()
-	&& (
-		type1_core::correction::suggest(word)
-		. candidates
-		. is_empty()
-	)
-	&& (
-		type1_core::correction::suggest(&capitalize(word))
-		. candidates
-		. is_empty()
-	)
+		&& !type1_core::correction::suggest(word).apply
+		&& !type1_core::correction::suggest(&capitalize(word)).apply
 }
 
 /// Common words the corrector leaves alone, including their capitalised form.

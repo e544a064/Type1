@@ -1457,6 +1457,27 @@ fn corrects_a_known_rare_word_to_a_neighbouring_word() {
 }
 
 #[test]
+fn known_words_still_suggest_nearby_words() {
+	for (typed, expected) in [("falk", "talk"), ("to", "go")] {
+		let mut engine = plain();
+		assert!(engine.set_profile_ids("qwerty", &["en"]));
+		for key in typed.chars() {
+			engine.on_key(&key.to_string());
+		}
+		let options = suggestions(&mut engine);
+		assert!(
+			options.iter().any(|text| text == expected),
+			"{expected} should be suggested for {typed}: {options:?}"
+		);
+		assert_eq!(
+			engine.on_key("space"),
+			vec![Action::Commit(" ".into())],
+			"{typed} is a valid word and must not be replaced"
+		);
+	}
+}
+
+#[test]
 fn corrects_a_full_word_with_nearby_keys() {
 	let mut engine = plain();
 	for key in ["s", "e", "c", "g"] {
@@ -1673,7 +1694,7 @@ fn moving_back_into_a_word_offers_a_recorrection() {	let mut engine = plain();
 }
 
 #[test]
-fn moving_back_into_a_known_word_keeps_the_strip_empty() {
+fn moving_back_into_a_known_word_without_alternatives_keeps_the_strip_empty() {
 	let mut engine = plain();
 	engine.set_context_word("bon", "jour");
 	let json: serde_json::Value = serde_json::from_str(&engine.render_json()).unwrap();

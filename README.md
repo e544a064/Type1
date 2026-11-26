@@ -81,6 +81,9 @@ release on the letter you want.
   `à`, `a`, then `w` and `z`; an English neighbour of `I` offers `I` first, then
   both `i` and the other nearby letters. Single letters are suggestion-only,
   never auto-corrected.
+- A word that is already a dictionary word still gets nearby alternatives in
+  the strip (`falk` → `talk`, `to` → `go`); it is replaced automatically only
+  when the known-word margin is exceeded.
 - Short words are corrected too, to the most likely candidate: `pq` → `la`
   (with `ma` offered next in the strip). Rare dictionary words are corrected
   the same way (`pa` → `la`), while common words stay put.
@@ -400,7 +403,7 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 197 tests, 13,567 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 198 tests, 13,567 fixture rows
   (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
   contraction typos), ~30,000 generated interaction sessions, 1,836 exact
   contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter
