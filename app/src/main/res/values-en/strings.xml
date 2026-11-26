@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Type1</string>
+	<string name="ime_name">Type1 (AZERTY, one line)</string>
+	<string name="subtype_azerty">French (Type1 AZERTY)</string>
+	<string name="subtype_azerty_ascii">French (Type1 AZERTY, ASCII)</string>
+
+	<string name="setup_title">Type1</string>
+	<string name="setup_subtitle">An AZERTY or QWERTY keyboard that fits on one line.</string>
+	<string name="setup_step_enable">1. Enable Type1 in settings</string>
+	<string name="setup_step_select">2. Choose Type1 as your keyboard</string>
+	<string name="setup_hint">Long-press a letter for accents. Drag along the letter row to correct before lifting.</string>
+	<string name="setup_profiles">Keyboard profiles</string>
+	<string name="setup_profiles_manage">Manage profiles</string>
+	<string name="setup_profiles_hint">Each profile pairs a layout with one or more languages. Long-press the comma for emoji; with several profiles, use the globe to switch to the next one.</string>
+	<string name="setup_profiles_none">No profile configured — AZERTY · French by default.</string>
+	<string name="setup_demo_hint">Try the keyboard here…</string>
+	<string name="setup_space_cursor">Drag on the spacebar to move the cursor</string>
+	<string name="setup_backspace_hold">Long-press ⌫</string>
+	<string name="backspace_hold_none">Do nothing</string>
+	<string name="backspace_hold_repeat">Repeat deletion</string>
+	<string name="backspace_hold_select">Select by dragging left</string>
+	<string name="setup_swipe_sensitivity">Swipe sensitivity</string>
+	<string name="setup_swipe_value">%1$d dp per character</string>
+	<string name="setup_swipe_hint">The smaller the value, the faster the cursor moves. Applies to dragging the spacebar and selecting with ⌫.</string>
+	<string name="setup_utility_height">Space row height</string>
+	<string name="setup_height_value">%1$d dp</string>
+	<string name="dictionary_credit">Dictionaries: Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
+
+	<string name="profiles_title">Keyboard profiles</string>
+	<string name="profiles_subtitle">Each profile chooses a layout and the languages to correct.</string>
+	<string name="profiles_empty">No profiles yet. Tap + to create one.</string>
+	<string name="profiles_add">+</string>
+	<string name="profiles_add_description">Add a profile</string>
+	<string name="profiles_edit">Edit</string>
+	<string name="profiles_delete">Delete</string>
+	<string name="profiles_active">Active</string>
+	<string name="profile_new">New profile</string>
+	<string name="profile_edit">Edit profile</string>
+	<string name="profile_layout">Layout</string>
+	<string name="profile_languages">Languages</string>
+	<string name="profile_need_language">Choose at least one language.</string>
+	<string name="profile_save">Save</string>
+	<string name="profile_cancel">Cancel</string>
+	<string name="profile_delete_title">Delete this profile?</string>
+	<string name="profile_delete_message">The profile “%1$s” will be deleted.</string>
+	<string name="profile_delete_confirm">Delete</string>
+
+	<string name="emoji_recent">Recent</string>
+	<string name="emoji_smileys">Smileys</string>
+	<string name="emoji_people">People</string>
+	<string name="emoji_activities">Activities</string>
+	<string name="emoji_objects">Objects</string>
+	<string name="emoji_travel">Travel</string>
+	<string name="emoji_sports">Sports</string>
+	<string name="emoji_symbols">Symbols</string>
+	<string name="emoji_signs">Signs</string>
+	<string name="emoji_flags">Flags</string>
+	<string name="emoji_text">Text</string>
+	<string name="emoji_empty_recent">No recent emoji.</string>
+</resources>

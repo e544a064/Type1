@@ -35,6 +35,8 @@ release on the letter you want.
   dropdown and the languages are toggles (Français, English (UK)). The list
   starts empty, and the keyboard falls back to `AZERTY · Français` until a
   profile exists.
+- The setup and profile screens have French and English resources. Android 13+
+  lists both in the system's per-app language setting.
 - Long-press `,` for the emoji picker: a scrollable grid with a category strip
   (recent emoji first, then smileys, people, activities, objects, travel,
   sports, symbols, signs, flags and text emoticons). With at least two
@@ -413,7 +415,7 @@ This snapshot was built and linted on Windows with:
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
 - `./gradlew assembleDebug`: APK 19.7 MB, contains the three `.so` files.
-- `./gradlew lintDebug`: 0 errors (3 typo false positives on "Type1").
+- `./gradlew lintDebug`: 0 errors (8 typo false positives on "Type1").
 - JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 
 No device was attached, so on-device behaviour (touch, IME lifecycle, sound) is
