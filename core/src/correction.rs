@@ -356,6 +356,84 @@ impl Corrector {
 		self.candidates_inner(&lower)
 	}
 
+	fn add_elisions(
+		&self,
+		lower: &str,
+		found: &mut HashMap<String, Candidate>,
+		include_remainder_typos: bool,
+	) {
+		if !self.elisions {
+			return;
+		}
+		for language in self
+		. languages
+		. iter()
+		. copied()
+		.filter(|language| language.elisions)
+		{
+			for &(clitic, penalty) in CLITICS {
+				if !lower.starts_with(clitic) {
+					continue;
+				}
+				let rest = &lower[clitic.len()..];
+				// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
+				let shortest = if clitic.len() >= 3 { 1 } else { 2 };
+				if rest.chars().count() < shortest {
+					continue;
+				}
+
+				let folded_rest = fold(rest);
+				if let Some(word) = language.dictionary.folded(&folded_rest) {
+					if elision_allowed(clitic, word) {
+						let (remainder, log_freq) =
+							elision_remainder(clitic, word, language.dictionary);
+						insert_elision(
+							found,
+							clitic,
+							remainder,
+							log_freq,
+							penalty,
+							APOSTROPHE_COST,
+							1,
+						);
+					}
+				}
+
+				// Short remainders are covered by the exact lookup above; scanning
+				// them for typos only invents forms like `j'air`.
+				if !include_remainder_typos || folded_rest.len() < 3 {
+					continue;
+				}
+				for word in language.dictionary.words_of_len(folded_rest.len()) {
+					if !elision_allowed(clitic, word) {
+						continue;
+					}
+					let Some(distance) = self.distance(
+						folded_rest.as_bytes(),
+						word.folded.as_bytes(),
+						MAX_COST,
+					) else {
+						continue;
+					};
+					if distance == 0.0 {
+						continue;
+					}
+					let (remainder, log_freq) =
+						elision_remainder(clitic, word, language.dictionary);
+					insert_elision(
+						found,
+						clitic,
+						remainder,
+						log_freq,
+						penalty,
+						APOSTROPHE_COST + distance,
+						1,
+					);
+				}
+			}
+		}
+	}
+
 	fn candidates_inner(&self, lower: &str) -> Vec<Candidate> {
 		debug_assert!(lower.chars().count() >= 2 && !lower.contains('\''));
 		let folded_typed = fold(lower);
@@ -378,71 +456,7 @@ impl Corrector {
 
 		// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
 		// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
-		if self.elisions {
-			for language in self
-			. languages
-			. iter()
-			. copied()
-			. filter(|language| language.elisions)
-			{
-				for &(clitic, penalty) in CLITICS {
-					if !lower.starts_with(clitic) {
-						continue;
-					}
-					let rest = &lower[clitic.len()..];
-					// Long clitics (`jusqu`, `lorsqu`) can precede a single-letter word.
-					let shortest = if clitic.len() >= 3 { 1 } else { 2 };
-					if rest.chars().count() < shortest {
-						continue;
-					}
-
-					let folded_rest = fold(rest);
-					if let Some(word) = language.dictionary.folded(&folded_rest) {
-						if elision_allowed(clitic, word) {
-							let (remainder, log_freq) = elision_remainder(clitic, word, language.dictionary);
-							insert_elision(
-								&mut found,
-								clitic,
-								remainder,
-								log_freq,
-								penalty,
-								APOSTROPHE_COST,
-								1,
-							);
-						}
-					}
-
-					// Short remainders are covered by the exact lookup above; scanning
-					// them for typos only invents forms like `j'air`.
-					if folded_rest.len() < 3 {
-						continue;
-					}
-					for word in language.dictionary.words_of_len(folded_rest.len()) {
-						if !elision_allowed(clitic, word) {
-							continue;
-						}
-						let Some(distance) =
-							self.distance(folded_rest.as_bytes(), word.folded.as_bytes(), MAX_COST)
-						else {
-							continue;
-						};
-						if distance == 0.0 {
-							continue;
-						}
-						let (remainder, log_freq) = elision_remainder(clitic, word, language.dictionary);
-						insert_elision(
-							&mut found,
-							clitic,
-							remainder,
-							log_freq,
-							penalty,
-							APOSTROPHE_COST + distance,
-							1,
-						);
-					}
-				}
-			}
-		}
+		self.add_elisions(lower, &mut found, true);
 
 		// Typographical and neighbouring-key errors.
 		let typed_len = typed_bytes.len();
@@ -877,6 +891,10 @@ impl Corrector {
 			for candidate in self.candidates_inner(&lower) {
 				insert(&mut found, candidate);
 			}
+		} else {
+			// A known word in one language (for example English `jai`) must not
+			// hide the elision that another active language can build from it.
+			self.add_elisions(&lower, &mut found, false);
 		}
 		self.add_neighbour_candidates(&lower, &mut found);
 		self.add_personal_candidates(&lower, personal, &mut found);

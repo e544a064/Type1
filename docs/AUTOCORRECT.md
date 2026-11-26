@@ -233,8 +233,10 @@ candidates into one pool; the pool is then ranked by the tier and score rules
 in §6. The channels are described here in the order they are usually applied.
 
 If the typed token is already a known word, the direct-edit, missing-accent and
-elision channels are skipped; only the known baseline, whole-word neighbour
-rescue and contractions can produce candidates. If the token is unknown, every
+remainder-typo channels are skipped; the known baseline, whole-word neighbour
+rescue, exact elision and contractions can still produce candidates. This keeps
+a word that exists only in one active language from hiding a valid elision in
+another (`jai` in an English list must not hide French `j'ai`). If the token is unknown, every
 channel described below is eligible.
 
 Each candidate also carries a confidence tier: tier 1 for trusted explanations,
@@ -294,9 +296,9 @@ are possible only if their total weighted cost remains at most `1.55`.
 ### 5.4 French elision
 
 Elision restores a missing apostrophe between a clitic and a following word.
-This channel is active only for languages that enable elision, and like the
-direct channel it is generated only when the token is not already an exact known
-word.
+This channel is active only for languages that enable elision. Its exact
+clitic-plus-word part also runs when the typed token is already a known word in
+another active language; the remainder-typo scan runs only for unknown tokens.
 
 #### Clitics and penalties
 

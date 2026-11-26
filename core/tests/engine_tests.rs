@@ -1557,6 +1557,20 @@ fn personal_words_are_protected_and_suggested() {
 }
 
 #[test]
+fn mixed_profile_keeps_the_french_elision_suggestion() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["fr", "en"]));
+	for key in ["j", "a", "i"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	assert!(
+		options.iter().any(|text| text == "j'ai"),
+		"j'ai should be suggested in a mixed French/English profile: {options:?}"
+	);
+}
+
+#[test]
 fn corrects_a_full_word_with_nearby_keys() {
 	let mut engine = plain();
 	for key in ["s", "e", "c", "g"] {
