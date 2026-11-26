@@ -5,15 +5,11 @@
 	<string name="subtype_azerty">French (Type1 AZERTY)</string>
 	<string name="subtype_azerty_ascii">French (Type1 AZERTY, ASCII)</string>
 
-	<string name="setup_title">Type1</string>
+	<string name="setup_title">Setup</string>
 	<string name="setup_subtitle">An AZERTY or QWERTY keyboard that fits on one line.</string>
 	<string name="setup_step_enable">1. Enable Type1 in settings</string>
 	<string name="setup_step_select">2. Choose Type1 as your keyboard</string>
 	<string name="setup_hint">Long-press a letter for accents. Drag along the letter row to correct before lifting.</string>
-	<string name="setup_profiles">Keyboard profiles</string>
-	<string name="setup_profiles_manage">Manage profiles</string>
-	<string name="setup_profiles_hint">Each profile pairs a layout with one or more languages. Long-press the comma for emoji; with several profiles, use the globe to switch to the next one.</string>
-	<string name="setup_profiles_none">No profile configured — AZERTY · French by default.</string>
 	<string name="setup_demo_hint">Try the keyboard here…</string>
 	<string name="setup_space_cursor">Drag on the spacebar to move the cursor</string>
 	<string name="setup_backspace_hold">Long-press ⌫</string>
@@ -26,6 +22,21 @@
 	<string name="setup_utility_height">Space row height</string>
 	<string name="setup_height_value">%1$d dp</string>
 	<string name="dictionary_credit">Dictionaries: Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
+
+	<string name="settings_behaviour">Behaviour</string>
+	<string name="settings_appearance">Appearance</string>
+	<string name="settings_about">About</string>
+	<string name="settings_setup_summary">Enable Type1 and choose it as your keyboard.</string>
+	<string name="settings_profiles_summary">Layout and languages for each profile.</string>
+	<string name="settings_behaviour_summary">Space drag, backspace hold and swipe sensitivity.</string>
+	<string name="settings_appearance_summary">Space row height.</string>
+	<string name="settings_about_summary">Licenses and dictionary credits.</string>
+	<string name="settings_appearance_hint">Changes the height of the bottom row without changing the letters.</string>
+	<string name="settings_licenses">Licenses</string>
+	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
+	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>
+	<string name="settings_license_app">Type1 — GPL-3.0</string>
+	<string name="settings_licenses_hint">Tap a licence to read its notice.</string>
 
 	<string name="profiles_title">Keyboard profiles</string>
 	<string name="profiles_subtitle">Each profile chooses a layout and the languages to correct.</string>

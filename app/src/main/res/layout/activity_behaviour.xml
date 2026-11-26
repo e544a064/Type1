@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<include layout="@layout/settings_header" />
+
+	<ScrollView
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:fillViewport="true">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:padding="24dp">
+
+			<Switch
+				android:id="@+id/spaceCursorSwitch"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/setup_space_cursor" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="28dp"
+				android:text="@string/setup_backspace_hold"
+				android:textColor="#FF11131A"
+				android:textSize="16sp" />
+
+			<Spinner
+				android:id="@+id/backspaceHoldSpinner"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="28dp"
+				android:text="@string/setup_swipe_sensitivity"
+				android:textColor="#FF11131A"
+				android:textSize="16sp" />
+
+			<TextView
+				android:id="@+id/swipeSensitivityValue"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="4dp"
+				android:textColor="#FF6B7285"
+				android:textSize="14sp" />
+
+			<SeekBar
+				android:id="@+id/swipeSensitivitySeek"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="4dp"
+				android:text="@string/setup_swipe_hint"
+				android:textColor="#FF6B7285"
+				android:textSize="13sp" />
+		</LinearLayout>
+	</ScrollView>
+</LinearLayout>

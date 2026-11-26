@@ -5,15 +5,11 @@
 	<string name="subtype_azerty">Français (Type1 AZERTY)</string>
 	<string name="subtype_azerty_ascii">Français (Type1 AZERTY, ASCII)</string>
 
-	<string name="setup_title">Type1</string>
+	<string name="setup_title">Configuration</string>
 	<string name="setup_subtitle">Un clavier AZERTY ou QWERTY tenant sur une seule ligne.</string>
 	<string name="setup_step_enable">1. Activer Type1 dans les paramètres</string>
 	<string name="setup_step_select">2. Choisir Type1 comme clavier</string>
 	<string name="setup_hint">Appuyez longuement sur une lettre pour les accents. Glissez le long de la ligne de lettres pour corriger avant de relâcher.</string>
-	<string name="setup_profiles">Profils de clavier</string>
-	<string name="setup_profiles_manage">Gérer les profils</string>
-	<string name="setup_profiles_hint">Chaque profil associe une disposition à une ou plusieurs langues. Appuyez longuement sur la virgule pour les émojis ; avec plusieurs profils, choisissez le globe pour passer au suivant.</string>
-	<string name="setup_profiles_none">Aucun profil configuré — AZERTY · Français par défaut.</string>
 	<string name="setup_demo_hint">Essayez le clavier ici…</string>
 	<string name="setup_space_cursor">Glisser sur l\'espace pour déplacer le curseur</string>
 	<string name="setup_backspace_hold">Appui long sur ⌫</string>
@@ -26,6 +22,21 @@
 	<string name="setup_utility_height">Hauteur de la rangée d\'espace</string>
 	<string name="setup_height_value">%1$d dp</string>
 	<string name="dictionary_credit">Dictionnaires : Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
+
+	<string name="settings_behaviour">Comportement</string>
+	<string name="settings_appearance">Apparence</string>
+	<string name="settings_about">À propos</string>
+	<string name="settings_setup_summary">Activez Type1 et choisissez-le comme clavier.</string>
+	<string name="settings_profiles_summary">Disposition et langues de chaque profil.</string>
+	<string name="settings_behaviour_summary">Glissement de l\'espace, appui long sur ⌫ et sensibilité.</string>
+	<string name="settings_appearance_summary">Hauteur de la rangée d\'espace.</string>
+	<string name="settings_about_summary">Licences et crédits des dictionnaires.</string>
+	<string name="settings_appearance_hint">Modifie la hauteur de la rangée du bas sans changer les lettres.</string>
+	<string name="settings_licenses">Licences</string>
+	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
+	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>
+	<string name="settings_license_app">Type1 — GPL-3.0</string>
+	<string name="settings_licenses_hint">Touchez une licence pour lire sa notice.</string>
 
 	<string name="profiles_title">Profils de clavier</string>
 	<string name="profiles_subtitle">Chaque profil choisit une disposition et les langues à corriger.</string>

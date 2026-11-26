@@ -26,13 +26,20 @@ release on the letter you want.
   order with row-based vertical offsets, uniform size and case (uppercase while
   shift/auto-caps is active). AZERTY is the default.
 - Profiles pair a layout with one or more languages. They are created in
-  **Keyboard profiles** (setup → Manage profiles; *Profils de clavier* in
-  French): the layout comes from a dropdown and the languages are toggles
+  **Keyboard profiles** (main settings → Keyboard profiles; *Profils de clavier*
+  in French): the layout comes from a dropdown and the languages are toggles
   (Français, English (UK)). The list starts empty, and the keyboard falls back
   to `AZERTY · Français` until a profile exists.
-- The setup and profile screens have English and French resources, with English
-  as the default and French in `values-fr`. Android 13+ lists both in the
-  system's per-app language setting.
+- Settings are split into a main page and five sub-pages, each with a sticky
+  title and a test field:
+  - **Setup** — enable Type1 and choose it as the current keyboard.
+  - **Keyboard profiles** — create, edit, select and delete profiles.
+  - **Behaviour** — spacebar drag, long-press backspace and swipe sensitivity.
+  - **Appearance** — space-row height.
+  - **About** — dictionary credits and clickable GPL/CC BY-SA notices.
+- The settings screens have English and French resources, with English as the
+  default and French in `values-fr`. Android 13+ lists both in the system's
+  per-app language setting.
 - Long-press `,` to open a small shortcut bubble. It offers the emoji panel,
   the settings gear, and—when at least two profiles exist—a globe that cycles
   to the next profile. The emoji panel itself has a scrollable grid with a
@@ -40,8 +47,8 @@ release on the letter you want.
   travel, sports, symbols, signs, flags and text emoticons).
 - The spacebar shows the active profile's language codes (`FR`, `FR-EN`, ...)
   instead of the word “espace”. The layout itself is visible on the keys.
-- Predictive back gestures are enabled for the setup and profiles screens
-  (Android 13+), including the system cross-activity animation.
+- Predictive back gestures are enabled for the settings pages (Android 13+),
+  including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from frequency-ranked dictionaries (all
   typable Lexique 3.83 French forms, full wordfreq English list),
@@ -222,8 +229,13 @@ app/                      Android app (Kotlin, no AndroidX needed)
     KeyboardView.kt       three bands + touch handling
     EmojiPickerPopup.kt   emoji panel opened from the comma
     EmojiData.kt          emoji categories and recent-emoji tab
-    SetupActivity.kt      enable/pick the keyboard, open the profiles page
+    SettingsPageActivity.kt  sticky title + test-field scaffold
+    SettingsActivity.kt   main settings hub
+    SetupActivity.kt      setup page: enable/pick the keyboard
     ProfilesActivity.kt   create/edit/delete and select profiles
+    BehaviourActivity.kt  space drag, backspace hold, swipe sensitivity
+    AppearanceActivity.kt space-row height
+    AboutActivity.kt      licences and dictionary credits
     core/NativeBridge.kt  external fun declarations
     core/KeyboardController.kt
     core/PersonalDictionary.kt  reads Android's user dictionary
@@ -231,6 +243,8 @@ app/                      Android app (Kotlin, no AndroidX needed)
     model/KeyAction.kt    JSON action model
     model/KeyboardProfile.kt  user profile and its JSON storage
     model/Json.kt         shared string-array parsing
+  src/main/res/layout/settings_header.xml  shared sticky header
+  src/main/res/raw/license_*.txt  licence notices shown on the About page
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq

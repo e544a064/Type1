@@ -1,180 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:fillViewport="true">
+	android:orientation="vertical">
 
-	<LinearLayout
+	<include layout="@layout/settings_header" />
+
+	<ScrollView
 		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:orientation="vertical"
-		android:padding="28dp">
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:fillViewport="true">
 
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:text="@string/setup_title"
-			android:textColor="#FF11131A"
-			android:textSize="34sp"
-			android:textStyle="bold" />
-
-		<TextView
+		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="8dp"
-			android:text="@string/setup_subtitle"
-			android:textColor="#FF4A5064"
-			android:textSize="16sp" />
+			android:orientation="vertical"
+			android:padding="24dp">
 
-		<Button
-			android:id="@+id/enableButton"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="36dp"
-			android:text="@string/setup_step_enable" />
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/setup_subtitle"
+				android:textColor="#FF4A5064"
+				android:textSize="15sp" />
 
-		<Button
-			android:id="@+id/selectButton"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="12dp"
-			android:text="@string/setup_step_select" />
+			<Button
+				android:id="@+id/enableButton"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="28dp"
+				android:text="@string/setup_step_enable"
+				android:textAllCaps="false" />
 
-		<EditText
-			android:id="@+id/demoField"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="20dp"
-			android:background="#FFFFFFFF"
-			android:gravity="top|start"
-			android:hint="@string/setup_demo_hint"
-			android:importantForAutofill="no"
-			android:inputType="textCapSentences|textMultiLine"
-			android:minLines="3"
-			android:padding="12dp"
-			android:textColor="#FF11131A"
-			android:textColorHint="#FF8C93A8"
-			android:textSize="16sp" />
+			<Button
+				android:id="@+id/selectButton"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="10dp"
+				android:text="@string/setup_step_select"
+				android:textAllCaps="false" />
 
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="28dp"
-			android:text="@string/setup_profiles"
-			android:textColor="#FF11131A"
-			android:textSize="16sp" />
-
-		<TextView
-			android:id="@+id/activeProfileValue"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="8dp"
-			android:textColor="#FF4A5064"
-			android:textSize="16sp" />
-
-		<Button
-			android:id="@+id/profilesButton"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="12dp"
-			android:text="@string/setup_profiles_manage" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:text="@string/setup_profiles_hint"
-			android:textColor="#FF6B7285"
-			android:textSize="13sp" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="36dp"
-			android:lineSpacingExtra="4dp"
-			android:text="@string/setup_hint"
-			android:textColor="#FF6B7285"
-			android:textSize="14sp" />
-
-		<Switch
-			android:id="@+id/spaceCursorSwitch"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="28dp"
-			android:text="@string/setup_space_cursor" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="28dp"
-			android:text="@string/setup_backspace_hold"
-			android:textColor="#FF11131A"
-			android:textSize="16sp" />
-
-		<Spinner
-			android:id="@+id/backspaceHoldSpinner"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="8dp" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="28dp"
-			android:text="@string/setup_swipe_sensitivity"
-			android:textColor="#FF11131A"
-			android:textSize="16sp" />
-
-		<TextView
-			android:id="@+id/swipeSensitivityValue"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:textColor="#FF6B7285"
-			android:textSize="14sp" />
-
-		<SeekBar
-			android:id="@+id/swipeSensitivitySeek"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="8dp" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:text="@string/setup_swipe_hint"
-			android:textColor="#FF6B7285"
-			android:textSize="13sp" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="28dp"
-			android:text="@string/setup_utility_height"
-			android:textColor="#FF11131A"
-			android:textSize="16sp" />
-
-		<TextView
-			android:id="@+id/utilityHeightValue"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="4dp"
-			android:textColor="#FF6B7285"
-			android:textSize="14sp" />
-
-		<SeekBar
-			android:id="@+id/utilityHeightSeek"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="8dp" />
-
-		<TextView
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="32dp"
-			android:text="@string/dictionary_credit"
-			android:textColor="#FF6B7285"
-			android:textSize="12sp" />
-	</LinearLayout>
-</ScrollView>
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="28dp"
+				android:lineSpacingExtra="4dp"
+				android:text="@string/setup_hint"
+				android:textColor="#FF6B7285"
+				android:textSize="14sp" />
+		</LinearLayout>
+	</ScrollView>
+</LinearLayout>

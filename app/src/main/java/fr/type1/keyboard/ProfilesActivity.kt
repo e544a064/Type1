@@ -1,6 +1,5 @@
 package fr.type1.keyboard
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.DialogInterface
 import android.os.Bundle
@@ -19,7 +18,10 @@ import fr.type1.keyboard.model.CatalogEntry
 import fr.type1.keyboard.model.KeyboardProfile
 
 /** Create, edit and select the user's keyboard profiles. */
-class ProfilesActivity : Activity() {
+class ProfilesActivity : SettingsPageActivity() {
+
+	override val contentLayout: Int = R.layout.activity_profiles
+	override val headerTitle: Int = R.string.profiles_title
 
 	private lateinit var layouts: List<CatalogEntry>
 	private lateinit var languages: List<CatalogEntry>
@@ -28,7 +30,6 @@ class ProfilesActivity : Activity() {
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
-		setContentView(R.layout.activity_profiles)
 		layouts = KeyboardController.layouts()
 		languages = KeyboardController.languages()
 		list = findViewById(R.id.profileList)

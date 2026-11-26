@@ -1,0 +1,16 @@
+Lexique 3.83
+Boris New & Christophe Pallier
+http://www.lexique.org
+
+Licence: Creative Commons Attribution-ShareAlike 4.0 International
+(CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Derived data used by Type1: lowercase single tokens made of letters and inner
+apostrophes, with film and book frequencies summed per orthographic form.
+Spaces, hyphens and other non-token punctuation are excluded because the
+keyboard tokenizer cannot use them. All remaining forms with positive frequency
+and at most 31 characters are kept (about 121,000 entries).
+
+The derived data is distributed with the GPL-3.0 application under the same
+CC BY-SA 4.0 terms for the data itself.

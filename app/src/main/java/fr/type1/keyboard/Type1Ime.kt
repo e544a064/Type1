@@ -178,7 +178,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 	override fun onOpenSettings() {
 		requestHideSelf(0)
 		val intent = (
-			Intent(this, SetupActivity::class.java)
+			Intent(this, SettingsActivity::class.java)
 			. addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 		)
 		startActivity(intent)

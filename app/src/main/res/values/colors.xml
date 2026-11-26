@@ -8,5 +8,9 @@
 	<color name="key_text_muted">#FF8C93A8</color>
 	<color name="accent">#FF4C6FFF</color>
 	<color name="brand">#FF4C6FFF</color>
+	<color name="settings_icon_background">#FFEAF0FF</color>
+	<color name="settings_icon_stroke">#FFC9D7FF</color>
+	<color name="settings_chevron">#FF9AA1B4</color>
+	<color name="settings_divider">#1A11131A</color>
 	<color name="ic_launcher_background">#FF0094FF</color>
 </resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<include layout="@layout/settings_header" />
+
+	<ScrollView
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:fillViewport="true">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:padding="24dp">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/dictionary_credit"
+				android:textColor="#FF6B7285"
+				android:textSize="13sp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="28dp"
+				android:text="@string/settings_licenses"
+				android:textColor="#FF11131A"
+				android:textSize="16sp" />
+
+			<TextView
+				android:id="@+id/licenseLexique"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:paddingBottom="12dp"
+				android:paddingTop="12dp"
+				android:text="@string/settings_license_lexique"
+				android:textColor="#FF4C6FFF"
+				android:textSize="16sp" />
+
+			<TextView
+				android:id="@+id/licenseWordfreq"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:paddingBottom="12dp"
+				android:paddingTop="12dp"
+				android:text="@string/settings_license_wordfreq"
+				android:textColor="#FF4C6FFF"
+				android:textSize="16sp" />
+
+			<TextView
+				android:id="@+id/licenseType1"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:paddingBottom="12dp"
+				android:paddingTop="12dp"
+				android:text="@string/settings_license_app"
+				android:textColor="#FF4C6FFF"
+				android:textSize="16sp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:text="@string/settings_licenses_hint"
+				android:textColor="#FF6B7285"
+				android:textSize="13sp" />
+		</LinearLayout>
+	</ScrollView>
+</LinearLayout>

@@ -14,7 +14,7 @@
 		tools:targetApi="33">
 
 		<activity
-			android:name=".SetupActivity"
+			android:name=".SettingsActivity"
 			android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
@@ -23,9 +23,29 @@
 		</activity>
 
 		<activity
+			android:name=".SetupActivity"
+			android:exported="false"
+			android:label="@string/setup_title" />
+
+		<activity
 			android:name=".ProfilesActivity"
 			android:exported="false"
 			android:label="@string/profiles_title" />
+
+		<activity
+			android:name=".BehaviourActivity"
+			android:exported="false"
+			android:label="@string/settings_behaviour" />
+
+		<activity
+			android:name=".AppearanceActivity"
+			android:exported="false"
+			android:label="@string/settings_appearance" />
+
+		<activity
+			android:name=".AboutActivity"
+			android:exported="false"
+			android:label="@string/settings_about" />
 
 		<service
 			android:name=".Type1Ime"
