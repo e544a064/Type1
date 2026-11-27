@@ -1,6 +1,8 @@
-Premi?re version F-Droid.
+Première version F-Droid.
 
-- Clavier AZERTY/QWERTY sur une ligne avec correction fran?aise et anglaise.
+- Clavier AZERTY/QWERTY sur une ligne avec correction française et anglaise.
 - Prise en charge du dictionnaire personnel.
-- Hauteurs r?glables des rang?es de suggestions, de lettres et d'espace.
-- S?lecteur d'?mojis, profils, pages de r?glages et gestion des langues.
+- Hauteurs réglables des rangées de suggestions, de lettres et d'espace.
+- Le sous-titre du clavier sur une ligne apparaît dans l'en-tête des réglages.
+- L'aide sur les accents est déplacée de Configuration vers Comportement.
+- Sélecteur d'émojis, profils, pages de réglages et gestion des langues.

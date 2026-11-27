@@ -3,4 +3,6 @@ Initial F-Droid release.
 - One-line AZERTY/QWERTY keyboard with French and English autocorrection.
 - Personal dictionary support.
 - Adjustable suggestion, letter and space row heights.
+- Main settings header shows the one-line keyboard subtitle.
+- Typing guidance moved from Setup to Behaviour.
 - Emoji picker, profiles, settings pages and adaptive language handling.
