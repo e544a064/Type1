@@ -1,0 +1,20 @@
+Type1 is a compact Android keyboard that puts all 26 letters on one horizontal line. It keeps the familiar AZERTY or QWERTY physical order while saving about 100 dp of screen height compared with a conventional keyboard.
+
+Main features:
+
+* One-line AZERTY and QWERTY layouts with row-based vertical offsets.
+* French and British English autocorrection from full frequency-ranked word lists.
+* Layout-aware typo handling: neighbouring keys, transpositions, missing accents, French elision and English contractions.
+* Suggestions for valid dictionary words, short words and personal names.
+* Android personal dictionary support, including locale filtering.
+* Emoji picker, recent emoji and text emoticons.
+* French spacing rules and adaptive enter/search/send keys.
+* Optional spacebar drag for cursor movement and configurable backspace long-press.
+* English and French settings, with Android 13+ per-app language support.
+* Resizeable settings screens for split-screen, freeform and desktop windows.
+
+Type1 works offline. It contains no advertising, analytics or network access. Suggestions are generated on the device. The only optional system integration is reading Android's personal dictionary so user-added words can be protected and suggested.
+
+The embedded word lists are derived from Lexique 3.83 and wordfreq, both licensed under CC BY-SA 4.0. The application is GPL-3.0. Source code, attribution and the full notices are available from the project repository.
+
+Type1 is an input method, so it must be enabled in Android's keyboard settings before it can be selected.

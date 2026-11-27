@@ -258,6 +258,10 @@ tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
 docs/AUTOCORRECT.md       correction, ranking and auto-apply specification
 docs/type1-keyboard.png   keyboard screenshot used above
+docs/FDROID.md            F-Droid submission checklist and notes
+fastlane/metadata/android/  F-Droid/store descriptions, icon and screenshots
+fdroid/fr.type1.keyboard.yml  ready-to-copy fdroiddata build recipe
+version.properties        default version name/code for local and F-Droid builds
 ```
 
 ## Dictionary
@@ -324,8 +328,14 @@ export ANDROID_NDK_HOME=/path/to/ndk      # PowerShell: $env:ANDROID_NDK_HOME
 ./scripts/build-rust.ps1                  # writes app/src/main/jniLibs/<abi>/*.so
 ```
 
-`./gradlew buildRust` runs the same step and is wired to `preBuild`. It only
-warns when the toolchain is missing, so Kotlin errors stay readable.
+`./gradlew buildRust` runs the same step and is wired to `preBuild`. For normal
+local builds it warns and continues when the toolchain is missing, so Kotlin
+errors stay readable. The F-Droid recipe passes `-PrequireRust=true`, making a
+missing Rust toolchain a hard build failure instead of publishing an APK
+without native libraries.
+
+The default `versionName` / `versionCode` come from `version.properties`.
+Tagged GitHub release builds still override them from the tag and CI run number.
 
 ### 2. APK
 
@@ -383,6 +393,22 @@ cd core; cargo run --release --example make_fuzzy_contraction_extra_cases
 `run.ps1` prints the row model and the actions for a few key presses. The Java
 class mirrors the Kotlin `NativeBridge` so a broken symbol name or signature
 fails immediately, without installing an APK.
+
+## F-Droid
+
+The application is prepared for the official F-Droid repository:
+
+- GPL-3.0 application, with Lexique 3.83 and wordfreq data under CC BY-SA 4.0.
+- No ads, tracking, network access or proprietary dependencies.
+- Upstream Fastlane metadata under `fastlane/metadata/android/` for English and
+  French, including descriptions, a 512x512 icon and six phone screenshots.
+- A ready-to-copy `fdroid/fr.type1.keyboard.yml` build recipe and submission
+  checklist in [docs/FDROID.md](docs/FDROID.md).
+- Checked-in `version.properties` plus release tags for update checking.
+
+Create and push the `v0.3.5` tag after this commit, then follow
+[docs/FDROID.md](docs/FDROID.md) to open the fdroiddata merge request. Actual
+publication requires that external submission and review.
 
 ## Releases
 

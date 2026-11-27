@@ -1,0 +1,30 @@
+Categories:
+  - Keyboard
+License: GPL-3.0-only
+SourceCode: https://github.com/e544a064/Type1
+IssueTracker: https://github.com/e544a064/Type1/issues
+RepoType: git
+Repo: https://github.com/e544a064/Type1.git
+
+Builds:
+  - versionName: '0.3.5'
+    versionCode: 3005
+    commit: v0.3.5
+    ndk: 27.0.12077973
+    sudo:
+      - apt-get update
+      - apt-get install -y build-essential clang rustup
+    prebuild:
+      - rustup default stable
+      - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+      - cargo install cargo-ndk --locked
+    gradle:
+      - yes
+    gradleprops:
+      - requireRust=true
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+UpdateCheckData: version.properties|versionCode=(\d+)|.|versionName=(\S+)
+CurrentVersion: '0.3.5'
+CurrentVersionCode: 3005

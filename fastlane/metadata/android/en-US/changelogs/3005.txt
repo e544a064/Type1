@@ -1,0 +1,5 @@
+Initial F-Droid-ready release.
+
+- One-line AZERTY/QWERTY keyboard with French and English autocorrection.
+- Personal dictionary support.
+- Emoji picker, profiles, settings pages and adaptive language handling.

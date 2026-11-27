@@ -1,3 +1,6 @@
+import java.io.File
+import java.util.Properties
+import org.gradle.api.GradleException
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.StopExecutionException
 
@@ -6,9 +9,18 @@ plugins {
 	id("org.jetbrains.kotlin.android")
 }
 
-// CI passes these from the pushed tag; local builds keep the defaults.
-val releaseVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 1
-val releaseVersionName = providers.gradleProperty("versionName").orNull ?: "0.1.0"
+// CI passes these from the pushed tag; local and F-Droid builds read the
+// checked-in release version. A tag build can still override them.
+val versionProperties = Properties().apply {
+	rootProject.file("version.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val releaseVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull()
+	?: versionProperties.getProperty("versionCode")?.toIntOrNull()
+	?: 1
+val releaseVersionName = providers.gradleProperty("versionName").orNull
+	?: versionProperties.getProperty("versionName")
+	?: "0.1.0"
+val requireRust = providers.gradleProperty("requireRust").orNull == "true"
 
 // Release signing is optional locally and required by the tag workflow. The
 // workflow decodes the keystore into the runner and exports these variables.
@@ -75,6 +87,8 @@ android {
  * reports the real errors instead of drowning them in a missing-toolchain error.
  */
 val rustTargets = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+val cargoBin = File(System.getProperty("user.home"), ".cargo/bin")
+val cargoCommand = File(cargoBin, "cargo").takeIf { it.exists() }?.absolutePath ?: "cargo"
 
 val buildRust = tasks.register<Exec>("buildRust") {
 	group = "build"
@@ -83,7 +97,7 @@ val buildRust = tasks.register<Exec>("buildRust") {
 	val outDir = rootProject.file("app/src/main/jniLibs").absolutePath
 	commandLine(
 		buildList {
-			add("cargo")
+			add(cargoCommand)
 			add("ndk")
 			rustTargets.forEach { add("-t"); add(it) }
 			add("-o"); add(outDir)
@@ -91,12 +105,17 @@ val buildRust = tasks.register<Exec>("buildRust") {
 			add("--release")
 		}
 	)
-	isIgnoreExitValue = true
+	environment(
+		"PATH",
+		(listOf(cargoBin.absolutePath) + (System.getenv("PATH") ?: ""))
+		. joinToString(File.pathSeparator)
+	)
+	isIgnoreExitValue = !requireRust
 	doFirst {
 		// A missing `cargo` throws instead of returning an exit code, which would
 		// break the whole build. Skip the task instead and keep the warning.
 		val available = try {
-			ProcessBuilder("cargo", "--version")
+			ProcessBuilder(cargoCommand, "--version")
 			. redirectErrorStream(true)
 			. start()
 			. waitFor() == 0
@@ -104,6 +123,9 @@ val buildRust = tasks.register<Exec>("buildRust") {
 			false
 		}
 		if (!available) {
+			if (requireRust) {
+				throw GradleException("Type1: `cargo` is required for this build but was not found.")
+			}
 			logger.warn("Type1: `cargo` not found, skipping the Rust core build.")
 			throw StopExecutionException("cargo not available")
 		}
@@ -111,6 +133,9 @@ val buildRust = tasks.register<Exec>("buildRust") {
 	doLast {
 		val so = rootProject.file("app/src/main/jniLibs/arm64-v8a/libtype1_core.so")
 		if (!so.exists()) {
+			if (requireRust) {
+				throw GradleException("Type1: the Rust core was not built.")
+			}
 			logger.warn(
 				"Type1: Rust core was not built. Install the NDK and cargo-ndk "
 				+ "(`cargo install cargo-ndk`), set ANDROID_NDK_HOME, then run ./gradlew buildRust"
