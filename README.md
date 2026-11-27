@@ -28,8 +28,8 @@ release on the letter you want.
 - Profiles pair a layout with one or more languages. They are created in
   **Keyboard profiles** (main settings → Keyboard profiles; *Profils de clavier*
   in French): the layout comes from a dropdown and the languages are toggles
-  (Français, English (UK)). The list starts empty, and the keyboard falls back
-  to `AZERTY · Français` until a profile exists.
+  (Français, English (UK), Español). The list starts empty, and the keyboard
+  falls back to `AZERTY · Français` until a profile exists.
 - Settings are split into a main page and five sub-pages, each with a sticky
   title and a test field:
   - **Setup** — enable Type1 and choose it as the current keyboard.
@@ -40,9 +40,9 @@ release on the letter you want.
 
   A final **Personal dictionary** row opens Android’s system user-dictionary
   settings.
-- The settings screens have English and French resources, with English as the
-  default and French in `values-fr`. Android 13+ lists both in the system's
-  per-app language setting.
+- The settings screens have English, French and Spanish resources, with English
+  as the default and French/Spanish in `values-fr` and `values-es`. Android 13+
+  lists all three in the system's per-app language setting.
 - The settings activities are resizeable for split-screen, freeform/desktop
   windows and keyboard-driven resizing.
 - Long-press `,` to open a small shortcut bubble. It offers the emoji panel,
@@ -56,13 +56,15 @@ release on the letter you want.
   including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from frequency-ranked dictionaries (all
-  typable Lexique 3.83 French forms, full wordfreq English list),
+  typable Lexique 3.83 French forms, full wordfreq English and Spanish lists),
   with a layout-aware touch model: neighbouring-key slips, transpositions,
-  missing accents (`ecole` → `école`) and French elision
+  missing accents (`ecole` → `école`, `manana` → `mañana`) and French elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
 - British English autocorrection (`langauge` → `language`, `recieve` →
   `receive`) with British spellings preferred (`colour`, `centre`, `organise`,
   `favourite`, `behaviour`).
+- Spanish autocorrection from the full wordfreq Spanish list, including accents
+  and ñ (`manana` → `mañana`, `nino` → `niño`, `espanol` → `español`).
 - English contractions are restored (`dont` → `don't`, `cant` → `can't`,
   `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`). Any ordinary
   candidate that equals a contraction key is shown as the contraction, so
@@ -125,7 +127,7 @@ release on the letter you want.
   plain-text fields that use the Search action), though the strip still offers
   suggestions there, even when the app sets the no-suggestions flag. Password
   fields always hide the strip; other plain-text fields honor that flag.
-- French accents on long-press (`é è ê ë à â ç ù û î ï ô ö œ ÿ ñ`), plus `’`.
+- French and Spanish accents on long-press (`á é í ó ú ü ñ è ê ë à â ç ù û î ï ô ö œ ÿ`), plus `’`.
 - Shift (tap once = one capital, twice = caps lock), auto-capitalisation from
   `inputType` (`CAP_SENTENCES`, `CAP_WORDS`, `CAP_CHARACTERS`), with sentence
   case as the default for plain text. Caps lock adds a bar under the shift
@@ -212,6 +214,7 @@ core/                     Rust crate (no Android dependency)
   src/ffi.rs              JNI surface (create/render/key/inputType/personalWords/layouts/languages/profile)
   data/fr.tsv             derived Lexique 3.83 list (all typable French forms)
   data/en.tsv             derived wordfreq list (all single-token English forms)
+  data/es.tsv             derived wordfreq list (Spanish forms with accents)
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
   examples/make_autocorrect_cases.rs  regenerate the typo fixtures
@@ -253,6 +256,7 @@ app/                      Android app (Kotlin, no AndroidX needed)
 scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
+scripts/build-spanish-dictionary.py  regenerate core/data/es.tsv from wordfreq
 scripts/export-wordfreq.py  export the full English wordfreq list
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
@@ -291,6 +295,13 @@ has about 287,000 forms (3.6 MB). Scores use the same hundredths of
 `scripts/export-wordfreq.py` exports the full package list (it requires the
 `wordfreq` Python package) and `scripts/build-english-dictionary.py` regenerates
 `en.tsv`.
+
+`core/data/es.tsv` is also derived from [wordfreq](https://github.com/rspeer/wordfreq)
+(CC BY-SA 4.0). It keeps every single Spanish token up to 31 characters made of
+letters including `á é í ó ú ü ñ`, with a positive wordfreq probability. The
+resulting list has about 334,000 forms (4.5 MB) and uses the same frequency
+scale as the other dictionaries. Regenerate it with
+`scripts/build-spanish-dictionary.py`.
 
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).
@@ -458,15 +469,15 @@ otherwise `assembleRelease` produces an unsigned APK.
 
 This snapshot was built and linted on Windows with:
 
-- Rust 1.101 (nightly), `cargo test`: 206 tests, 13,567 fixture rows
+- Rust 1.101 (nightly), `cargo test`: 209 tests, 13,567 fixture rows
   (6,500 typos + 2,000 all-caps + 3,121 fuzzy contractions + 1,946 wider
   contraction typos), ~30,000 generated interaction sessions, 1,836 exact
   contraction cases, 11,309 fuzzy contraction executions and 1,488 single-letter
   checks.
 - JDK 21 (Temurin), Gradle 8.11.1, AGP 8.7.2, Kotlin 2.0.21.
 - NDK 27.0.12077973 + cargo-ndk 4.1.2: `arm64-v8a`, `armeabi-v7a`, `x86_64`.
-- `./gradlew assembleDebug`: APK 19.7 MB, contains the three `.so` files.
-- `./gradlew lintDebug`: 0 errors, 10 warnings (5 “Type1” typo false positives and 5 launcher-icon shape warnings).
+- `./gradlew assembleDebug` / `assembleRelease`: debug APK 40 MB, release APK 32.3 MB, each containing the three `.so` files.
+- `./gradlew lintDebug`: 0 errors, 13 warnings (8 “Type1” typo false positives and 5 launcher-icon shape warnings).
 - JNI smoke test: autocorrect and undo round-trip correctly through the host JVM.
 
 No device was attached, so on-device behaviour (touch, IME lifecycle, sound) is

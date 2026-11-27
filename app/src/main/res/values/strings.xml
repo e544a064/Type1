@@ -31,7 +31,7 @@
 	<string name="settings_setup_summary">Enable Type1 and choose it as your keyboard.</string>
 	<string name="settings_profiles_summary">Layout and languages for each profile.</string>
 	<string name="settings_behaviour_summary">Space drag, backspace hold and swipe sensitivity.</string>
-	<string name="settings_appearance_summary">Space row height.</string>
+	<string name="settings_appearance_summary">Suggestion, letter and space row heights.</string>
 	<string name="settings_about_summary">Licenses and dictionary credits.</string>
 	<string name="settings_personal_dictionary">Personal dictionary</string>
 	<string name="settings_personal_dictionary_summary">Manage custom words stored by Android.</string>

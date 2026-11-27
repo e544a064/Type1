@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">Type1</string>
+	<string name="ime_name">Type1 (una línea)</string>
+	<string name="subtype_azerty">Francés (Type1 AZERTY)</string>
+	<string name="subtype_azerty_ascii">Francés (Type1 AZERTY, ASCII)</string>
+
+	<string name="setup_title">Configuración</string>
+	<string name="setup_subtitle">Un teclado que cabe en una línea</string>
+	<string name="setup_step_enable">1. Activa Type1 en los ajustes</string>
+	<string name="setup_step_select">2. Elige Type1 como teclado</string>
+	<string name="behaviour_hint">Mantén pulsada una letra para los acentos. Arrastra por la fila de letras para corregir antes de levantar el dedo.</string>
+	<string name="setup_demo_hint">Prueba el teclado aquí…</string>
+	<string name="setup_space_cursor">Arrastra en la barra espaciadora para mover el cursor</string>
+	<string name="setup_backspace_hold">Mantén pulsado ⌫</string>
+	<string name="backspace_hold_none">No hacer nada</string>
+	<string name="backspace_hold_repeat">Repetir borrado</string>
+	<string name="backspace_hold_select">Seleccionar arrastrando a la izquierda</string>
+	<string name="setup_swipe_sensitivity">Sensibilidad del deslizamiento</string>
+	<string name="setup_swipe_value">%1$d dp por carácter</string>
+	<string name="setup_swipe_hint">Cuanto menor sea el valor, más rápido se mueve el cursor. Se aplica al arrastrar la barra espaciadora y a la selección con ⌫.</string>
+	<string name="setup_suggestion_height">Altura de la fila de sugerencias</string>
+	<string name="setup_letter_height">Altura de la fila de letras</string>
+	<string name="setup_utility_height">Altura de la fila de espacio</string>
+	<string name="setup_height_value">%1$d dp</string>
+	<string name="dictionary_credit">Diccionarios: Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
+
+	<string name="settings_behaviour">Comportamiento</string>
+	<string name="settings_appearance">Apariencia</string>
+	<string name="settings_about">Acerca de</string>
+	<string name="settings_setup_summary">Activa Type1 y elígelo como teclado.</string>
+	<string name="settings_profiles_summary">Diseño e idiomas de cada perfil.</string>
+	<string name="settings_behaviour_summary">Arrastre del espacio, pulsación larga de ⌫ y sensibilidad.</string>
+	<string name="settings_appearance_summary">Alturas de las filas de sugerencias, letras y espacio.</string>
+	<string name="settings_about_summary">Licencias y créditos de los diccionarios.</string>
+	<string name="settings_personal_dictionary">Diccionario personal</string>
+	<string name="settings_personal_dictionary_summary">Gestiona las palabras personalizadas de Android.</string>
+	<string name="settings_appearance_hint">Ajusta la altura de las filas de sugerencias, letras y espacio.</string>
+	<string name="settings_licenses">Licencias</string>
+	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
+	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>
+	<string name="settings_license_app">Type1 — GPL-3.0</string>
+	<string name="settings_licenses_hint">Toca una licencia para leer su aviso.</string>
+
+	<string name="profiles_title">Perfiles de teclado</string>
+	<string name="profiles_subtitle">Cada perfil elige un diseño y los idiomas que se corrigen.</string>
+	<string name="profiles_empty">Aún no hay perfiles. Toca + para crear uno.</string>
+	<string name="profiles_add">+</string>
+	<string name="profiles_add_description">Añadir un perfil</string>
+	<string name="profiles_edit">Editar</string>
+	<string name="profiles_delete">Eliminar</string>
+	<string name="profiles_active">Activo</string>
+	<string name="profile_new">Nuevo perfil</string>
+	<string name="profile_edit">Editar perfil</string>
+	<string name="profile_layout">Diseño</string>
+	<string name="profile_languages">Idiomas</string>
+	<string name="profile_need_language">Elige al menos un idioma.</string>
+	<string name="profile_save">Guardar</string>
+	<string name="profile_cancel">Cancelar</string>
+	<string name="profile_delete_title">¿Eliminar este perfil?</string>
+	<string name="profile_delete_message">El perfil «%1$s» se eliminará.</string>
+	<string name="profile_delete_confirm">Eliminar</string>
+
+	<string name="emoji_recent">Recientes</string>
+	<string name="emoji_smileys">Emoticonos</string>
+	<string name="emoji_people">Personas</string>
+	<string name="emoji_activities">Actividades</string>
+	<string name="emoji_objects">Objetos</string>
+	<string name="emoji_travel">Viajes</string>
+	<string name="emoji_sports">Deportes</string>
+	<string name="emoji_symbols">Símbolos</string>
+	<string name="emoji_signs">Signos</string>
+	<string name="emoji_flags">Banderas</string>
+	<string name="emoji_text">Texto</string>
+	<string name="emoji_empty_recent">No hay emojis recientes.</string>
+</resources>

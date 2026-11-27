@@ -1571,6 +1571,31 @@ fn mixed_profile_keeps_the_french_elision_suggestion() {
 }
 
 #[test]
+fn spanish_suggestions_restore_accents() {
+	let mut engine = plain();
+	assert!(engine.set_profile_ids("qwerty", &["es"]));
+	for key in ["m", "a", "n", "a", "n", "a"] {
+		engine.on_key(key);
+	}
+	let options = suggestions(&mut engine);
+	assert!(
+		options.iter().any(|text| text == "mañana"),
+		"mañana should be suggested: {options:?}"
+	);
+
+	let mut nino = plain();
+	assert!(nino.set_profile_ids("qwerty", &["es"]));
+	for key in ["n", "i", "n", "o"] {
+		nino.on_key(key);
+	}
+	let options = suggestions(&mut nino);
+	assert!(
+		options.iter().any(|text| text == "niño"),
+		"niño should be suggested: {options:?}"
+	);
+}
+
+#[test]
 fn corrects_a_full_word_with_nearby_keys() {
 	let mut engine = plain();
 	for key in ["s", "e", "c", "g"] {

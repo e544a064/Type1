@@ -30,3 +30,16 @@
   `word<TAB>ln(frequency per million + 1) × 100<TAB>0`.
 - This derived data is distributed with the GPL-3.0 application under the same
   CC BY-SA 4.0 terms for the data itself.
+
+`es.tsv` is a derived list built from **wordfreq**:
+
+- wordfreq, Luminoso Technologies — <https://github.com/rspeer/wordfreq>
+- Export used: the full Spanish `best` list from the wordfreq package
+- Licence: Creative Commons Attribution-ShareAlike 4.0 International
+  (CC BY-SA 4.0) — <https://creativecommons.org/licenses/by-sa/4.0/>
+- Derivation: every single token up to 31 characters made of Spanish letters
+  (including `á é í ó ú ü ñ`) with a positive wordfreq probability (about
+  334,000 forms, 4.5 MB), including names, places and modern terms. Each line is
+  `word<TAB>ln(frequency per million + 1) × 100<TAB>0`.
+- This derived data is distributed with the GPL-3.0 application under the same
+  CC BY-SA 4.0 terms for the data itself.

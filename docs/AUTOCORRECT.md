@@ -810,9 +810,9 @@ The correction memory:
 
 ## 11. Worked examples
 
-These examples use the reference French and English lexicons and the reference
-layouts. Unless stated otherwise, each example uses the language in which the
-result is valid. Exact output can change if the lexicons or layouts change.
+These examples use the reference lexicons and layouts. Unless stated otherwise,
+each example uses the language in which the result is valid. Exact output can
+change if the lexicons or layouts change.
 
 | Typed | Result | Explanation |
 |---|---|---|

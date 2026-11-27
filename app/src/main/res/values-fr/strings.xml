@@ -31,7 +31,7 @@
 	<string name="settings_setup_summary">Activez Type1 et choisissez-le comme clavier.</string>
 	<string name="settings_profiles_summary">Disposition et langues de chaque profil.</string>
 	<string name="settings_behaviour_summary">Glissement de l\'espace, appui long sur ⌫ et sensibilité.</string>
-	<string name="settings_appearance_summary">Hauteur de la rangée d\'espace.</string>
+	<string name="settings_appearance_summary">Hauteurs des rangées de suggestions, de lettres et d\'espace.</string>
 	<string name="settings_about_summary">Licences et crédits des dictionnaires.</string>
 	<string name="settings_personal_dictionary">Dictionnaire personnel</string>
 	<string name="settings_personal_dictionary_summary">Gérer les mots personnalisés d\'Android.</string>

@@ -52,13 +52,15 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Per-field correction memory: moving back into a changed word re-opens
       the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
-- [x] Per-language dictionaries (French and English UK) with a profile-scoped
-      corrector
+- [x] Per-language dictionaries (French, English UK and Spanish) with a
+      profile-scoped corrector
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
 - [x] Autocorrect with caps lock: all-caps words keep their capitals
       (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`)
 - [x] British English autocorrect with British spelling preference
       (`langauge` → `language`, `colour`, `centre`, `organise`)
+- [x] Spanish autocorrect with accents and ñ
+      (`manana` → `mañana`, `nino` → `niño`, `espanol` → `español`)
 - [x] English contractions restored (`dont` → `don't`, `cant` → `can't`,
       `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`), with nearby
       key slips corrected too (`douv` → `don't`)
@@ -77,7 +79,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Automatic spacing around French punctuation, including removing a stray
       space before `.`/`,` (also after a suggestion tap)
 - [ ] Spell checking
-- [ ] Personal dictionary
+- [x] Personal dictionary (Android user dictionary, read-only)
 - [~] Multilingual typing: profiles can list several languages and combine
       their dictionaries; mixed-language ranking and Korean are still pending
 - [ ] Double-space period
@@ -123,7 +125,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [ ] Large-text / high-contrast mode
 - [ ] Configurable touch timing
 - [ ] RTL / complex scripts
-- [x] French UI strings
+- [x] English, French and Spanish UI strings
 
 ## 12. System integration
 - [x] Correct `inputType` handling (caps, numeric, multiline)

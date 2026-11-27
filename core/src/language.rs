@@ -5,6 +5,7 @@
 
 use crate::dictionary::{
 	Dictionary, ENGLISH as ENGLISH_DICTIONARY, FRENCH as FRENCH_DICTIONARY,
+	SPANISH as SPANISH_DICTIONARY,
 };
 use crate::json;
 
@@ -98,9 +99,19 @@ pub static ENGLISH: Language = Language {
 	ambiguous_contractions: &["lets"],
 };
 
+pub static SPANISH: Language = Language {
+	id: "es",
+	label: "Español",
+	short: "ES",
+	dictionary: &SPANISH_DICTIONARY,
+	elisions: false,
+	contractions: &[],
+	ambiguous_contractions: &[],
+};
+
 /// Languages with a correction model today. Korean can be added here once its
 /// dictionary and Hangul composition exist.
-pub static LANGUAGES: &[&Language] = &[&FRENCH, &ENGLISH];
+pub static LANGUAGES: &[&Language] = &[&FRENCH, &ENGLISH, &SPANISH];
 
 pub fn find(id: &str) -> Option<&'static Language> {
 	LANGUAGES.iter().copied().find(|language| language.id == id)
@@ -142,11 +153,22 @@ mod tests {
 	}
 
 	#[test]
-	fn catalog_lists_both_languages() {
+	fn spanish_is_available() {
+		let spanish = find("es").unwrap();
+		assert_eq!(spanish.label, "Español");
+		assert_eq!(spanish.short, "ES");
+		assert!(!spanish.elisions);
+		assert!(spanish.dictionary.words().len() >= 300_000);
+	}
+
+	#[test]
+	fn catalog_lists_all_languages() {
 		let json: serde_json::Value = serde_json::from_str(&catalog_json()).unwrap();
 		assert_eq!(json[0]["id"], "fr");
 		assert_eq!(json[0]["label"], "Français");
 		assert_eq!(json[1]["id"], "en");
 		assert_eq!(json[1]["label"], "English (UK)");
+		assert_eq!(json[2]["id"], "es");
+		assert_eq!(json[2]["label"], "Español");
 	}
 }

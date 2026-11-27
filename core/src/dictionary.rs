@@ -1,9 +1,9 @@
 //! Frequency-ranked dictionary shipped with the core.
 //!
 //! Each language owns its own [`Dictionary`]. The French data is derived from
-//! Lexique 3.83 (https://www.lexique.org) and the English data from wordfreq
-//! (https://github.com/rspeer/wordfreq), both distributed under CC BY-SA 4.0.
-//! See `data/NOTICE.md` for attribution.
+//! Lexique 3.83 (https://www.lexique.org) and the English and Spanish data from
+//! wordfreq (https://github.com/rspeer/wordfreq), all distributed under
+//! CC BY-SA 4.0. See `data/NOTICE.md` for attribution.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -145,6 +145,9 @@ pub static FRENCH: Dictionary = Dictionary::new(include_str!("../data/fr.tsv"));
 /// British English dictionary (wordfreq).
 pub static ENGLISH: Dictionary = Dictionary::new(include_str!("../data/en.tsv"));
 
+/// Spanish dictionary (wordfreq).
+pub static SPANISH: Dictionary = Dictionary::new(include_str!("../data/es.tsv"));
+
 /// Compatibility wrappers for the default French dictionary.
 pub fn words() -> &'static [Word] {
 	FRENCH.words()
@@ -172,6 +175,14 @@ mod tests {
 		assert_eq!(folded("ecole").map(|w| w.text), Some("école"));
 		assert_ne!(exact("aime").unwrap().flags & VERB, 0);
 		assert_ne!(exact("action").unwrap().flags & NOUN, 0);
+	}
+
+	#[test]
+	fn loads_the_spanish_dictionary() {
+		assert!(SPANISH.words().len() >= 300_000);
+		assert!(SPANISH.exact("hola").is_some());
+		assert!(SPANISH.exact("mañana").is_some());
+		assert!(SPANISH.exact("pingüino").is_some());
 	}
 
 	#[test]
