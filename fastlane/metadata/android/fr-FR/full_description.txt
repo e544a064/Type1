@@ -3,14 +3,14 @@ Type1 est un clavier Android compact qui place les 26 lettres sur une seule lign
 Fonctionnalités principales :
 
 * Dispositions AZERTY et QWERTY sur une ligne, avec décalage vertical selon la rangée.
-* Correction automatique en français et en anglais britannique à partir de listes de mots complètes classées par fréquence.
+* Correction automatique en français, en anglais britannique et en espagnol à partir de listes de mots complètes classées par fréquence.
 * Gestion des fautes liée à la disposition : touches voisines, inversions, accents manquants, élision française et contractions anglaises.
 * Suggestions pour les mots valides, les mots courts et les noms personnels.
 * Prise en charge du dictionnaire personnel Android, avec filtrage par langue.
 * Sélecteur d'émojis, émojis récents et émoticônes textuelles.
 * Règles d'espacement françaises et touche entrée/recherche/envoi adaptative.
 * Glissement optionnel sur l'espace pour déplacer le curseur et appui long sur ⌫ configurable.
-* Interface en français et en anglais, avec langue par application sur Android 13+.
+* Interface en français, en anglais et en espagnol, avec langue par application sur Android 13+.
 * Écrans de réglages redimensionnables pour le multi-fenêtre, le mode libre et le bureau.
 
 Type1 fonctionne hors ligne. L'application ne contient ni publicité, ni analyse d'audience, ni accès réseau. Les suggestions sont calculées sur l'appareil. La seule intégration système facultative est la lecture du dictionnaire personnel Android pour protéger et suggérer les mots ajoutés par l'utilisateur.

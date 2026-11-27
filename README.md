@@ -417,7 +417,7 @@ The application is prepared for the official F-Droid repository:
   checklist in [docs/FDROID.md](docs/FDROID.md).
 - Checked-in `version.properties` plus release tags for update checking.
 
-Create and push the `v0.3.6` tag after this commit, then follow
+Create and push the `v0.3.7` tag after this commit, then follow
 [docs/FDROID.md](docs/FDROID.md) to open the fdroiddata merge request. Actual
 publication requires that external submission and review.
 
