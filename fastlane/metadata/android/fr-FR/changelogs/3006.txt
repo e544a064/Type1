@@ -1,6 +1,6 @@
 Première version F-Droid.
 
-- Clavier AZERTY/QWERTY sur une ligne avec correction française et anglaise.
+- Clavier sur une ligne avec correction française et anglaise.
 - Prise en charge du dictionnaire personnel.
 - Hauteurs réglables des rangées de suggestions, de lettres et d'espace.
 - Le sous-titre du clavier sur une ligne apparaît dans l'en-tête des réglages.

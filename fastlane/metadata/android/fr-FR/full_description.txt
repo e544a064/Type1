@@ -1,4 +1,4 @@
-Type1 est un clavier Android compact qui place les 26 lettres sur une seule ligne horizontale. Il conserve l'ordre physique AZERTY ou QWERTY familier tout en économisant environ 100 dp de hauteur par rapport à un clavier classique.
+Type1 est un clavier Android compact qui place les 26 lettres sur une seule ligne horizontale. Il conserve l'ordre physique familier des lettres tout en économisant environ 100 dp de hauteur par rapport à un clavier classique.
 
 Fonctionnalités principales :
 

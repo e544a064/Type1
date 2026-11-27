@@ -1,4 +1,4 @@
-# Type1 — a one-line AZERTY/QWERTY Android keyboard
+# Type1 — a one-line Android keyboard
 
 Every letter sits on **one horizontal line**, between a suggestion strip and a
 row of utility keys: ~154 dp of screen instead of the usual ~250 dp. The typing

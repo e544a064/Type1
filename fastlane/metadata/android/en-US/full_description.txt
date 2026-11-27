@@ -1,4 +1,4 @@
-Type1 is a compact Android keyboard that puts all 26 letters on one horizontal line. It keeps the familiar AZERTY or QWERTY physical order while saving about 100 dp of screen height compared with a conventional keyboard.
+Type1 is a compact Android keyboard that puts all 26 letters on one horizontal line. It keeps the familiar physical letter order while saving about 100 dp of screen height compared with a conventional keyboard.
 
 Main features:
 

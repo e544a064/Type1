@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string name="app_name">Type1</string>
-	<string name="ime_name">Type1 (AZERTY, une ligne)</string>
+	<string name="ime_name">Type1 (une ligne)</string>
 	<string name="subtype_azerty">Français (Type1 AZERTY)</string>
 	<string name="subtype_azerty_ascii">Français (Type1 AZERTY, ASCII)</string>
 
