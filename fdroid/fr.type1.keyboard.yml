@@ -7,9 +7,9 @@ RepoType: git
 Repo: https://github.com/e544a064/Type1.git
 
 Builds:
-  - versionName: '0.3.7'
-    versionCode: 3007
-    commit: v0.3.7
+  - versionName: '0.3.8'
+    versionCode: 3008
+    commit: v0.3.8
     ndk: 27.0.12077973
     sudo:
       - apt-get update
@@ -26,5 +26,5 @@ Builds:
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 UpdateCheckData: version.properties|versionCode=(\d+)|.|versionName=(\S+)
-CurrentVersion: '0.3.7'
-CurrentVersionCode: 3007
+CurrentVersion: '0.3.8'
+CurrentVersionCode: 3008

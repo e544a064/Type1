@@ -1,0 +1,6 @@
+Version 0.3.8.
+
+- Added Spanish UI, autocorrection and profile language support.
+- Added a full Spanish dictionary with accent-aware suggestions.
+- Added Spanish accent long-press options.
+- Settings improvements: one-line subtitle in the main header, typing guidance moved to Behaviour.

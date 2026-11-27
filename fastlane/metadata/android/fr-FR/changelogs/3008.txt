@@ -1,0 +1,6 @@
+Version 0.3.8.
+
+- Ajout de l'interface, de la correction automatique et du profil espagnols.
+- Ajout d'un dictionnaire espagnol complet avec suggestions d'accents.
+- Ajout des accents espagnols à l'appui long.
+- Réglages : sous-titre « une ligne » dans l'en-tête principal et aide de saisie déplacée dans Comportement.
