@@ -481,6 +481,14 @@ untested.
 6. **Later** — voice input hand-off, glide typing adapted
    to one line, iOS UI on the same core.
 
+## AI use disclosure
+
+This project was done entirely by an agent, under my supervision for the results but I've never read the code.
+The reason behind this decision is the following. I would never have the time to make this project "the right way",
+which is writing the code myself, nice code, well-tested, well-commented, all the features I want, etc.
+So I'm left with two options. Wrong way 1, do it myself but spend so little time that the project would be terrible.
+Wrong way 2, this way.
+
 ## Licence
 
 GPL-3.0 — see [LICENSE](LICENSE).
