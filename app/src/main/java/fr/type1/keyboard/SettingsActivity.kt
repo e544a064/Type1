@@ -13,6 +13,7 @@ class SettingsActivity : SettingsPageActivity() {
 
 	override val contentLayout: Int = R.layout.activity_settings
 	override val headerTitle: Int = R.string.app_name
+	override val headerSubtitle: Int = R.string.setup_subtitle
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)

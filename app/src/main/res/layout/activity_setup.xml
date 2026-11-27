@@ -18,18 +18,11 @@
 			android:orientation="vertical"
 			android:padding="24dp">
 
-			<TextView
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:text="@string/setup_subtitle"
-				android:textColor="#FF4A5064"
-				android:textSize="15sp" />
-
 			<Button
 				android:id="@+id/enableButton"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginTop="28dp"
+				android:layout_marginTop="4dp"
 				android:text="@string/setup_step_enable"
 				android:textAllCaps="false" />
 

@@ -14,6 +14,7 @@ abstract class SettingsPageActivity : Activity() {
 
 	protected abstract val contentLayout: Int
 	protected abstract val headerTitle: Int
+	protected open val headerSubtitle: Int? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -23,6 +24,14 @@ abstract class SettingsPageActivity : Activity() {
 			or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
 		)
 		findViewById<TextView>(R.id.settingsTitle).setText(headerTitle)
+		val subtitle = findViewById<TextView>(R.id.settingsSubtitle)
+		val subtitleId = headerSubtitle
+		if (subtitleId != null) {
+			subtitle.setText(subtitleId)
+			subtitle.visibility = TextView.VISIBLE
+		} else {
+			subtitle.visibility = TextView.GONE
+		}
 	}
 
 	protected fun bindSeekBar(

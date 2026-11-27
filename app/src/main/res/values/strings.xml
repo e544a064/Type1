@@ -6,7 +6,7 @@
 	<string name="subtype_azerty_ascii">French (Type1 AZERTY, ASCII)</string>
 
 	<string name="setup_title">Setup</string>
-	<string name="setup_subtitle">An AZERTY or QWERTY keyboard that fits on one line.</string>
+	<string name="setup_subtitle">A keyboard that fits on one line</string>
 	<string name="setup_step_enable">1. Enable Type1 in settings</string>
 	<string name="setup_step_select">2. Choose Type1 as your keyboard</string>
 	<string name="setup_hint">Long-press a letter for accents. Drag along the letter row to correct before lifting.</string>
