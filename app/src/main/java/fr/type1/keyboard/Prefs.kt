@@ -14,6 +14,8 @@ object Prefs {
 	private const val SPACE_CURSOR = "space_cursor"
 	private const val BACKSPACE_HOLD = "backspace_hold"
 	private const val SWIPE_SENSITIVITY = "swipe_sensitivity"
+	private const val SUGGESTION_ROW_HEIGHT = "suggestion_row_height"
+	private const val LETTER_ROW_HEIGHT = "letter_row_height"
 	private const val UTILITY_ROW_HEIGHT = "utility_row_height"
 	private const val RECENT_EMOJIS = "recent_emojis"
 	const val PROFILES = "profiles"
@@ -62,6 +64,24 @@ object Prefs {
 
 	fun setSwipeSensitivity(context: Context, dpPerStep: Int) {
 		edit(context) { putInt(SWIPE_SENSITIVITY, dpPerStep.coerceIn(8, 40)) }
+	}
+
+	/** Height in dp of the suggestion row. Default 38 dp. */
+	fun suggestionRowHeight(context: Context): Int {
+		return preferences(context).getInt(SUGGESTION_ROW_HEIGHT, 38).coerceIn(28, 56)
+	}
+
+	fun setSuggestionRowHeight(context: Context, heightDp: Int) {
+		edit(context) { putInt(SUGGESTION_ROW_HEIGHT, heightDp.coerceIn(28, 56)) }
+	}
+
+	/** Height in dp of the letter row. Default 56 dp. */
+	fun letterRowHeight(context: Context): Int {
+		return preferences(context).getInt(LETTER_ROW_HEIGHT, 56).coerceIn(44, 80)
+	}
+
+	fun setLetterRowHeight(context: Context, heightDp: Int) {
+		edit(context) { putInt(LETTER_ROW_HEIGHT, heightDp.coerceIn(44, 80)) }
 	}
 
 	/** Height in dp of the bottom row holding the spacebar. Default 48 dp. */

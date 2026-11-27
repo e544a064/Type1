@@ -19,6 +19,8 @@
 	<string name="setup_swipe_sensitivity">Sensibilité du glissement</string>
 	<string name="setup_swipe_value">%1$d dp par caractère</string>
 	<string name="setup_swipe_hint">Plus la valeur est petite, plus le curseur avance vite. S\'applique au glissement sur l\'espace et à la sélection avec ⌫.</string>
+	<string name="setup_suggestion_height">Hauteur de la rangée de suggestions</string>
+	<string name="setup_letter_height">Hauteur de la rangée de lettres</string>
 	<string name="setup_utility_height">Hauteur de la rangée d\'espace</string>
 	<string name="setup_height_value">%1$d dp</string>
 	<string name="dictionary_credit">Dictionnaires : Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
@@ -33,7 +35,7 @@
 	<string name="settings_about_summary">Licences et crédits des dictionnaires.</string>
 	<string name="settings_personal_dictionary">Dictionnaire personnel</string>
 	<string name="settings_personal_dictionary_summary">Gérer les mots personnalisés d\'Android.</string>
-	<string name="settings_appearance_hint">Modifie la hauteur de la rangée du bas sans changer les lettres.</string>
+	<string name="settings_appearance_hint">Réglez la hauteur des rangées de suggestions, de lettres et d\'espace.</string>
 	<string name="settings_licenses">Licences</string>
 	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
 	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>

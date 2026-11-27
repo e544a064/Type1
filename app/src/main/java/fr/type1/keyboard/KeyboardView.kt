@@ -64,16 +64,16 @@ class KeyboardView(
 
 	private var model: RowModel? = null
 
-	private val suggestionHeight = dp(38f)
-	private val letterHeight = dp(56f)
+	private var suggestionHeight = dp(38f)
+	private var letterHeight = dp(56f)
 	private var utilityHeight = dp(48f)
 	private val bandGap = dp(3f)
 	private val padding = dp(3f)
 	private val corner = dp(8f)
 
-	private val suggestionTop = padding
-	private val letterTop = padding + suggestionHeight + bandGap
-	private val utilityTop = letterTop + letterHeight + bandGap
+	private val suggestionTop get() = padding
+	private val letterTop get() = padding + suggestionHeight + bandGap
+	private val utilityTop get() = letterTop + letterHeight + bandGap
 	private val contentHeight: Float get() = utilityTop + utilityHeight + padding
 
 	/** Height of the system navigation bar overlapping the IME window. */
@@ -270,6 +270,24 @@ class KeyboardView(
 	/** dp of horizontal travel per caret/selection step (8-40). */
 	fun setSwipeSensitivity(dpPerStep: Int) {
 		swipeStepDp = dpPerStep.coerceIn(8, 40)
+	}
+
+	/** Height in dp of the suggestion row (28-56). */
+	fun setSuggestionRowHeight(heightDp: Int) {
+		val height = dp(heightDp.coerceIn(28, 56).toFloat())
+		if (height == suggestionHeight) return
+		suggestionHeight = height
+		requestLayout()
+		invalidate()
+	}
+
+	/** Height in dp of the letter row (44-80). */
+	fun setLetterRowHeight(heightDp: Int) {
+		val height = dp(heightDp.coerceIn(44, 80).toFloat())
+		if (height == letterHeight) return
+		letterHeight = height
+		requestLayout()
+		invalidate()
 	}
 
 	/** Height in dp of the bottom row holding the spacebar (36-72). */

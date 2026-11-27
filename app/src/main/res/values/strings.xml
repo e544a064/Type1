@@ -19,6 +19,8 @@
 	<string name="setup_swipe_sensitivity">Swipe sensitivity</string>
 	<string name="setup_swipe_value">%1$d dp per character</string>
 	<string name="setup_swipe_hint">The smaller the value, the faster the cursor moves. Applies to dragging the spacebar and selecting with ⌫.</string>
+	<string name="setup_suggestion_height">Suggestion row height</string>
+	<string name="setup_letter_height">Letter row height</string>
 	<string name="setup_utility_height">Space row height</string>
 	<string name="setup_height_value">%1$d dp</string>
 	<string name="dictionary_credit">Dictionaries: Lexique 3.83 (CC BY-SA 4.0) — lexique.org · wordfreq (CC BY-SA 4.0) — github.com/rspeer/wordfreq</string>
@@ -33,7 +35,7 @@
 	<string name="settings_about_summary">Licenses and dictionary credits.</string>
 	<string name="settings_personal_dictionary">Personal dictionary</string>
 	<string name="settings_personal_dictionary_summary">Manage custom words stored by Android.</string>
-	<string name="settings_appearance_hint">Changes the height of the bottom row without changing the letters.</string>
+	<string name="settings_appearance_hint">Adjust the suggestion, letter and space row heights.</string>
 	<string name="settings_licenses">Licenses</string>
 	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
 	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>

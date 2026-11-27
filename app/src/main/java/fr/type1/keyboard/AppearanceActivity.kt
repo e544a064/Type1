@@ -12,6 +12,22 @@ class AppearanceActivity : SettingsPageActivity() {
 		super.onCreate(savedInstanceState)
 
 		bindSeekBar(
+			R.id.suggestionHeightSeek,
+			R.id.suggestionHeightValue,
+			R.string.setup_height_value,
+			28..56,
+			Prefs.suggestionRowHeight(this),
+		) { Prefs.setSuggestionRowHeight(this, it) }
+
+		bindSeekBar(
+			R.id.letterHeightSeek,
+			R.id.letterHeightValue,
+			R.string.setup_height_value,
+			44..80,
+			Prefs.letterRowHeight(this),
+		) { Prefs.setLetterRowHeight(this, it) }
+
+		bindSeekBar(
 			R.id.utilityHeightSeek,
 			R.id.utilityHeightValue,
 			R.string.setup_height_value,

@@ -35,7 +35,7 @@ release on the letter you want.
   - **Setup** — enable Type1 and choose it as the current keyboard.
   - **Keyboard profiles** — create, edit, select and delete profiles.
   - **Behaviour** — spacebar drag, long-press backspace and swipe sensitivity.
-  - **Appearance** — space-row height.
+  - **Appearance** — suggestion, letter and space row heights.
   - **About** — dictionary credits and clickable GPL/CC BY-SA notices.
 
   A final **Personal dictionary** row opens Android’s system user-dictionary
@@ -146,7 +146,8 @@ release on the letter you want.
   current field; the setup screen has a switch to turn this off.
 - Swipe sensitivity (8–40 dp per character) is adjustable with a slider and
   shared by the spacebar caret drag and the backspace selection.
-- Spacebar row height is adjustable (36–72 dp, 48 dp by default).
+- Suggestion, letter and space row heights are adjustable (28–56, 44–80 and
+  36–72 dp; defaults 38, 56 and 48 dp).
 - Shift and backspace sit at the ends of the suggestion strip; the bottom row is
   page, comma, space, period and enter. Long-press the period for the full
   symbol set (`& % + " - : ' @ ; / ( ) # ! ?`); a `…` hint marks the long
@@ -186,8 +187,7 @@ The three bands are 38 dp (suggestions), 56 dp (letters) and 36–72 dp
 plus 3 dp gaps: **154 dp** total by default. On a 411 dp-wide phone a letter is
 ~12.5 dp wide; on 360 dp it is ~11 dp. Tuning knobs:
 
-- `suggestionHeight`, `letterHeight` in `KeyboardView.kt`,
-- the utility row height is a setting (36–72 dp, default 48),
+- the default row heights and their ranges in `KeyboardView.kt` and `Prefs.kt`,
 - the `rowOffset` values (±7 dp) in `KeyboardView.kt`,
 - letter order, row indices and utility weights in `core/src/layout.rs`,
 - the active languages and layout in `core/src/profile.rs`,
@@ -239,7 +239,7 @@ app/                      Android app (Kotlin, no AndroidX needed)
     SetupActivity.kt      setup page: enable/pick the keyboard
     ProfilesActivity.kt   create/edit/delete and select profiles
     BehaviourActivity.kt  space drag, backspace hold, swipe sensitivity
-    AppearanceActivity.kt space-row height
+    AppearanceActivity.kt suggestion, letter and space row heights
     AboutActivity.kt      licences and dictionary credits
     core/NativeBridge.kt  external fun declarations
     core/KeyboardController.kt
@@ -406,7 +406,7 @@ The application is prepared for the official F-Droid repository:
   checklist in [docs/FDROID.md](docs/FDROID.md).
 - Checked-in `version.properties` plus release tags for update checking.
 
-Create and push the `v0.3.5` tag after this commit, then follow
+Create and push the `v0.3.6` tag after this commit, then follow
 [docs/FDROID.md](docs/FDROID.md) to open the fdroiddata merge request. Actual
 publication requires that external submission and review.
 

@@ -105,6 +105,8 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 		view.setSpaceCursorEnabled(Prefs.spaceCursor(this))
 		view.setBackspaceHold(Prefs.backspaceHold(this))
 		view.setSwipeSensitivity(Prefs.swipeSensitivity(this))
+		view.setSuggestionRowHeight(Prefs.suggestionRowHeight(this))
+		view.setLetterRowHeight(Prefs.letterRowHeight(this))
 		view.setUtilityRowHeight(Prefs.utilityRowHeight(this))
 	}
 

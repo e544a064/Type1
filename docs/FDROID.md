@@ -3,7 +3,7 @@
 The repository now contains the upstream metadata F-Droid expects:
 
 - `fastlane/metadata/android/en-US/` and `fr-FR/`: title, short and full
-  descriptions, icon, six phone screenshots and the `3005` changelog.
+  descriptions, icon, six phone screenshots and the `3006` changelog.
 - `version.properties`: the checked-in version name and code used by local and
   F-Droid builds. Tagged GitHub releases still override them.
 - `fdroid/fr.type1.keyboard.yml`: a ready-to-copy fdroiddata build recipe.
@@ -15,8 +15,8 @@ The repository now contains the upstream metadata F-Droid expects:
   `core/data/NOTICE.md`)
 - Dependencies: Android SDK, Kotlin, Gradle and the `jni` Rust crate; no GMS,
   Firebase, ads, analytics or network services
-- Version: `version.properties` currently contains `0.3.5` / `3005`
-- Release tag: create and push `v0.3.5` so the recipe can check out a tagged
+- Version: `version.properties` currently contains `0.3.6` / `3006`
+- Release tag: create and push `v0.3.6` so the recipe can check out a tagged
   release commit
 
 ## Submit
@@ -24,7 +24,7 @@ The repository now contains the upstream metadata F-Droid expects:
 F-Droid's main repository accepts build metadata through
 [fdroiddata](https://gitlab.com/fdroid/fdroiddata). Fork it, copy
 `fdroid/fr.type1.keyboard.yml` to `metadata/fr.type1.keyboard.yml`, replace the
-`commit:` tag with the full commit hash of the `v0.3.5` release, and open a
+`commit:` tag with the full commit hash of the `v0.3.6` release, and open a
 merge request labelled **New App**. The recipe builds the Rust core with
 `cargo-ndk`; `gradleprops: requireRust=true` makes the build fail instead of
 silently producing an APK without native libraries.
