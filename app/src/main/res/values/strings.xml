@@ -9,7 +9,7 @@
 	<string name="setup_subtitle">A keyboard that fits on one line</string>
 	<string name="setup_step_enable">1. Enable Type1 in settings</string>
 	<string name="setup_step_select">2. Choose Type1 as your keyboard</string>
-	<string name="setup_hint">Long-press a letter for accents. Drag along the letter row to correct before lifting.</string>
+	<string name="behaviour_hint">Long-press a letter for accents. Drag along the letter row to correct before lifting.</string>
 	<string name="setup_demo_hint">Try the keyboard here…</string>
 	<string name="setup_space_cursor">Drag on the spacebar to move the cursor</string>
 	<string name="setup_backspace_hold">Long-press ⌫</string>
