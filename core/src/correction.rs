@@ -4,14 +4,18 @@
 //! noisy-channel model: `P(typed | intended)` comes from the distance between
 //! the physical keys, `P(intended)` from the word frequency.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
 
 use crate::dictionary::{self, Word};
+use crate::hangul;
 use crate::language::Language;
 use crate::layout;
 use crate::lexicon::fold;
 use crate::personal::PersonalLexicon;
 use crate::profile::Profile;
+use crate::script::Script;
 
 /// Minimum score a candidate needs before it may replace the typed word.
 const MIN_SCORE: f32 = 0.5;
@@ -38,6 +42,11 @@ const TRANSPOSE_COST: f32 = 0.6;
 const APOSTROPHE_COST: f32 = 0.15;
 /// Two-key candidates are shown but need more confidence before auto-apply.
 const TWO_KEY_MIN_SCORE: f32 = 2.0;
+/// Hangul confidence bands use the total explanation cost across all jamo
+/// changes, not just the worst single change. A word whose whole path is cheap
+/// ranks above a merely frequent word with many changes.
+const HANGUL_TIER1_COST: f32 = 1.75;
+const HANGUL_TIER2_COST: f32 = 4.0;
 /// A low-confidence tier-1 candidate is discarded when the best tier-2
 /// candidate is this much more likely. Otherwise a rare word that happens to be
 /// one key away can hide a much more plausible spelling variant.
@@ -53,10 +62,14 @@ const CONTRACTION_LOG_FREQ: f32 = 8.0;
 /// normally a misspelling or a rare word. Applied to any candidate that
 /// matches a contraction key before it is shown to the user.
 const CONTRACTION_ALIAS_BONUS: f32 = 4.0;
-/// Longest token the weighted distance will consider.
-const MAX_CHARS: usize = 31;
+/// Longest unit sequence the weighted distance will consider. Latin tokens are
+/// at most 31 folded bytes; Korean words are at most 31 syllables, which can
+/// decompose to roughly 150 jamo.
+const MAX_CHARS: usize = 160;
 /// `a`–`z` use 0–25, everything else (apostrophes, stray letters) shares 26.
 const OTHER: usize = 26;
+/// Compatibility jamo use U+3131–U+318E, i.e. 94 possible unit codes.
+const UNIT_COUNT: usize = 94;
 
 #[derive(Clone, Debug)]
 pub struct Candidate {
@@ -114,33 +127,113 @@ fn char_index(byte: u8) -> usize {
 	}
 }
 
-type CostTable = [[f32; OTHER + 1]; OTHER + 1];
+/// Pack a compatibility jamo into the unit byte used by the distance code.
+fn jamo_unit(c: char) -> u8 {
+	debug_assert!(hangul::is_jamo(c), "{c} is not a jamo");
+	(c as u32 - 0x3131) as u8
+}
+
+type CostTable = [[f32; UNIT_COUNT]; UNIT_COUNT];
+
+/// A jamo key on the layout, used to build the substitution cost table.
+#[derive(Clone, Debug)]
+struct JamoKey {
+	code: usize,
+	x: f32,
+	y: f32,
+}
 
 /// Correction model for one keyboard profile: its key geometry and all of its
 /// language dictionaries.
 #[derive(Debug)]
 pub struct Corrector {
 	costs: CostTable,
+	hangul: bool,
 	languages: Vec<&'static Language>,
 	elisions: bool,
+	/// Korean words grouped by decomposed jamo length, built on first use.
+	hangul_words: OnceLock<Vec<Vec<&'static Word>>>,
 }
 
 impl Corrector {
 	pub fn new(profile: &Profile) -> Self {
+		let hangul = profile.layout.script == Script::Hangul;
+		let costs = if hangul {
+			let mut keys = Vec::new();
+			for letter in profile.layout.letters.iter() {
+				let x = key_column(letter.id);
+				let y = letter.row as f32 * 0.55;
+				if let Some(jamo) = letter.commit.chars().next() {
+					let code = jamo_unit(jamo) as usize;
+					keys.push(JamoKey { code, x, y });
+				}
+				if let Some(jamo) = letter.shift_commit.chars().next() {
+					let code = jamo_unit(jamo) as usize;
+					keys.push(JamoKey { code, x, y });
+				}
+			}
+			jamo_cost_table(&keys)
+		} else {
+			cost_table(profile.layout.letters)
+		};
 		Corrector {
-			costs: cost_table(profile.layout.letters),
+			costs,
+			hangul,
 			languages: profile.languages.clone(),
 			elisions: profile
 			. languages
 			. iter()
 			. any(|language| language.elisions),
+			hangul_words: OnceLock::new(),
 		}
 	}
 
-	fn words_of_len(&self, length: usize) -> impl Iterator<Item = &'static Word> + '_ {
-		self.languages
-		. iter()
-		. flat_map(move |language| language.dictionary.words_of_len(length))
+	/// Typed units: folded ASCII bytes for Latin, packed jamo codes for Hangul.
+	fn units(&self, text: &str) -> Vec<u8> {
+		if self.hangul {
+			hangul::decompose_keystrokes(text)
+			. into_iter()
+			. map(jamo_unit)
+			. collect()
+		} else {
+			fold(text).into_bytes()
+		}
+	}
+
+	fn word_units(&self, word: &'static Word) -> Cow<'static, [u8]> {
+		if self.hangul {
+			Cow::Owned(self.units(word.text))
+		} else {
+			Cow::Borrowed(word.folded.as_bytes())
+		}
+	}
+
+	fn words_of_units_len(
+		&self,
+		length: usize,
+	) -> Box<dyn Iterator<Item = &'static Word> + '_> {
+		if self.hangul {
+			let index = self.hangul_words.get_or_init(|| {
+				let mut by_len: Vec<Vec<&'static Word>> = Vec::new();
+				for language in &self.languages {
+					for word in language.dictionary.words() {
+						let len = hangul::decompose_keystrokes(word.text).len();
+						if by_len.len() <= len {
+							by_len.resize_with(len + 1, Vec::new);
+						}
+						by_len[len].push(word);
+					}
+				}
+				by_len
+			});
+			Box::new(index.get(length).into_iter().flatten().copied())
+		} else {
+			Box::new(
+				self.languages
+				. iter()
+				. flat_map(move |language| language.dictionary.words_of_len(length)),
+			)
+		}
 	}
 
 	fn exact(&self, word: &str) -> Option<&'static Word> {
@@ -156,6 +249,39 @@ impl Corrector {
 		. filter_map(|language| language.dictionary.folded(form))
 		. max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
 	}
+
+	#[cfg(test)]
+	fn unit_index(&self, unit: u8) -> usize {
+		if self.hangul {
+			unit as usize
+		} else {
+			char_index(unit)
+		}
+	}
+
+	#[cfg(test)]
+	fn substitution_cost(&self, a: u8, b: u8) -> f32 {
+		self.costs[self.unit_index(a)][self.unit_index(b)]
+	}
+
+}
+
+/// Physical QWERTY column of a layout letter. Korean ids are `ko_q`, so the
+/// last character still identifies the original key.
+fn key_column(id: &str) -> f32 {
+	match id.chars().last() {
+		Some('q' | 'a' | 'z') => 0.0,
+		Some('w' | 's' | 'x') => 1.0,
+		Some('c'..='e') => 2.0,
+		Some('r' | 'f' | 'v') => 3.0,
+		Some('t' | 'g' | 'b') => 4.0,
+		Some('y' | 'h' | 'n') => 5.0,
+		Some('u' | 'j' | 'm') => 6.0,
+		Some('i' | 'k') => 7.0,
+		Some('o' | 'l') => 8.0,
+		Some('p') => 9.0,
+		_ => 0.0,
+	}
 }
 
 /// Pairwise substitution costs for one layout.
@@ -168,7 +294,7 @@ fn cost_table(letters: &[layout::Letter]) -> CostTable {
 		}
 	}
 
-	let mut table = [[1.5f32; OTHER + 1]; OTHER + 1];
+	let mut table = [[1.5f32; UNIT_COUNT]; UNIT_COUNT];
 	table[OTHER][OTHER] = 0.0;
 	for (a, row) in table.iter_mut().enumerate().take(26) {
 		for (b, slot) in row.iter_mut().enumerate().take(26) {
@@ -182,9 +308,28 @@ fn cost_table(letters: &[layout::Letter]) -> CostTable {
 	table
 }
 
+/// Jamo substitution costs from the physical Sebeolsik key positions. Jamo on
+/// the same key (base and shift variant) cost nothing, so `ㅅ`/`ㅆ` and the
+/// other pairs compete purely on dictionary frequency.
+fn jamo_cost_table(keys: &[JamoKey]) -> CostTable {
+	let mut table = [[1.5f32; UNIT_COUNT]; UNIT_COUNT];
+	for (code, row) in table.iter_mut().enumerate() {
+		row[code] = 0.0;
+	}
+	for a in keys {
+		for b in keys {
+			let dx = a.x - b.x;
+			let dy = a.y - b.y;
+			table[a.code][b.code] = (dx * dx + dy * dy).sqrt().min(2.6);
+		}
+	}
+	table
+}
+
 impl Corrector {
 	/// Weighted Damerau-Levenshtein distance, abandoned as soon as every path is
-	/// more expensive than `max`. Operates on folded (ASCII) bytes.
+	/// more expensive than `max`. Operates on folded ASCII bytes or packed jamo
+	/// units, depending on the profile script.
 	fn distance(&self, a: &[u8], b: &[u8], max: f32) -> Option<f32> {
 		let n = a.len();
 		let m = b.len();
@@ -192,10 +337,11 @@ impl Corrector {
 			return None;
 		}
 
-		let costs = &self.costs;
 		let mut prev2 = [f32::INFINITY; MAX_CHARS + 1];
 		let mut prev = [0.0f32; MAX_CHARS + 1];
 		let mut cur = [0.0f32; MAX_CHARS + 1];
+		let hangul = self.hangul;
+		let costs = &self.costs;
 		for (j, slot) in prev.iter_mut().enumerate().take(m + 1) {
 			*slot = j as f32;
 		}
@@ -203,10 +349,14 @@ impl Corrector {
 		for i in 1..=n {
 			cur[0] = i as f32;
 			let mut row_min = cur[0];
-			let ai = char_index(a[i - 1]);
 			for j in 1..=m {
+				let step = if hangul {
+					costs[a[i - 1] as usize][b[j - 1] as usize]
+				} else {
+					costs[char_index(a[i - 1])][char_index(b[j - 1])]
+				};
 				let mut best = (
-					(prev[j - 1] + costs[ai][char_index(b[j - 1])])
+					(prev[j - 1] + step)
 					. min(prev[j] + 1.0)
 					. min(cur[j - 1] + 1.0)
 				);
@@ -255,10 +405,13 @@ fn starts_with_vowel(s: &str) -> bool {
 	matches!(
 		s.chars().next(),
 		Some(
-			'a' | 'e'
-				| 'i' | 'o' | 'u' | 'y'
-				| 'à' | 'â' | 'ä' | 'é' | 'è' | 'ê' | 'ë' | 'î' | 'ï' | 'ô' | 'ö' | 'ù'
-				| 'û' | 'ü' | 'œ' | 'æ'
+			| 'a' | 'à' | 'â' | 'ä'
+			| 'e' | 'é' | 'è' | 'ê' | 'ë'
+			| 'i' | 'î' | 'ï'
+			| 'o' | 'ô' | 'ö'
+			| 'u' | 'ù' | 'û' | 'ü'
+			| 'y'
+			| 'œ' | 'æ'
 		)
 	)
 }
@@ -388,7 +541,7 @@ impl Corrector {
 		. languages
 		. iter()
 		. copied()
-		.filter(|language| language.elisions)
+		. filter(|language| language.elisions)
 		{
 			for &(clitic, penalty) in CLITICS {
 				if !lower.starts_with(clitic) {
@@ -454,41 +607,44 @@ impl Corrector {
 	}
 
 	fn candidates_inner(&self, lower: &str) -> Vec<Candidate> {
-		debug_assert!(lower.chars().count() >= 2 && !lower.contains('\''));
-		let folded_typed = fold(lower);
-		let typed_bytes = folded_typed.as_bytes();
+		let typed_units = self.units(lower);
+		debug_assert!(!typed_units.is_empty() && !lower.contains('\''));
 		let mut found: HashMap<String, Candidate> = HashMap::new();
 
-		// Missing accents only (`ecole` -> `école`).
-		if let Some(word) = self.folded(&folded_typed) {
-			let cost = 0.25;
-			insert(
-				&mut found,
-				Candidate::normal(
-					word.text,
-					word.log_freq * AGGRESSIVE_WEIGHT - cost,
-					1,
-				),
-			);
+		if !self.hangul {
+			// Missing accents only (`ecole` -> `école`).
+			let folded_typed = fold(lower);
+			if let Some(word) = self.folded(&folded_typed) {
+				let cost = 0.25;
+				insert(
+					&mut found,
+					Candidate::normal(
+						word.text,
+						word.log_freq * AGGRESSIVE_WEIGHT - cost,
+						1,
+					),
+				);
+			}
+
+			// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may
+			// itself contain a typo, so `taimx` and `taipe` can still reach
+			// `t'aime`.
+			self.add_elisions(lower, &mut found, true);
 		}
 
-		// Elision: `jai` -> `j'ai`, `taime` -> `t'aime`. The remainder may itself
-		// contain a typo, so `taimx` and `taipe` can still reach `t'aime`.
-		self.add_elisions(lower, &mut found, true);
-
 		// Typographical and neighbouring-key errors.
-		let typed_len = typed_bytes.len();
+		let typed_len = typed_units.len();
 		for length in typed_len.saturating_sub(1)..=typed_len.saturating_add(1) {
-			for word in self.words_of_len(length) {
-				let word_bytes = word.folded.as_bytes();
-				if word_bytes.len() < 2 {
+			for word in self.words_of_units_len(length) {
+				let word_units = self.word_units(word);
+				if word_units.len() < 2 {
 					continue;
 				}
-				if let Some(cost) = self.distance(typed_bytes, word_bytes, MAX_COST) {
+				if let Some(cost) = self.distance(&typed_units, &word_units, MAX_COST) {
 					if cost == 0.0 {
 						continue;
 					}
-					let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
+					let length_diff = word_units.len().abs_diff(typed_units.len()) as f32;
 					insert(
 						&mut found,
 						Candidate::normal(
@@ -521,11 +677,16 @@ impl Corrector {
 		if n != b.len() || n > MAX_CHARS {
 			return None;
 		}
-		let costs = &self.costs;
 		let mut dp = [f32::INFINITY; MAX_CHARS + 1];
 		dp[0] = 0.0;
+		let hangul = self.hangul;
+		let costs = &self.costs;
 		for i in 1..=n {
-			let step = costs[char_index(a[i - 1])][char_index(b[i - 1])];
+			let step = if hangul {
+				costs[a[i - 1] as usize][b[i - 1] as usize]
+			} else {
+				costs[char_index(a[i - 1])][char_index(b[i - 1])]
+			};
 			if step <= limit {
 				dp[i] = dp[i - 1] + step;
 			}
@@ -577,8 +738,22 @@ impl Corrector {
 	/// Closest explanation, with a tier: 1 for one-key slips, 2 for the second
 	/// key ring or a one-letter spelling variant.
 	fn candidate_distance(&self, a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
-		self.keyboard_distance(a, b)
-		. or_else(|| Self::spelling_distance(a, b).map(|distance| (distance, 2)))
+		let result = self
+		. keyboard_distance(a, b)
+		. or_else(|| Self::spelling_distance(a, b).map(|distance| (distance, 2)));
+		if !self.hangul {
+			return result;
+		}
+		result.map(|(distance, _)| {
+			let tier = if distance <= HANGUL_TIER1_COST {
+				1
+			} else if distance <= HANGUL_TIER2_COST {
+				2
+			} else {
+				3
+			};
+			(distance, tier)
+		})
 	}
 }
 
@@ -586,9 +761,8 @@ impl Corrector {
 	/// Very last resort: the same-length dictionary word with the smallest
 	/// weighted edit distance. Only used when no tier-1/2 candidate exists.
 	fn last_resort_candidates(&self, lower: &str) -> Vec<Candidate> {
-		let folded = fold(lower);
-		let typed_bytes = folded.as_bytes();
-		let length = typed_bytes.len();
+		let typed_units = self.units(lower);
+		let length = typed_units.len();
 		if length < LAST_RESORT_MIN_LEN {
 			return Vec::new();
 		}
@@ -596,8 +770,9 @@ impl Corrector {
 
 		let mut best = f32::INFINITY;
 		let mut matches: Vec<(&dictionary::Word, f32)> = Vec::new();
-		for word in self.words_of_len(length) {
-			let Some(distance) = self.distance(typed_bytes, word.folded.as_bytes(), max) else {
+		for word in self.words_of_units_len(length) {
+			let word_units = self.word_units(word);
+			let Some(distance) = self.distance(&typed_units, &word_units, max) else {
 				continue;
 			};
 			if distance < best {
@@ -722,19 +897,18 @@ impl Corrector {
 		if personal.is_empty() {
 			return;
 		}
-		let folded_typed = fold(lower);
-		let typed_bytes = folded_typed.as_bytes();
-		for word in personal.words_of_len(typed_bytes.len()) {
+		let typed_units = self.units(lower);
+		for word in personal.words() {
 			if !word.matches(&self.languages) {
 				continue;
 			}
-			let folded = word.folded();
-			if folded == folded_typed {
+			let word_units = self.units(word.text());
+			if word_units == typed_units {
 				continue;
 			}
 			let Some((distance, tier)) = self.candidate_distance(
-				typed_bytes,
-				folded.as_bytes(),
+				&typed_units,
+				&word_units,
 			) else {
 				continue;
 			};
@@ -749,15 +923,15 @@ impl Corrector {
 		}
 	}
 
-	/// Words where every typed letter is one or two keys away from the intended
+	/// Words where every typed unit is one or two keys away from the intended
 	/// one, ranked by frequency. This is the narrow-keyboard rescue: an input can
 	/// be complete nonsense and still point at a common word.
 	fn add_neighbour_candidates(&self, lower: &str, found: &mut HashMap<String, Candidate>) {
-		let folded_typed = fold(lower);
-		let typed_bytes = folded_typed.as_bytes();
-		for word in self.words_of_len(typed_bytes.len()) {
+		let typed_units = self.units(lower);
+		for word in self.words_of_units_len(typed_units.len()) {
+			let word_units = self.word_units(word);
 			let Some((distance, tier)) =
-				self.candidate_distance(typed_bytes, word.folded.as_bytes())
+				self.candidate_distance(&typed_units, &word_units)
 			else {
 				continue;
 			};
@@ -781,12 +955,13 @@ impl Corrector {
 		let folded = fold(lower);
 		let bytes = folded.as_bytes();
 
-		for language in self
-		. languages
-		. iter()
-		. copied()
-		. filter(|language| language.elisions)
-		{
+		for language in (
+			self
+			. languages
+			. iter()
+			. copied()
+			. filter(|language| language.elisions)
+		) {
 			for &(clitic, penalty) in CLITICS {
 				let clitic_len = clitic.len();
 				if bytes.len() <= clitic_len {
@@ -846,14 +1021,18 @@ impl Corrector {
 		personal: &PersonalLexicon,
 	) -> Suggestion {
 		let lower = typed.to_lowercase();
-		let length = lower.chars().count();
+		let length = if self.hangul {
+			self.units(&lower).len()
+		} else {
+			lower.chars().count()
+		};
 		if lower.contains('\'') {
 			return Suggestion::empty();
 		}
-		if length == 1 {
+		if length == 1 && !self.hangul {
 			return self.single_letter_suggestions(&lower);
 		}
-		if length < 2 {
+		if length == 0 {
 			return Suggestion::empty();
 		}
 
@@ -888,17 +1067,19 @@ impl Corrector {
 			for candidate in self.candidates_inner(&lower) {
 				insert(&mut found, candidate);
 			}
-		} else {
+		} else if !self.hangul {
 			// A known word in one language (for example English `jai`) must not
 			// hide the elision that another active language can build from it.
 			self.add_elisions(&lower, &mut found, false);
 		}
 		self.add_neighbour_candidates(&lower, &mut found);
 		self.add_personal_candidates(&lower, personal, &mut found);
-		if !is_known && length >= 3 {
+		if !is_known && !self.hangul && length >= 3 {
 			self.add_aggressive_elisions(&lower, &mut found);
 		}
-		self.add_contractions(&lower, &mut found);
+		if !self.hangul {
+			self.add_contractions(&lower, &mut found);
+		}
 
 		let mut list: Vec<Candidate> = found.into_values().collect();
 		let best_tier2 = (
@@ -1028,7 +1209,7 @@ impl Corrector {
 		}
 
 		let mut by_base: HashMap<char, HashMap<String, f32>> = HashMap::new();
-		for word in self.words_of_len(1) {
+		for word in self.words_of_units_len(1) {
 			let Some(word_base) = word.folded.chars().next() else {
 				continue;
 			};
@@ -1327,6 +1508,40 @@ mod tests {
 			. iter()
 			. all(|candidate| candidate.text != "zorblat")
 		);
+	}
+
+	#[test]
+	fn shift_variants_have_no_extra_correction_cost() {
+		let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
+		let corrector = profile.corrector();
+		for (base, shifted) in [
+			('ㅂ', 'ㅃ'),
+			('ㅈ', 'ㅉ'),
+			('ㄷ', 'ㄸ'),
+			('ㄱ', 'ㄲ'),
+			('ㅅ', 'ㅆ'),
+			('ㅐ', 'ㅒ'),
+			('ㅔ', 'ㅖ'),
+		] {
+			let cost = |from: char, to: char| {
+				corrector.substitution_cost(jamo_unit(from), jamo_unit(to))
+			};
+			assert_eq!(cost(base, shifted), 0.0, "{base} -> {shifted}");
+			assert_eq!(cost(shifted, base), 0.0, "{shifted} -> {base}");
+		}
+	}
+
+	#[test]
+	fn jamo_costs_follow_key_distance() {
+		let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
+		let corrector = profile.corrector();
+		let cost = |from: char, to: char| {
+			corrector.substitution_cost(jamo_unit(from), jamo_unit(to))
+		};
+		assert_eq!(cost('ㄷ', 'ㄸ'), 0.0);
+		assert!((cost('ㄱ', 'ㄹ') - 0.55).abs() < 0.01);
+		assert!(cost('ㄱ', 'ㅐ') > TWO_KEY_COST, "{}", cost('ㄱ', 'ㅐ'));
+		assert!(cost('ㄹ', 'ㅊ') <= NEIGHBOUR_COST);
 	}
 
 	#[test]

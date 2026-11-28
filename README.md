@@ -17,19 +17,22 @@ physical column order (AZERTY `A Q W`, `Z S X`, ...; QWERTY `Q A Z`, `W S X`,
 according to its physical row — top-row letters higher, bottom-row letters
 lower — so the original layout stays legible.
 The row is lowercase normally and uppercase while shift (or auto-capitalisation)
-is active. Taps resolve by horizontal position; you can drag along the strip and
-release on the letter you want.
+is active. Hangul jamo have no case, so shift selects the tense consonant or
+`ㅒ`/`ㅖ` instead. Taps resolve by horizontal position; you can drag along the
+strip and release on the letter you want.
 
 ## Status: MVP
 
 - AZERTY and QWERTY layouts, all 26 letters on one line in physical column
   order with row-based vertical offsets, uniform size and case (uppercase while
-  shift/auto-caps is active). AZERTY is the default.
+  shift/auto-caps is active). AZERTY is the default. A Sebeolsik Final layout
+  puts the Korean jamo on the same line; shift types the tense consonants and
+  `ㅒ`/`ㅖ`, which are also available from the base key's long-press popup.
 - Profiles pair a layout with one or more languages. They are created in
   **Keyboard profiles** (main settings → Keyboard profiles; *Profils de clavier*
   in French): the layout comes from a dropdown and the languages are toggles
-  (Français, English (UK), Español). The list starts empty, and the keyboard
-  falls back to `AZERTY · Français` until a profile exists.
+  (Français, English (UK), Español, 한국어). The list starts empty, and the
+  keyboard falls back to `AZERTY · Français` until a profile exists.
 - Settings are split into a main page and five sub-pages, each with a sticky
   title and a test field:
   - **Setup** — enable Type1 and choose it as the current keyboard.
@@ -56,8 +59,8 @@ release on the letter you want.
   including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
 - Autocorrection at word boundaries from frequency-ranked dictionaries (all
-  typable Lexique 3.83 French forms, full wordfreq English and Spanish lists),
-  with a layout-aware touch model: neighbouring-key slips, transpositions,
+  typable Lexique 3.83 French forms, full wordfreq English, Spanish and Korean
+  lists), with a layout-aware touch model: neighbouring-key slips, transpositions,
   missing accents (`ecole` → `école`, `manana` → `mañana`) and French elision
   (`jai` → `j'ai`, `taimx` → `t'aime`, `taipe` → `t'aime`).
 - British English autocorrection (`langauge` → `language`, `recieve` →
@@ -65,6 +68,16 @@ release on the letter you want.
   `favourite`, `behaviour`).
 - Spanish autocorrection from the full wordfreq Spanish list, including accents
   and ñ (`manana` → `mañana`, `nino` → `niño`, `espanol` → `español`).
+- Korean typing with Sebeolsik Final: jamo compose into syllables as you type
+  (`ㄱ` then `ㅏ` → `가`), a trailing consonant moves to the next syllable
+  (`가나`), and backspace removes one jamo at a time. Autocorrection uses the
+  same dictionary search as the other languages, with the typed word and each
+  dictionary word decomposed into jamo units. Neighbouring-key and shift-variant
+  changes such as `댈개` → `딸기` are therefore found by the normal whole-word
+  rescue, then ranked by frequency. Shift variants have equal correction
+  priority, so a tense consonant is never penalised as a typo. A known but rare
+  form still gets suggestions: `달기` offers `딸기` without being replaced
+  automatically.
 - English contractions are restored (`dont` → `don't`, `cant` → `can't`,
   `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`). Any ordinary
   candidate that equals a contraction key is shown as the contraction, so
@@ -175,10 +188,12 @@ it workable. Three things compensate:
 - autocorrection with layout-aware candidates (`dkre` → `dire`,
   `ecole` → `école`).
 
-Layout and language are data, not code: `core/src/layout.rs` lists the AZERTY
-and QWERTY letters in physical column order with a `row` index (0 top, 1 home,
-2 bottom), each language owns its dictionary in `core/src/language.rs`, and
-`core/src/profile.rs` combines one layout with a set of languages at runtime.
+Layout and language are data, not code: `core/src/layout.rs` lists the AZERTY,
+QWERTY and Sebeolsik letters in physical column order with a `row` index (0 top,
+1 home, 2 bottom), each language owns its dictionary in `core/src/language.rs`,
+and `core/src/profile.rs` combines one layout with a set of languages at
+runtime. `core/src/hangul.rs` composes and decomposes Korean jamo for layouts
+whose script is Hangul; Latin layouts never enter that path.
 The core exposes layouts and languages separately; the user's profiles are
 stored in preferences, so no combination list is hard-coded.
 
@@ -205,7 +220,9 @@ core/                     Rust crate (no Android dependency)
   src/language.rs         language definitions and dictionaries
   src/dictionary.rs       lazily loaded per-language word lists
   src/correction.rs       profile-scoped candidates and scoring
+  src/hangul.rs           Hangul jamo composition and decomposition
   src/profile.rs          runtime layout + language configuration
+  src/script.rs           Latin vs Hangul script behaviour
   src/personal.rs         dynamic host personal-word overlay
   src/lexicon.rs          accent folding
   src/json.rs             tiny JSON writer for the render payload
@@ -215,6 +232,7 @@ core/                     Rust crate (no Android dependency)
   data/fr.tsv             derived Lexique 3.83 list (all typable French forms)
   data/en.tsv             derived wordfreq list (all single-token English forms)
   data/es.tsv             derived wordfreq list (Spanish forms with accents)
+  data/ko.tsv             derived wordfreq list (Korean Hangul syllables)
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
   examples/make_autocorrect_cases.rs  regenerate the typo fixtures
@@ -225,6 +243,7 @@ core/                     Rust crate (no Android dependency)
   tests/interaction_tests.rs  full editing sessions through a small editor model
   tests/english_bulk_tests.rs  contractions, caps-lock and single letters
   tests/autocorrect_tests.rs  bulk autocorrect regressions
+  tests/korean_tests.rs   Hangul composition, jamo correction and backspace
   tests/data/autocorrect_cases.tsv  2,500 mixed typo cases
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases
@@ -257,6 +276,7 @@ scripts/build-rust.ps1    cross-compile the core into jniLibs
 scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
 scripts/build-spanish-dictionary.py  regenerate core/data/es.tsv from wordfreq
+scripts/build-korean-dictionary.py  regenerate core/data/ko.tsv from wordfreq
 scripts/export-wordfreq.py  export the full English wordfreq list
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
@@ -302,6 +322,11 @@ letters including `á é í ó ú ü ñ`, with a positive wordfreq probability. 
 resulting list has about 334,000 forms (4.5 MB) and uses the same frequency
 scale as the other dictionaries. Regenerate it with
 `scripts/build-spanish-dictionary.py`.
+
+`core/data/ko.tsv` is derived from [wordfreq](https://github.com/rspeer/wordfreq)
+(CC BY-SA 4.0). It keeps every single Korean token up to 31 precomposed Hangul
+syllables, about 26,800 forms (0.37 MB), with the same frequency scale.
+Regenerate it with `scripts/build-korean-dictionary.py`.
 
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).

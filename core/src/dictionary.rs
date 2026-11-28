@@ -148,6 +148,9 @@ pub static ENGLISH: Dictionary = Dictionary::new(include_str!("../data/en.tsv"))
 /// Spanish dictionary (wordfreq).
 pub static SPANISH: Dictionary = Dictionary::new(include_str!("../data/es.tsv"));
 
+/// Korean dictionary (wordfreq).
+pub static KOREAN: Dictionary = Dictionary::new(include_str!("../data/ko.tsv"));
+
 /// Compatibility wrappers for the default French dictionary.
 pub fn words() -> &'static [Word] {
 	FRENCH.words()
@@ -183,6 +186,15 @@ mod tests {
 		assert!(SPANISH.exact("hola").is_some());
 		assert!(SPANISH.exact("mañana").is_some());
 		assert!(SPANISH.exact("pingüino").is_some());
+	}
+
+	#[test]
+	fn loads_the_korean_dictionary() {
+		assert!(KOREAN.words().len() >= 20_000);
+		assert!(KOREAN.exact("한글").is_some());
+		assert!(KOREAN.exact("사람").is_some());
+		assert!(KOREAN.exact("안녕").is_some());
+		assert!(KOREAN.exact("한굴").is_none());
 	}
 
 	#[test]

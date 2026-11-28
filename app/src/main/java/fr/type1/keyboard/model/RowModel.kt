@@ -6,6 +6,8 @@ import org.json.JSONObject
 data class LetterKey(
 	val id: String,
 	val label: String,
+	/** Text this key commits when tapped (use this for its popup). */
+	val commit: String,
 	val letter: Boolean,
 	/** Physical keyboard row: 0 top, 1 home, 2 bottom. */
 	val row: Int,
@@ -34,6 +36,8 @@ data class RowModel(
 	val shift: Int,
 	/** True when the next letter will be uppercase (shift or auto-capitals). */
 	val caps: Boolean,
+	/** Whether a letter popup may also show neighbouring keys' alternates. */
+	val mergeLetterAlts: Boolean,
 	val suggestions: List<String>,
 	val letters: List<LetterKey>,
 	/** Shift (left) and backspace (right) pinned to the suggestion strip. */
@@ -50,6 +54,7 @@ data class RowModel(
 				LetterKey(
 					id = letter.getString("id"),
 					label = letter.optString("label", letter.getString("id")),
+					commit = letter.optString("commit", letter.getString("id")),
 					letter = letter.optBoolean("letter", false),
 					row = letter.optInt("row", 1),
 					alts = letter.stringList("alts"),
@@ -60,6 +65,7 @@ data class RowModel(
 				page = root.optString("page", "letters"),
 				shift = root.optInt("shift", 0),
 				caps = root.optBoolean("caps", false),
+				mergeLetterAlts = root.optBoolean("mergeLetterAlts", true),
 				suggestions = root.stringList("suggestions"),
 				letters = letters,
 				strip = root.utilityList("strip"),

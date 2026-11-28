@@ -116,6 +116,10 @@ impl PersonalLexicon {
 		self.words.len()
 	}
 
+	pub fn words(&self) -> &[PersonalWord] {
+		&self.words
+	}
+
 	/// Best exact match by folded form, limited to the active languages.
 	pub fn exact<'a>(&'a self, folded: &str, languages: &[&Language]) -> Option<&'a PersonalWord> {
 		self

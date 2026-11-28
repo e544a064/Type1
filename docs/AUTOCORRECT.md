@@ -539,6 +539,44 @@ dictionary. It is an overlay on the embedded dictionaries, not part of them.
 - Changing the personal lexicon invalidates the cached suggestion for the
   current token.
 
+### 5.11 Hangul jamo units
+
+Korean uses the Sebeolsik Final layout. Every key commits a compatibility jamo,
+and the engine composes jamo into precomposed syllables before the word reaches
+the editor. Correction does not have a separate Hangul algorithm: it runs the
+same channels as Latin on jamo units.
+
+1. **Input transformation.** A Latin token is folded to ASCII units. A Korean
+   token is decomposed into jamo units. Compound vowels and tails are split into
+   their keys; double leads and the atomic vowels with their own key stay one
+   unit.
+2. **Dictionary transformation.** Korean dictionary words are indexed by jamo
+   length and decomposed to the same units before the weighted distance runs.
+   Latin keeps its existing folded-length index.
+3. **Same candidate channels.** Missing accents, elisions and contractions are
+   Latin-only, so they are skipped for Hangul. The shared direct-edit,
+   whole-word neighbour rescue, spelling-variant and last-resort channels run
+   unchanged. A candidate is always a real dictionary word.
+4. **Same ranking.** Candidates are scored with
+   `ln(frequency) × AGGRESSIVE_WEIGHT − distance`, sorted by tier and score, and
+   filtered by the normal known-word, fallback and runner-up margins. Korean
+   uses total explanation cost for the tier bands, so several one-key changes do
+   not look as confident as a single cheap change.
+5. **Output transformation.** A candidate's jamo sequence is the dictionary
+   word's decomposed form, so its surface text is its precomposed syllables.
+   Personal words are decomposed and scored the same way.
+
+Shift variants (`ㅅ`/`ㅆ`, `ㄱ`/`ㄲ`, `ㅐ`/`ㅒ`, ...) are on the same key and
+therefore cost nothing. A word already in the Korean dictionary is protected by
+the normal known-word margin; it can still show alternatives in the strip.
+
+This is why `댈개` finds `딸기`: the whole-word neighbour rescue sees
+`ㄷㅐㄹㄱㅐ` versus `ㄸㅏㄹㄱㅣ`, where every changed jamo is on a neighbouring
+key or the other shift state of the same key.
+
+Backspace removes one jamo at a time (`가` → `ㄱ`, `값` → `갑`), while a word
+boundary applies the normal tier and margin rules.
+
 ## 6. Merging and ranking
 
 ### 6.1 Duplicate handling

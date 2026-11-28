@@ -5,9 +5,10 @@
 
 use crate::dictionary::{
 	Dictionary, ENGLISH as ENGLISH_DICTIONARY, FRENCH as FRENCH_DICTIONARY,
-	SPANISH as SPANISH_DICTIONARY,
+	KOREAN as KOREAN_DICTIONARY, SPANISH as SPANISH_DICTIONARY,
 };
 use crate::json;
+use crate::script::Script;
 
 #[derive(Debug)]
 pub struct Language {
@@ -16,6 +17,7 @@ pub struct Language {
 	/// Short code shown on the spacebar (`FR`, `EN`, ...).
 	pub short: &'static str,
 	pub dictionary: &'static Dictionary,
+	pub script: Script,
 	/// French elision/clitic handling (`jai` -> `j'ai`).
 	pub elisions: bool,
 	/// Missing-apostrophe forms and their contraction (`dont` -> `don't`).
@@ -30,6 +32,7 @@ pub static FRENCH: Language = Language {
 	label: "Français",
 	short: "FR",
 	dictionary: &FRENCH_DICTIONARY,
+	script: Script::Latin,
 	elisions: true,
 	contractions: &[],
 	ambiguous_contractions: &[],
@@ -94,6 +97,7 @@ pub static ENGLISH: Language = Language {
 	label: "English (UK)",
 	short: "EN",
 	dictionary: &ENGLISH_DICTIONARY,
+	script: Script::Latin,
 	elisions: false,
 	contractions: ENGLISH_CONTRACTIONS,
 	ambiguous_contractions: &["lets"],
@@ -104,14 +108,25 @@ pub static SPANISH: Language = Language {
 	label: "Español",
 	short: "ES",
 	dictionary: &SPANISH_DICTIONARY,
+	script: Script::Latin,
 	elisions: false,
 	contractions: &[],
 	ambiguous_contractions: &[],
 };
 
-/// Languages with a correction model today. Korean can be added here once its
-/// dictionary and Hangul composition exist.
-pub static LANGUAGES: &[&Language] = &[&FRENCH, &ENGLISH, &SPANISH];
+pub static KOREAN: Language = Language {
+	id: "ko",
+	label: "한국어",
+	short: "KO",
+	dictionary: &KOREAN_DICTIONARY,
+	script: Script::Hangul,
+	elisions: false,
+	contractions: &[],
+	ambiguous_contractions: &[],
+};
+
+/// Languages with a correction model today.
+pub static LANGUAGES: &[&Language] = &[&FRENCH, &ENGLISH, &SPANISH, &KOREAN];
 
 pub fn find(id: &str) -> Option<&'static Language> {
 	LANGUAGES.iter().copied().find(|language| language.id == id)
@@ -162,6 +177,16 @@ mod tests {
 	}
 
 	#[test]
+	fn korean_is_available() {
+		let korean = find("ko").unwrap();
+		assert_eq!(korean.label, "한국어");
+		assert_eq!(korean.short, "KO");
+		assert_eq!(korean.script, Script::Hangul);
+		assert!(!korean.elisions);
+		assert!(korean.dictionary.words().len() >= 20_000);
+	}
+
+	#[test]
 	fn catalog_lists_all_languages() {
 		let json: serde_json::Value = serde_json::from_str(&catalog_json()).unwrap();
 		assert_eq!(json[0]["id"], "fr");
@@ -170,5 +195,7 @@ mod tests {
 		assert_eq!(json[1]["label"], "English (UK)");
 		assert_eq!(json[2]["id"], "es");
 		assert_eq!(json[2]["label"], "Español");
+		assert_eq!(json[3]["id"], "ko");
+		assert_eq!(json[3]["label"], "한국어");
 	}
 }

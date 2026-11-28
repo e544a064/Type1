@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 
 use crate::action::{Action, ImeActionKind};
 use crate::correction::Suggestion;
+use crate::hangul;
 use crate::json;
 use crate::layout::{Letter, Page, ShiftState};
 use crate::lexicon::fold;
@@ -144,6 +145,8 @@ pub struct Engine {
 	last_char: Option<char>,
 	/// Letters (and inner apostrophes) committed since the last boundary.
 	word: String,
+	/// Jamo keys behind the current Hangul word. Empty for other scripts.
+	jamo: Vec<char>,
 	ime_action: ImeActionKind,
 	/// True when the editor asked the enter key to stay a newline.
 	no_enter_action: bool,
@@ -187,6 +190,7 @@ impl Engine {
 			word_starts_sentence: true,
 			last_char: None,
 			word: String::new(),
+			jamo: Vec::new(),
 			ime_action: ImeActionKind::None,
 			no_enter_action: false,
 			suggestions_enabled: true,
@@ -274,6 +278,7 @@ impl Engine {
 		self.word_starts_sentence = true;
 		self.last_char = None;
 		self.word.clear();
+		self.jamo.clear();
 		self.clear_correction_state();
 		self.correction_memory.clear();
 		self.suggestion_cache = None;
@@ -372,6 +377,9 @@ impl Engine {
 		let sentence_start = starts_sentence(before);
 		self.word.clear();
 		self.word.push_str(&prefix);
+		if self.profile.hangul() {
+			self.jamo = hangul::decompose_keystrokes(&prefix);
+		}
 		self.context_suffix = if self.suggestions_enabled && !suffix.is_empty() {
 			Some(suffix.clone())
 		} else {
@@ -405,6 +413,13 @@ impl Engine {
 			return self.finish_word(symbol, space_before);
 		}
 		if let Some(alt) = id.strip_prefix("alt:") {
+			if (
+				self.profile.hangul()
+				&& !alt.is_empty()
+				&& alt.chars().all(hangul::is_jamo)
+			) {
+				return self.commit_hangul(alt);
+			}
 			return self.commit(alt, true, false);
 		}
 		if let Some(index) = id.strip_prefix("sug:") {
@@ -455,7 +470,14 @@ impl Engine {
 					let space_before = self.profile.spacing.space_before(letter.commit);
 					self.finish_word(letter.commit, space_before)
 				}
-				Some(letter) => self.commit(letter.commit, letter.letter, false),
+				Some(letter) if self.profile.hangul() && letter.letter => {
+					let text = letter_text(letter, self.shift != ShiftState::Off);
+					self.commit_hangul(text)
+				}
+				Some(letter) => {
+					let text = letter_text(letter, self.shift != ShiftState::Off);
+					self.commit(text, letter.letter, false)
+				}
 				None => Vec::new(),
 			},
 		}
@@ -503,11 +525,51 @@ impl Engine {
 			}
 		} else {
 			self.word.clear();
+			self.jamo.clear();
 			self.last_correction = None;
 			self.context_suffix = None;
 		}
 		self.suggestion_cache = None;
 		if let Some(c) = rendered.chars().last() {
+			self.note(c);
+		}
+		out
+	}
+
+	/// Commit a jamo, composing it into the previous syllable. The visible word
+	/// may shrink as well as grow: `간` plus `ㅏ` becomes `가나`, so the editor
+	/// is updated by deleting only the changed suffix.
+	fn commit_hangul(&mut self, text: &str) -> Vec<Action> {
+		let mut out = Vec::new();
+		self.suggestion_word = None;
+		self.last_correction = None;
+		if self.word.is_empty() {
+			self.word_starts_sentence = self.at_start;
+		}
+		if self.jamo.is_empty() && !self.word.is_empty() {
+			// The caret sits in text that this layout cannot decompose.
+			self.word.clear();
+		}
+		self.jamo
+		. extend(text.chars().filter(|c| hangul::is_jamo(*c)));
+		let next = hangul::compose_jamo(&self.jamo);
+		let old = std::mem::take(&mut self.word);
+		let common = common_prefix_chars(&old, &next);
+		let delete = old.chars().count().saturating_sub(common);
+		if delete > 0 {
+			out.push(Action::DeleteChars(delete as u32));
+		}
+		let suffix: String = next.chars().skip(common).collect();
+		if !suffix.is_empty() {
+			out.push(Action::Commit(suffix));
+		}
+		self.word = next;
+		self.reverted = false;
+		self.suggestion_cache = None;
+		if self.shift == ShiftState::Once {
+			self.shift = ShiftState::Off;
+		}
+		if let Some(c) = self.word.chars().last() {
 			self.note(c);
 		}
 		out
@@ -546,6 +608,7 @@ impl Engine {
 			self.remember_correction(&corrected, &original);
 		}
 		self.word.clear();
+		self.jamo.clear();
 		self.clear_correction_state();
 		self.context_suffix = None;
 		self.suggestion_cache = None;
@@ -619,6 +682,7 @@ impl Engine {
 			self.commit_boundary(&mut out, boundary, leading_space);
 		}
 		self.word.clear();
+		self.jamo.clear();
 		self.suggestion_word = None;
 		self.reverted = false;
 		self.context_suffix = None;
@@ -760,6 +824,7 @@ impl Engine {
 			);
 			self.remember_correction(&chosen, &typed);
 			self.word.clear();
+			self.jamo.clear();
 			self.clear_correction_state();
 			self.context_suffix = None;
 			self.suggestion_cache = None;
@@ -776,6 +841,7 @@ impl Engine {
 			let original = format!("{}{}", self.word, suffix);
 			self.remember_correction(&chosen, &original);
 			self.word.clear();
+			self.jamo.clear();
 			self.clear_correction_state();
 			self.suggestion_cache = None;
 			self.note_text(&chosen);
@@ -799,6 +865,7 @@ impl Engine {
 				self.note_text(&text);
 				self.remember_correction(&chosen, &record.original);
 				self.word.clear();
+				self.jamo.clear();
 				self.suggestion_word = None;
 				self.suggestion_cache = None;
 				if chosen != record.original {
@@ -814,6 +881,7 @@ impl Engine {
 		}
 
 		let typed = std::mem::take(&mut self.word);
+		self.jamo.clear();
 		let delete = typed.chars().count() as u32;
 		let mut out = Vec::new();
 		self.consume_pending_boundary(&mut out);
@@ -851,6 +919,7 @@ impl Engine {
 					Some(record.boundary)
 				};
 				self.word = record.original;
+				self.jamo = hangul::decompose_keystrokes(&self.word);
 				self.last_char = self.word.chars().last();
 				self.at_start = false;
 				self.reverted = true;
@@ -868,19 +937,50 @@ impl Engine {
 				self.at_start = false;
 				self.last_char = accepted.chars().last();
 				self.word = accepted;
+				self.jamo = hangul::decompose_keystrokes(&self.word);
 				self.reverted = true;
 				self.suggestion_cache = None;
 				return vec![Action::Delete { word: false }];
 			}
 		}
 
+		if self.profile.hangul() && !self.jamo.is_empty() {
+			return self.backspace_hangul();
+		}
+
 		self.suggestion_word = None;
 		self.at_start = false;
 		self.last_char = None;
 		self.word.pop();
+		self.jamo.clear();
 		self.reverted = false;
 		self.suggestion_cache = None;
 		vec![Action::Delete { word: false }]
+	}
+
+	/// Remove the last jamo, not the whole syllable: `가` becomes `ㄱ` and
+	/// `값` becomes `갑`.
+	fn backspace_hangul(&mut self) -> Vec<Action> {
+		let old = std::mem::take(&mut self.word);
+		self.jamo.pop();
+		let next = hangul::compose_jamo(&self.jamo);
+		let common = common_prefix_chars(&old, &next);
+		let delete = old.chars().count().saturating_sub(common);
+		let mut out = Vec::new();
+		if delete > 0 {
+			out.push(Action::DeleteChars(delete as u32));
+		}
+		let suffix: String = next.chars().skip(common).collect();
+		if !suffix.is_empty() {
+			out.push(Action::Commit(suffix));
+		}
+		self.word = next;
+		self.suggestion_word = None;
+		self.at_start = false;
+		self.last_char = self.word.chars().last();
+		self.reverted = false;
+		self.suggestion_cache = None;
+		out
 	}
 
 	fn word_with_suffix(&self) -> String {
@@ -981,6 +1081,7 @@ impl Engine {
 
 	fn drop_word(&mut self) {
 		self.word.clear();
+		self.jamo.clear();
 		self.word_starts_sentence = false;
 		self.last_char = None;
 		self.clear_correction_state();
@@ -1075,6 +1176,8 @@ impl Engine {
 		out.push_str(&self.shift.code().to_string());
 		out.push_str(",\"caps\":");
 		json::bool_into(&mut out, self.shift != ShiftState::Off || self.auto_caps());
+		out.push_str(",\"mergeLetterAlts\":");
+		json::bool_into(&mut out, self.profile.layout.merge_letter_alts);
 		out.push_str(",\"suggestions\":[");
 		for (i, suggestion) in suggestions.iter().enumerate() {
 			if i > 0 {
@@ -1087,7 +1190,7 @@ impl Engine {
 			if i > 0 {
 				out.push(',');
 			}
-			letter_json(&mut out, letter);
+			letter_json(&mut out, letter, self.shift != ShiftState::Off);
 		}
 		out.push_str("],\"strip\":[");
 		for (i, key) in self.profile.layout.strip.iter().enumerate() {
@@ -1248,11 +1351,18 @@ fn apply_case(typed: &str, candidate: &str) -> String {
 	}
 }
 
-fn letter_json(out: &mut String, letter: &crate::layout::Letter) {
+fn letter_json(out: &mut String, letter: &crate::layout::Letter, shifted: bool) {
+	let label = if shifted && !letter.shift_label.is_empty() {
+		letter.shift_label
+	} else {
+		letter.label
+	};
 	out.push_str("{\"id\":");
 	json::string_into(out, letter.id);
 	out.push_str(",\"label\":");
-	json::string_into(out, letter.label);
+	json::string_into(out, label);
+	out.push_str(",\"commit\":");
+	json::string_into(out, letter_text(letter, shifted));
 	out.push_str(",\"letter\":");
 	json::bool_into(out, letter.letter);
 	out.push_str(",\"row\":");
@@ -1265,6 +1375,23 @@ fn letter_json(out: &mut String, letter: &crate::layout::Letter) {
 		json::string_into(out, alt);
 	}
 	out.push_str("]}");
+}
+
+/// Text committed by a letter, honouring the layout's shifted jamo.
+fn letter_text(letter: &Letter, shifted: bool) -> &'static str {
+	if shifted && !letter.shift_commit.is_empty() {
+		letter.shift_commit
+	} else {
+		letter.commit
+	}
+}
+
+/// Number of leading characters two strings share.
+fn common_prefix_chars(a: &str, b: &str) -> usize {
+	a.chars()
+	. zip(b.chars())
+	. take_while(|(left, right)| left == right)
+	. count()
 }
 
 fn kind_id(kind: crate::layout::KeyKind) -> &'static str {

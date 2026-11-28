@@ -11,12 +11,14 @@ pub mod action;
 pub mod correction;
 pub mod dictionary;
 pub mod engine;
+pub mod hangul;
 pub mod json;
 pub mod language;
 pub mod layout;
 pub mod lexicon;
 pub mod personal;
 pub mod profile;
+pub mod script;
 
 mod ffi;
 
@@ -26,3 +28,4 @@ pub use language::Language;
 pub use layout::{Layout, Page, ShiftState};
 pub use personal::{PersonalLexicon, PersonalWord};
 pub use profile::{Profile, SpacingRules};
+pub use script::Script;

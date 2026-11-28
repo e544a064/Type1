@@ -9,6 +9,7 @@
 //! enter). The suggestion strip is rendered by the UI from the engine payload.
 
 use crate::json;
+use crate::script::Script;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyKind {
@@ -32,6 +33,10 @@ pub struct Letter {
 	/// offset of the glyph inside the single line.
 	pub row: u8,
 	pub alts: &'static [&'static str],
+	/// Text committed when shift is active. Empty keeps [`Self::commit`].
+	pub shift_commit: &'static str,
+	/// Label shown when shift is active. Empty keeps [`Self::label`].
+	pub shift_label: &'static str,
 }
 
 const fn l(
@@ -47,6 +52,8 @@ const fn l(
 		letter: true,
 		row,
 		alts,
+		shift_commit: "",
+		shift_label: "",
 	}
 }
 
@@ -58,6 +65,42 @@ const fn c(id: &'static str, label: &'static str, row: u8) -> Letter {
 		letter: false,
 		row,
 		alts: &[],
+		shift_commit: "",
+		shift_label: "",
+	}
+}
+
+/// A Hangul key. `commit` and `shift_commit` are compatibility jamo.
+const fn j(
+	id: &'static str,
+	label: &'static str,
+	commit: &'static str,
+	row: u8,
+	shift_label: &'static str,
+	shift_commit: &'static str,
+) -> Letter {
+	ja(id, label, commit, row, shift_label, shift_commit, &[])
+}
+
+/// A Hangul key with extra long-press jamo, such as the tense consonants.
+const fn ja(
+	id: &'static str,
+	label: &'static str,
+	commit: &'static str,
+	row: u8,
+	shift_label: &'static str,
+	shift_commit: &'static str,
+	alts: &'static [&'static str],
+) -> Letter {
+	Letter {
+		id,
+		label,
+		commit,
+		letter: true,
+		row,
+		alts,
+		shift_commit,
+		shift_label,
 	}
 }
 
@@ -121,6 +164,40 @@ pub static QWERTY_LETTERS: &[Letter] = &[
 	l("o", "O", 0, &["ô", "ö", "œ", "ó"]),
 	l("l", "L", 1, &[]),
 	l("p", "P", 0, &[]),
+];
+
+/// Sebeolsik Final (세벌식 최종) in the same physical column order.
+///
+/// Reading the top-row keys gives `ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ`, the home-row keys give
+/// `ㅁㄴㅇㄹㅎㅗㅓㅏㅣ`, and the bottom-row keys give `ㅋㅌㅊㅍㅠㅜㅡ`.
+/// Shift adds the tense consonants and `ㅒ`/`ㅖ`.
+pub static SEBEOLSIK_LETTERS: &[Letter] = &[
+	ja("ko_q", "ㅂ", "ㅂ", 0, "ㅃ", "ㅃ", &["ㅃ"]),
+	j("ko_a", "ㅁ", "ㅁ", 1, "", ""),
+	j("ko_z", "ㅋ", "ㅋ", 2, "", ""),
+	ja("ko_w", "ㅈ", "ㅈ", 0, "ㅉ", "ㅉ", &["ㅉ"]),
+	j("ko_s", "ㄴ", "ㄴ", 1, "", ""),
+	j("ko_x", "ㅌ", "ㅌ", 2, "", ""),
+	ja("ko_e", "ㄷ", "ㄷ", 0, "ㄸ", "ㄸ", &["ㄸ"]),
+	j("ko_d", "ㅇ", "ㅇ", 1, "", ""),
+	j("ko_c", "ㅊ", "ㅊ", 2, "", ""),
+	ja("ko_r", "ㄱ", "ㄱ", 0, "ㄲ", "ㄲ", &["ㄲ"]),
+	j("ko_f", "ㄹ", "ㄹ", 1, "", ""),
+	j("ko_v", "ㅍ", "ㅍ", 2, "", ""),
+	ja("ko_t", "ㅅ", "ㅅ", 0, "ㅆ", "ㅆ", &["ㅆ"]),
+	j("ko_g", "ㅎ", "ㅎ", 1, "", ""),
+	j("ko_b", "ㅠ", "ㅠ", 2, "", ""),
+	j("ko_y", "ㅛ", "ㅛ", 0, "", ""),
+	j("ko_h", "ㅗ", "ㅗ", 1, "", ""),
+	j("ko_n", "ㅜ", "ㅜ", 2, "", ""),
+	j("ko_u", "ㅕ", "ㅕ", 0, "", ""),
+	j("ko_j", "ㅓ", "ㅓ", 1, "", ""),
+	j("ko_m", "ㅡ", "ㅡ", 2, "", ""),
+	j("ko_i", "ㅑ", "ㅑ", 0, "", ""),
+	j("ko_k", "ㅏ", "ㅏ", 1, "", ""),
+	ja("ko_o", "ㅐ", "ㅐ", 0, "ㅒ", "ㅒ", &["ㅒ"]),
+	j("ko_l", "ㅣ", "ㅣ", 1, "", ""),
+	ja("ko_p", "ㅔ", "ㅔ", 0, "ㅖ", "ㅖ", &["ㅖ"]),
 ];
 
 pub static NUMBERS: &[Letter] = &[
@@ -278,6 +355,9 @@ impl Page {
 pub struct Layout {
 	pub id: &'static str,
 	pub label: &'static str,
+	pub script: Script,
+	/// Whether a long-press popup also offers the neighbouring keys' alts.
+	pub merge_letter_alts: bool,
 	pub letters: &'static [Letter],
 	pub numbers: &'static [Letter],
 	pub symbols: &'static [Letter],
@@ -299,6 +379,8 @@ impl Layout {
 pub static AZERTY: Layout = Layout {
 	id: "azerty",
 	label: "AZERTY",
+	script: Script::Latin,
+	merge_letter_alts: true,
 	letters: LETTERS,
 	numbers: NUMBERS,
 	symbols: SYMBOLS,
@@ -310,6 +392,8 @@ pub static AZERTY: Layout = Layout {
 pub static QWERTY: Layout = Layout {
 	id: "qwerty",
 	label: "QWERTY",
+	script: Script::Latin,
+	merge_letter_alts: true,
 	letters: QWERTY_LETTERS,
 	numbers: NUMBERS,
 	symbols: SYMBOLS,
@@ -317,8 +401,21 @@ pub static QWERTY: Layout = Layout {
 	utilities: UTILITIES,
 };
 
+/// Korean Sebeolsik Final: jamo keys, Hangul composition.
+pub static SEBEOLSIK: Layout = Layout {
+	id: "sebeolsik",
+	label: "Sebeolsik Final",
+	script: Script::Hangul,
+	merge_letter_alts: false,
+	letters: SEBEOLSIK_LETTERS,
+	numbers: NUMBERS,
+	symbols: SYMBOLS,
+	strip: STRIP,
+	utilities: UTILITIES,
+};
+
 /// Layouts offered when creating a keyboard profile.
-pub static LAYOUTS: &[&Layout] = &[&AZERTY, &QWERTY];
+pub static LAYOUTS: &[&Layout] = &[&AZERTY, &QWERTY, &SEBEOLSIK];
 
 pub fn find(id: &str) -> Option<&'static Layout> {
 	LAYOUTS.iter().copied().find(|layout| layout.id == id)
@@ -410,6 +507,49 @@ mod tests {
 	}
 
 	#[test]
+	fn sebeolsik_letters_match_the_physical_rows() {
+		let row = |index: u8| -> String {
+			SEBEOLSIK_LETTERS
+			. iter()
+			. filter(|letter| letter.row == index)
+			. map(|letter| letter.label)
+			. collect()
+		};
+		assert_eq!(row(0), "ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ");
+		assert_eq!(row(1), "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ");
+		assert_eq!(row(2), "ㅋㅌㅊㅍㅠㅜㅡ");
+		assert_eq!(SEBEOLSIK_LETTERS.len(), 26);
+		let double = (
+			SEBEOLSIK_LETTERS
+			. iter()
+			. find(|letter| letter.id == "ko_r")
+			. unwrap()
+		);
+		assert_eq!(double.commit, "ㄱ");
+		assert_eq!(double.shift_commit, "ㄲ");
+		assert_eq!(double.shift_label, "ㄲ");
+		assert_eq!(double.alts, &["ㄲ"]);
+		for (id, alt) in [
+			("ko_q", "ㅃ"),
+			("ko_w", "ㅉ"),
+			("ko_e", "ㄸ"),
+			("ko_r", "ㄲ"),
+			("ko_t", "ㅆ"),
+			("ko_o", "ㅒ"),
+			("ko_p", "ㅖ"),
+		] {
+			let letter = SEBEOLSIK_LETTERS
+			.iter()
+			.find(|letter| letter.id == id)
+			.unwrap();
+			assert_eq!(letter.alts, &[alt], "{id}");
+		}
+		assert!(!SEBEOLSIK.merge_letter_alts);
+		assert!(AZERTY.merge_letter_alts);
+		assert!(QWERTY.merge_letter_alts);
+	}
+
+	#[test]
 	fn layouts_can_be_looked_up() {
 		let azerty = find("azerty").unwrap();
 		assert_eq!(azerty.label, "AZERTY");
@@ -417,6 +557,10 @@ mod tests {
 		let qwerty = find("qwerty").unwrap();
 		assert_eq!(qwerty.label, "QWERTY");
 		assert_eq!(qwerty.letters.len(), 26);
+		let sebeolsik = find("sebeolsik").unwrap();
+		assert_eq!(sebeolsik.label, "Sebeolsik Final");
+		assert_eq!(sebeolsik.script, Script::Hangul);
+		assert_eq!(sebeolsik.letters.len(), 26);
 		assert!(find("missing").is_none());
 		let mut ids: Vec<&str> = LAYOUTS.iter().map(|layout| layout.id).collect();
 		ids.sort_unstable();

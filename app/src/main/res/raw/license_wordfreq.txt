@@ -6,11 +6,13 @@ Licence: Creative Commons Attribution-ShareAlike 4.0 International
 (CC BY-SA 4.0)
 https://creativecommons.org/licenses/by-sa/4.0/
 
-Derived data used by Type1: every single alphabetic token up to 31 characters
-with a positive wordfreq probability (about 287,000 forms), including names,
-places, brands and modern terms. Common American spellings are replaced by
-their British variants, while words valid in both varieties are kept. The
-pronoun "I" is kept capitalised.
+Derived data used by Type1: every single English alphabetic token up to 31
+characters (about 287,000 forms), every single Spanish token up to 31 characters
+(about 334,000 forms), and every single Korean token up to 31 precomposed Hangul
+syllables (about 26,800 forms), all with a positive wordfreq probability. The
+English data includes names, places, brands and modern terms; common American
+spellings are replaced by their British variants, while words valid in both
+varieties are kept. The pronoun "I" is kept capitalised.
 
 The derived data is distributed with the GPL-3.0 application under the same
 CC BY-SA 4.0 terms for the data itself.

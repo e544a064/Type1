@@ -78,6 +78,11 @@ impl Profile {
 			. all(|(a, b)| std::ptr::eq(*a, *b))
 	}
 
+	/// True when keys are jamo and the engine should compose Hangul syllables.
+	pub fn hangul(&self) -> bool {
+		self.layout.script == crate::script::Script::Hangul
+	}
+
 	pub(crate) fn corrector(&self) -> &Corrector {
 		self.corrector.get_or_init(|| Corrector::new(self))
 	}

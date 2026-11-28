@@ -8,6 +8,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Shift, caps lock (tap twice; a bar under the arrow marks the lock)
 - [x] Multi-touch rollover: overlapping presses are committed in down order
 - [x] AZERTY and QWERTY, all 26 letters on one line (column order, row-based vertical offsets)
+- [x] Sebeolsik Final for Korean, with jamo composition and shift for tense consonants
+- [x] Long-press popup for Korean shift variants (`ㅅ` → `ㅆ`, `ㄱ` → `ㄲ`, ...)
 - [x] Alternates via long-press (accents, the period's symbol set, `0`–`9` on the page key)
 - [x] Period key opens `& % + " - : ' @ ; / ( ) # ! ?`; a `…` hint marks the long list
 - [x] Page key long-press popup for a single digit without leaving the page
@@ -19,7 +21,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Hold-to-repeat backspace
 - [x] Comma left of the spacebar, period on its right with its full symbol set on long-press
 - [ ] Key preview bubble
-- [~] Other layouts: AZERTY and QWERTY data; Sebeolsik/Korean pending
+- [~] Other layouts: AZERTY, QWERTY and Sebeolsik data; more layouts pending
 - [ ] Landscape-specific tuning
 
 ## 2. Modes & switching (critical for a one-row keyboard)
@@ -52,7 +54,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Per-field correction memory: moving back into a changed word re-opens
       the original suggestions, capped and cleared on a new or sensitive field
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
-- [x] Per-language dictionaries (French, English UK and Spanish) with a
+- [x] Per-language dictionaries (French, English UK, Spanish and Korean) with a
       profile-scoped corrector
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
 - [x] Autocorrect with caps lock: all-caps words keep their capitals
@@ -61,6 +63,11 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
       (`langauge` → `language`, `colour`, `centre`, `organise`)
 - [x] Spanish autocorrect with accents and ñ
       (`manana` → `mañana`, `nino` → `niño`, `espanol` → `español`)
+- [x] Korean jamo composition (`ㄱ` + `ㅏ` → `가`, `가` + `ㄴ` + `ㅏ` → `가나`)
+      and the shared correction pipeline on jamo units, including multi-slip
+      words such as `댈개` → `딸기`
+- [x] Shift variants (`ㅅ`/`ㅆ`, `ㄱ`/`ㄲ`, `ㅐ`/`ㅒ`, ...) have equal
+      correction cost and are available from the base key's long-press popup
 - [x] English contractions restored (`dont` → `don't`, `cant` → `can't`,
       `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`), with nearby
       key slips corrected too (`douv` → `don't`)
@@ -81,7 +88,7 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [ ] Spell checking
 - [x] Personal dictionary (Android user dictionary, read-only)
 - [~] Multilingual typing: profiles can list several languages and combine
-      their dictionaries; mixed-language ranking and Korean are still pending
+      their dictionaries; mixed-language ranking is still pending
 - [ ] Double-space period
 - [ ] Grammar/style hints
 

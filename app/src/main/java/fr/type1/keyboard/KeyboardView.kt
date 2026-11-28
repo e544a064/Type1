@@ -539,19 +539,31 @@ class KeyboardView(
 		drawable.draw(canvas)
 	}
 
-	/** Floating bubble with the accents of the pressed key and its neighbours. */
+	/** Floating bubble with the alternates of the pressed key and, for Latin
+	 *  layouts, its neighbours. */
 	private fun showAltPopup(index: Int): Boolean {
 		val letters = model?.letters ?: return false
 		val letter = letters.getOrNull(index) ?: return false
 		val rect = letterRects.getOrNull(index) ?: return false
+		val mergeNeighbours = model?.mergeLetterAlts != false
 
 		val entries = ArrayList<AltEntry>()
-		letters.getOrNull(index - 1)?.alts?.forEach { entries += AltEntry("alt:$it", it) }
-		val baseIndex = entries.size
+		val seen = HashSet<String>()
+		fun addAlt(entry: AltEntry) {
+			if (seen.add(entry.display)) entries += entry
+		}
+		if (mergeNeighbours) {
+			letters.getOrNull(index - 1)?.alts?.forEach { addAlt(AltEntry("alt:$it", it)) }
+		}
 		val baseLabel = if (model?.caps == true) letter.label else letter.label.lowercase()
-		entries += AltEntry("alt:${letter.id}", baseLabel)
-		letter.alts.forEach { entries += AltEntry("alt:$it", it) }
-		letters.getOrNull(index + 1)?.alts?.forEach { entries += AltEntry("alt:$it", it) }
+		val baseIndex = entries.size
+		// The commit text differs from the id for Hangul keys (`ko_t` -> `ㅅ`).
+		entries += AltEntry("alt:${letter.commit}", baseLabel)
+		seen += baseLabel
+		letter.alts.forEach { addAlt(AltEntry("alt:$it", it)) }
+		if (mergeNeighbours) {
+			letters.getOrNull(index + 1)?.alts?.forEach { addAlt(AltEntry("alt:$it", it)) }
+		}
 		if (entries.size <= 1) return false
 		return showAltEntries(entries, rect, baseIndex, letterTop)
 	}
