@@ -64,9 +64,9 @@ class KeyboardView(
 
 	private var model: RowModel? = null
 
-	private var suggestionHeight = dp(38f)
-	private var letterHeight = dp(56f)
-	private var utilityHeight = dp(48f)
+	private var suggestionHeight = dp(Prefs.DEFAULT_SUGGESTION_HEIGHT.toFloat())
+	private var letterHeight = dp(Prefs.DEFAULT_LETTER_HEIGHT.toFloat())
+	private var utilityHeight = dp(Prefs.DEFAULT_UTILITY_HEIGHT.toFloat())
 	private val bandGap = dp(3f)
 	private val padding = dp(3f)
 	private val corner = dp(8f)
@@ -274,27 +274,29 @@ class KeyboardView(
 
 	/** Height in dp of the suggestion row (28-56). */
 	fun setSuggestionRowHeight(heightDp: Int) {
-		val height = dp(heightDp.coerceIn(28, 56).toFloat())
-		if (height == suggestionHeight) return
-		suggestionHeight = height
-		requestLayout()
-		invalidate()
+		setRowHeight(suggestionHeight, heightDp, Prefs.SUGGESTION_HEIGHT_RANGE) {
+			suggestionHeight = it
+		}
 	}
 
 	/** Height in dp of the letter row (44-80). */
 	fun setLetterRowHeight(heightDp: Int) {
-		val height = dp(heightDp.coerceIn(44, 80).toFloat())
-		if (height == letterHeight) return
-		letterHeight = height
-		requestLayout()
-		invalidate()
+		setRowHeight(letterHeight, heightDp, Prefs.LETTER_HEIGHT_RANGE) {
+			letterHeight = it
+		}
 	}
 
 	/** Height in dp of the bottom row holding the spacebar (36-72). */
 	fun setUtilityRowHeight(heightDp: Int) {
-		val height = dp(heightDp.coerceIn(36, 72).toFloat())
-		if (height == utilityHeight) return
-		utilityHeight = height
+		setRowHeight(utilityHeight, heightDp, Prefs.UTILITY_HEIGHT_RANGE) {
+			utilityHeight = it
+		}
+	}
+
+	private fun setRowHeight(current: Float, heightDp: Int, range: IntRange, assign: (Float) -> Unit) {
+		val height = dp(heightDp.coerceIn(range).toFloat())
+		if (height == current) return
+		assign(height)
 		requestLayout()
 		invalidate()
 	}

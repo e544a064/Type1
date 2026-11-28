@@ -2,7 +2,7 @@ package fr.type1.keyboard
 
 import android.os.Bundle
 
-/** Appearance settings: utility row height. */
+/** Appearance settings: suggestion, letter and space row heights. */
 class AppearanceActivity : SettingsPageActivity() {
 
 	override val contentLayout: Int = R.layout.activity_appearance
@@ -15,7 +15,7 @@ class AppearanceActivity : SettingsPageActivity() {
 			R.id.suggestionHeightSeek,
 			R.id.suggestionHeightValue,
 			R.string.setup_height_value,
-			28..56,
+			Prefs.SUGGESTION_HEIGHT_RANGE,
 			Prefs.suggestionRowHeight(this),
 		) { Prefs.setSuggestionRowHeight(this, it) }
 
@@ -23,7 +23,7 @@ class AppearanceActivity : SettingsPageActivity() {
 			R.id.letterHeightSeek,
 			R.id.letterHeightValue,
 			R.string.setup_height_value,
-			44..80,
+			Prefs.LETTER_HEIGHT_RANGE,
 			Prefs.letterRowHeight(this),
 		) { Prefs.setLetterRowHeight(this, it) }
 
@@ -31,7 +31,7 @@ class AppearanceActivity : SettingsPageActivity() {
 			R.id.utilityHeightSeek,
 			R.id.utilityHeightValue,
 			R.string.setup_height_value,
-			36..72,
+			Prefs.UTILITY_HEIGHT_RANGE,
 			Prefs.utilityRowHeight(this),
 		) { Prefs.setUtilityRowHeight(this, it) }
 	}

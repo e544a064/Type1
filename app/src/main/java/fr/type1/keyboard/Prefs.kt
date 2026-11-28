@@ -20,6 +20,12 @@ object Prefs {
 	private const val RECENT_EMOJIS = "recent_emojis"
 	const val PROFILES = "profiles"
 	const val ACTIVE_PROFILE = "active_profile"
+	val SUGGESTION_HEIGHT_RANGE = 28..56
+	val LETTER_HEIGHT_RANGE = 44..80
+	val UTILITY_HEIGHT_RANGE = 36..72
+	const val DEFAULT_SUGGESTION_HEIGHT = 38
+	const val DEFAULT_LETTER_HEIGHT = 56
+	const val DEFAULT_UTILITY_HEIGHT = 48
 	private const val MAX_RECENT_EMOJIS = 30
 
 	fun preferences(context: Context): SharedPreferences {
@@ -68,29 +74,37 @@ object Prefs {
 
 	/** Height in dp of the suggestion row. Default 38 dp. */
 	fun suggestionRowHeight(context: Context): Int {
-		return preferences(context).getInt(SUGGESTION_ROW_HEIGHT, 38).coerceIn(28, 56)
+		return rowHeight(context, SUGGESTION_ROW_HEIGHT, DEFAULT_SUGGESTION_HEIGHT, SUGGESTION_HEIGHT_RANGE)
 	}
 
 	fun setSuggestionRowHeight(context: Context, heightDp: Int) {
-		edit(context) { putInt(SUGGESTION_ROW_HEIGHT, heightDp.coerceIn(28, 56)) }
+		setRowHeight(context, SUGGESTION_ROW_HEIGHT, heightDp, SUGGESTION_HEIGHT_RANGE)
 	}
 
 	/** Height in dp of the letter row. Default 56 dp. */
 	fun letterRowHeight(context: Context): Int {
-		return preferences(context).getInt(LETTER_ROW_HEIGHT, 56).coerceIn(44, 80)
+		return rowHeight(context, LETTER_ROW_HEIGHT, DEFAULT_LETTER_HEIGHT, LETTER_HEIGHT_RANGE)
 	}
 
 	fun setLetterRowHeight(context: Context, heightDp: Int) {
-		edit(context) { putInt(LETTER_ROW_HEIGHT, heightDp.coerceIn(44, 80)) }
+		setRowHeight(context, LETTER_ROW_HEIGHT, heightDp, LETTER_HEIGHT_RANGE)
 	}
 
 	/** Height in dp of the bottom row holding the spacebar. Default 48 dp. */
 	fun utilityRowHeight(context: Context): Int {
-		return preferences(context).getInt(UTILITY_ROW_HEIGHT, 48).coerceIn(36, 72)
+		return rowHeight(context, UTILITY_ROW_HEIGHT, DEFAULT_UTILITY_HEIGHT, UTILITY_HEIGHT_RANGE)
 	}
 
 	fun setUtilityRowHeight(context: Context, heightDp: Int) {
-		edit(context) { putInt(UTILITY_ROW_HEIGHT, heightDp.coerceIn(36, 72)) }
+		setRowHeight(context, UTILITY_ROW_HEIGHT, heightDp, UTILITY_HEIGHT_RANGE)
+	}
+
+	private fun rowHeight(context: Context, key: String, default: Int, range: IntRange): Int {
+		return preferences(context).getInt(key, default).coerceIn(range)
+	}
+
+	private fun setRowHeight(context: Context, key: String, heightDp: Int, range: IntRange) {
+		edit(context) { putInt(key, heightDp.coerceIn(range)) }
 	}
 
 	/** User-created keyboard profiles, newest last. */
