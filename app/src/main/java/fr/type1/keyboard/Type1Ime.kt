@@ -150,6 +150,7 @@ class Type1Ime : InputMethodService(), KeyboardView.Listener {
 				controller.setDefaultProfile()
 			}
 		}
+		controller.prepare()
 	}
 
 	/** Tell the comma popup whether there is another profile to switch to. */

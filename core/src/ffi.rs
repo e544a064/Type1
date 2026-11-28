@@ -41,6 +41,19 @@ pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeCreate(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativePrepare(
+	_env: JNIEnv<'_>,
+	_this: JObject<'_>,
+	_handle: jlong,
+) {
+	let _ = catch_unwind(AssertUnwindSafe(|| {
+		if let Some(engine) = lock().as_mut() {
+			engine.prepare();
+		}
+	}));
+}
+
+#[no_mangle]
 pub extern "system" fn Java_fr_type1_keyboard_core_NativeBridge_nativeDestroy(
 	_env: JNIEnv<'_>,
 	_this: JObject<'_>,

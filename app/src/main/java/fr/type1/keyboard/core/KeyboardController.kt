@@ -53,6 +53,8 @@ class KeyboardController {
 
 	fun reset() = NativeBridge.nativeReset(handle)
 
+	fun prepare() = NativeBridge.nativePrepare(handle)
+
 	fun setImeOptions(imeOptions: Int) = NativeBridge.nativeSetImeOptions(handle, imeOptions)
 
 	internal fun setPersonalWords(entries: List<PersonalDictionaryEntry>) {

@@ -58,6 +58,12 @@ strip and release on the letter you want.
 - Predictive back gestures are enabled for the settings pages (Android 13+),
   including the system cross-activity animation.
 - Numbers and symbols take over the letter line (`123`, `#+=`).
+- Dictionaries are indexed lazily. The keyboard starts loading the active
+  profile's dictionaries in the background when it appears and when the profile
+  changes; until they are ready the strip shows an animated loading indicator,
+  then refreshes automatically. A French-only profile never builds the English,
+  Spanish or Korean indexes. Once built, an index stays loaded for the process
+  lifetime.
 - Autocorrection at word boundaries from frequency-ranked dictionaries (all
   typable Lexique 3.83 French forms, full wordfreq English, Spanish and Korean
   lists), with a layout-aware touch model: neighbouring-key slips, transpositions,
@@ -248,6 +254,7 @@ core/                     Rust crate (no Android dependency)
   tests/english_bulk_tests.rs  contractions, caps-lock and single letters
   tests/autocorrect_tests.rs  bulk autocorrect regressions
   tests/korean_tests.rs   Hangul composition, jamo correction and backspace
+  tests/async_loading_tests.rs  background dictionary loading and loading state
   tests/data/autocorrect_cases.tsv  2,500 mixed typo cases
   tests/data/two_key_cases.tsv  2,000 two-key-slip cases
   tests/data/spelling_cases.tsv  2,000 spelling-variant cases

@@ -171,6 +171,8 @@ pub struct Engine {
 	context: Option<ContextWord>,
 	/// Word characters after the caret when editing inside existing text.
 	context_suffix: Option<String>,
+	/// Whether dictionary indexes load on a background thread.
+	async_loading: bool,
 }
 
 impl Default for Engine {
@@ -204,6 +206,7 @@ impl Engine {
 			suggestion_cache: None,
 			context: None,
 			context_suffix: None,
+			async_loading: false,
 		}
 	}
 
@@ -221,12 +224,23 @@ impl Engine {
 
 	/// Switch the active layout/language profile and start from a clean state.
 	pub fn set_profile(&mut self, profile: Profile) {
+		let mut profile = profile;
+		profile.set_async_loading(self.async_loading);
 		if self.profile.same_as(&profile) {
+			self.profile.start_loading();
 			return;
 		}
 		self.profile = profile;
 		self.page = Page::Letters;
 		self.reset();
+		self.profile.start_loading();
+	}
+
+	/// Start loading the active profile's dictionaries on a background thread.
+	pub fn prepare(&mut self) {
+		self.async_loading = true;
+		self.profile.set_async_loading(true);
+		self.profile.start_loading();
 	}
 
 	pub fn set_profile_ids(&mut self, layout_id: &str, language_ids: &[&str]) -> bool {
@@ -1166,6 +1180,8 @@ impl Engine {
 
 	/// Full keyboard model for the UI, as JSON.
 	pub fn render_json(&mut self) -> String {
+		self.profile.start_loading();
+		let loading = self.profile.is_loading();
 		let suggestions = self.current_suggestions();
 		let language_label = self.language_label();
 
@@ -1185,7 +1201,9 @@ impl Engine {
 			}
 			json::string_into(&mut out, suggestion);
 		}
-		out.push_str("],\"letters\":[");
+		out.push_str("],\"loading\":");
+		json::bool_into(&mut out, loading);
+		out.push_str(",\"letters\":[");
 		for (i, letter) in self.page_letters().iter().enumerate() {
 			if i > 0 {
 				out.push(',');

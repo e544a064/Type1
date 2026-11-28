@@ -163,6 +163,7 @@ struct JamoKey {
 pub struct Corrector {
 	costs: CostTable,
 	hangul: bool,
+	async_loading: bool,
 	languages: Vec<&'static Language>,
 	elisions: bool,
 	/// Korean words grouped by decomposed jamo length, built on first use.
@@ -193,6 +194,7 @@ impl Corrector {
 		Corrector {
 			costs,
 			hangul,
+			async_loading: profile.async_loading(),
 			languages: profile.languages.clone(),
 			elisions: profile
 			. languages
@@ -227,10 +229,30 @@ impl Corrector {
 		length: usize,
 	) -> Box<dyn Iterator<Item = &'static Word> + '_> {
 		if self.hangul {
+			let hangul_languages: Vec<&'static Language> = (
+				self
+				. languages
+				. iter()
+				. copied()
+				. filter(|language| language.script == Script::Hangul)
+				. collect()
+			);
+			if self.async_loading && (
+				!hangul_languages
+				. iter()
+				. all(|language| language.dictionary.is_ready())
+			) {
+				return Box::new(std::iter::empty());
+			}
 			let index = self.hangul_words.get_or_init(|| {
 				let mut by_len: Vec<Vec<&'static Word>> = Vec::new();
-				for language in &self.languages {
-					for word in language.dictionary.words() {
+				for language in hangul_languages {
+					let words = if self.async_loading {
+						language.dictionary.words_ready()
+					} else {
+						language.dictionary.words()
+					};
+					for word in words {
 						let len = hangul::decompose_keystrokes(word.text).len();
 						if by_len.len() <= len {
 							by_len.resize_with(len + 1, Vec::new);
@@ -241,6 +263,12 @@ impl Corrector {
 				by_len
 			});
 			Box::new(index.get(length).into_iter().flatten().copied())
+		} else if self.async_loading {
+			Box::new(
+				self.languages
+				. iter()
+				. flat_map(move |language| language.dictionary.words_of_len_ready(length)),
+			)
 		} else {
 			Box::new(
 				self.languages
@@ -253,15 +281,27 @@ impl Corrector {
 	fn exact(&self, word: &str) -> Option<&'static Word> {
 		self.languages
 		. iter()
-		. filter_map(|language| language.dictionary.exact(word))
-		. max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
+		. filter_map(|language| {
+			if self.async_loading {
+				language.dictionary.exact_ready(word)
+			} else {
+				language.dictionary.exact(word)
+			}
+		})
+		.max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
 	}
 
 	fn folded(&self, form: &str) -> Option<&'static Word> {
 		self.languages
 		. iter()
-		. filter_map(|language| language.dictionary.folded(form))
-		. max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
+		. filter_map(|language| {
+			if self.async_loading {
+				language.dictionary.folded_ready(form)
+			} else {
+				language.dictionary.folded(form)
+			}
+		})
+		.max_by(|a, b| a.log_freq.total_cmp(&b.log_freq))
 	}
 
 	#[cfg(test)]
@@ -571,12 +611,13 @@ impl Corrector {
 		if !self.elisions {
 			return;
 		}
-		for language in self
-		. languages
-		. iter()
-		. copied()
-		. filter(|language| language.elisions)
-		{
+		for language in (
+			self
+			. languages
+			. iter()
+			. copied()
+			. filter(|language| language.elisions)
+		) {
 			for &(clitic, penalty) in CLITICS {
 				if !lower.starts_with(clitic) {
 					continue;
@@ -624,8 +665,9 @@ impl Corrector {
 					if distance == 0.0 {
 						continue;
 					}
-					let (remainder, log_freq) =
-						elision_remainder(clitic, word, language.dictionary);
+					let (remainder, log_freq) = (
+						elision_remainder(clitic, word, language.dictionary)
+					);
 					insert_elision(
 						found,
 						clitic,
@@ -772,9 +814,11 @@ impl Corrector {
 	/// Closest explanation, with a tier: 1 for one-key slips, 2 for the second
 	/// key ring or a one-letter spelling variant.
 	fn candidate_distance(&self, a: &[u8], b: &[u8]) -> Option<(f32, u8)> {
-		let result = self
-		. keyboard_distance(a, b)
-		. or_else(|| Self::spelling_distance(a, b).map(|distance| (distance, 2)));
+		let result = (
+			self
+			. keyboard_distance(a, b)
+			. or_else(|| Self::spelling_distance(a, b).map(|distance| (distance, 2)))
+		);
 		if !self.hangul {
 			return result;
 		}

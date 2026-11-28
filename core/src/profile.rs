@@ -9,7 +9,6 @@ use crate::correction::{Corrector, Suggestion};
 use crate::language::{self, Language};
 use crate::layout::{self, Layout};
 use crate::personal::PersonalLexicon;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpacingRules {
 	French,
@@ -29,6 +28,7 @@ pub struct Profile {
 	pub languages: Vec<&'static Language>,
 	pub spacing: SpacingRules,
 	corrector: OnceLock<Corrector>,
+	async_loading: bool,
 }
 
 impl Profile {
@@ -43,6 +43,7 @@ impl Profile {
 			languages,
 			spacing,
 			corrector: OnceLock::new(),
+			async_loading: false,
 		}
 	}
 
@@ -81,6 +82,47 @@ impl Profile {
 	/// True when keys are jamo and the engine should compose Hangul syllables.
 	pub fn hangul(&self) -> bool {
 		self.layout.script == crate::script::Script::Hangul
+	}
+
+	/// Enable non-blocking dictionary loading. Must be set before the first
+	/// suggestion lookup, which is when the corrector is created.
+	pub fn set_async_loading(&mut self, enabled: bool) {
+		self.async_loading = enabled;
+	}
+
+	pub(crate) fn async_loading(&self) -> bool {
+		self.async_loading
+	}
+
+	/// Start loading the active languages' dictionaries in the background.
+	pub fn start_loading(&self) {
+		if !self.async_loading {
+			return;
+		}
+		let mut claimed = Vec::new();
+		for language in &self.languages {
+			if language.dictionary.begin_load() {
+				claimed.push(*language);
+			}
+		}
+		if claimed.is_empty() {
+			return;
+		}
+		std::thread::spawn(move || {
+			for language in claimed {
+				language.dictionary.load_now();
+			}
+		});
+	}
+
+	/// True while at least one active language dictionary is being built.
+	pub fn is_loading(&self) -> bool {
+		self.async_loading && (
+			self
+			. languages
+			. iter()
+			. any(|language| language.dictionary.is_loading())
+		)
 	}
 
 	pub(crate) fn corrector(&self) -> &Corrector {

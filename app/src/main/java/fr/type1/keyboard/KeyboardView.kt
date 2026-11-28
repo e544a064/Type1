@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -23,8 +24,10 @@ import fr.type1.keyboard.model.LetterKey
 import fr.type1.keyboard.model.RowModel
 import fr.type1.keyboard.model.SUGGESTION_PREFIX
 import fr.type1.keyboard.model.UtilityKey
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.sin
 
 /**
  * Three horizontal bands, driven entirely by [RowModel]:
@@ -139,6 +142,16 @@ class KeyboardView(
 		strip = context.getColor(R.color.suggestion_background),
 	)
 
+	private val loadingPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+	private val loadingRefresh = object : Runnable {
+		override fun run() {
+			if (model?.loading == true) {
+				refresh()
+			}
+		}
+	}
+
 	private val iconDrawables: Map<String, Drawable> by lazy {
 		val map = HashMap<String, Drawable>()
 		fun add(name: String, res: Int) {
@@ -213,11 +226,15 @@ class KeyboardView(
 
 	/** Re-pull the three bands from the core. */
 	fun refresh() {
+		handler.removeCallbacks(loadingRefresh)
 		val next = controller.render()
 		model = next
 		dismissAltPopup()
 		layoutBands(next)
 		invalidate()
+		if (next.loading) {
+			handler.postDelayed(loadingRefresh, LOADING_REFRESH_MS)
+		}
 	}
 
 	/** Reserve space for the system navigation bar so it never covers keys. */
@@ -402,6 +419,12 @@ class KeyboardView(
 		drawStripKey(canvas, stripLeft, row.strip.getOrNull(0), 0, row.shift)
 		drawStripKey(canvas, stripRight, row.strip.getOrNull(1), 1, row.shift)
 
+		if (row.loading) {
+			drawLoadingDots(canvas)
+			postInvalidateDelayed(LOADING_ANIMATION_MS)
+			return
+		}
+
 		for (i in row.suggestions.indices) {
 			val rect = suggestionRects.getOrNull(i) ?: continue
 			val pressed = pressedSuggestion == i
@@ -417,6 +440,31 @@ class KeyboardView(
 				dp(10f),
 			)
 			canvas.drawText(row.suggestions[i], rect.centerX(), baseline(rect), labelPaint)
+		}
+	}
+
+	/** Three pulsing dots in the suggestion strip while dictionaries load. */
+	private fun drawLoadingDots(canvas: Canvas) {
+		val left = stripLeft.right + dp(4f)
+		val right = stripRight.left - dp(4f)
+		if (right <= left) return
+		val centerX = (left + right) / 2f
+		val centerY = suggestionTop + suggestionHeight / 2f
+		val gap = dp(7f)
+		val radius = dp(2.1f)
+		val period = 900f
+		val now = (SystemClock.uptimeMillis() % period.toLong()).toFloat()
+		for (i in 0..2) {
+			val phase = (now / period - i / 3f) * 2f * PI.toFloat()
+			val pulse = (sin(phase.toDouble()).toFloat() + 1f) / 2f
+			val alpha = 0.25f + 0.75f * pulse
+			loadingPaint.color = Color.argb(
+				(alpha * 255f).toInt(),
+				Color.red(colors.muted),
+				Color.green(colors.muted),
+				Color.blue(colors.muted),
+			)
+			canvas.drawCircle(centerX + (i - 1) * gap, centerY, radius, loadingPaint)
 		}
 	}
 
@@ -1181,6 +1229,8 @@ class KeyboardView(
 		// swipe on backspace starts selection before this timer fires.
 		const val LONG_PRESS_MS = 320L
 		const val REPEAT_MS = 55L
+		const val LOADING_REFRESH_MS = 120L
+		const val LOADING_ANIMATION_MS = 80L
 		const val ALT_CELL_DP = 40f
 		const val ALT_HEIGHT_DP = 44f
 		const val ALT_SELECT_SLOP_DP = 6f

@@ -15,6 +15,9 @@ internal object NativeBridge {
 
 	external fun nativeCreate(): Long
 
+	/** Start loading the active dictionaries in the background. */
+	external fun nativePrepare(handle: Long)
+
 	external fun nativeDestroy(handle: Long)
 
 	external fun nativeReset(handle: Long)

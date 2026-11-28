@@ -6,6 +6,7 @@
 //! CC BY-SA 4.0. See `data/NOTICE.md` for attribution.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 use crate::lexicon::fold;
@@ -101,6 +102,7 @@ impl Index {
 pub struct Dictionary {
 	source: &'static str,
 	index: OnceLock<Index>,
+	loading: AtomicBool,
 }
 
 impl Dictionary {
@@ -108,15 +110,57 @@ impl Dictionary {
 		Dictionary {
 			source,
 			index: OnceLock::new(),
+			loading: AtomicBool::new(false),
 		}
 	}
 
+	/// Build the index synchronously. Used by tests and public lookups.
 	fn index(&self) -> &Index {
 		self.index.get_or_init(|| Index::load(self.source))
 	}
 
+	fn ready_index(&self) -> Option<&Index> {
+		self.index.get()
+	}
+
+	/// Build the index on the calling thread. Only use this from a background
+	/// loader or a test.
+	pub fn load_now(&self) {
+		let _ = self.index();
+		self.loading.store(false, Ordering::Release);
+	}
+
+	/// Claim the one background load for this dictionary. Returns false when it
+	/// is already loaded or already being loaded.
+	pub fn begin_load(&self) -> bool {
+		if self.index.get().is_some() {
+			return false;
+		}
+		self
+		. loading
+		. compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+		. is_ok()
+	}
+
+	pub fn needs_load(&self) -> bool {
+		self.index.get().is_none() && !self.loading.load(Ordering::Acquire)
+	}
+
+	pub fn is_ready(&self) -> bool {
+		self.index.get().is_some()
+	}
+
+	pub fn is_loading(&self) -> bool {
+		self.loading.load(Ordering::Acquire)
+	}
+
 	pub fn words(&self) -> &[Word] {
 		&self.index().words
+	}
+
+	/// Non-blocking word list for the correction path.
+	pub fn words_ready(&self) -> &[Word] {
+		self.ready_index().map(|index| index.words.as_slice()).unwrap_or(&[])
 	}
 
 	/// Words whose folded form has exactly `length` bytes.
@@ -130,14 +174,36 @@ impl Dictionary {
 		. map(move |&i| &index.words[i])
 	}
 
+	/// Non-blocking variant of [`Self::words_of_len`].
+	pub fn words_of_len_ready(&self, length: usize) -> impl Iterator<Item = &Word> + '_ {
+		let index = self.ready_index();
+		let indices = index.and_then(|index| index.by_len.get(length));
+		indices
+		. into_iter()
+		. flatten()
+		. filter_map(move |&i| index.and_then(|index| index.words.get(i)))
+	}
+
 	/// Exact lookup. `word` must already be lowercase.
 	pub fn exact(&self, word: &str) -> Option<&Word> {
-		self.index().by_text.get(word).map(|&i| &self.index().words[i])
+		let index = self.index();
+		index.by_text.get(word).map(|&i| &index.words[i])
+	}
+
+	pub fn exact_ready(&self, word: &str) -> Option<&Word> {
+		let index = self.ready_index()?;
+		index.by_text.get(word).map(|&i| &index.words[i])
 	}
 
 	/// Lookup by accent-free, lowercase form.
 	pub fn folded(&self, form: &str) -> Option<&Word> {
-		self.index().by_fold.get(form).map(|&i| &self.index().words[i])
+		let index = self.index();
+		index.by_fold.get(form).map(|&i| &index.words[i])
+	}
+
+	pub fn folded_ready(&self, form: &str) -> Option<&Word> {
+		let index = self.ready_index()?;
+		index.by_fold.get(form).map(|&i| &index.words[i])
 	}
 }
 
@@ -173,6 +239,29 @@ pub fn folded(form: &str) -> Option<&'static Word> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn dictionary_can_load_in_background() {
+		static ASYNC_TEST: Dictionary = (
+			Dictionary::new("alpha\t100\t0\nbeta\t90\t0\n")
+		);
+
+		assert!(ASYNC_TEST.begin_load());
+		assert!(ASYNC_TEST.is_loading());
+		assert!(!ASYNC_TEST.is_ready());
+		assert!(ASYNC_TEST.exact_ready("alpha").is_none());
+		assert_eq!(ASYNC_TEST.words_of_len_ready(5).count(), 0);
+
+		ASYNC_TEST.load_now();
+		assert!(ASYNC_TEST.is_ready());
+		assert!(!ASYNC_TEST.is_loading());
+		assert_eq!(
+			ASYNC_TEST.exact_ready("alpha").map(|word| word.text),
+			Some("alpha")
+		);
+		assert_eq!(ASYNC_TEST.words_of_len_ready(5).count(), 1);
+		assert_eq!(ASYNC_TEST.words_of_len_ready(4).count(), 1);
+	}
 
 	#[test]
 	fn loads_the_shipped_dictionary() {

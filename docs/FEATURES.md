@@ -56,6 +56,8 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Accent-insensitive matching (`ecole` → `école`) and one-tap replacement
 - [x] Per-language dictionaries (French, English UK, Spanish and Korean) with a
       profile-scoped corrector
+- [x] Background dictionary loading with a spinner in the suggestion strip;
+      preload on keyboard show and profile change, without blocking typing
 - [x] Autocorrect at word boundaries with revert (`jai` → `j'ai`)
 - [x] Autocorrect with caps lock: all-caps words keep their capitals
       (`LANGAUGE` → `LANGUAGE`, `JAI` → `J'AI`)

@@ -38,6 +38,8 @@ data class RowModel(
 	val caps: Boolean,
 	/** Whether a letter popup may also show neighbouring keys' alternates. */
 	val mergeLetterAlts: Boolean,
+	/** True while the active dictionaries are loading in the background. */
+	val loading: Boolean,
 	val suggestions: List<String>,
 	val letters: List<LetterKey>,
 	/** Shift (left) and backspace (right) pinned to the suggestion strip. */
@@ -66,6 +68,7 @@ data class RowModel(
 				shift = root.optInt("shift", 0),
 				caps = root.optBoolean("caps", false),
 				mergeLetterAlts = root.optBoolean("mergeLetterAlts", true),
+				loading = root.optBoolean("loading", false),
 				suggestions = root.stringList("suggestions"),
 				letters = letters,
 				strip = root.utilityList("strip"),

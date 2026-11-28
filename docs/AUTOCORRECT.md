@@ -105,6 +105,25 @@ Elision is enabled if any active language enables it. Contraction tables belong
 to individual languages, with a cross-language conflict rule described in
 §7.
 
+### 2.5 Dictionary loading
+
+Each language owns a lazily built index. The platform can enable asynchronous
+loading with `Engine::prepare`, which claims the active languages and starts a
+background thread. Until an index is ready:
+
+- lookups and candidate channels see that language as empty;
+- no component waits for the build;
+- `render_json` reports `"loading": true` while at least one active dictionary
+  is being built;
+- the Android view polls while loading and shows animated dots in the centre of
+  the suggestion strip.
+
+`prepare` is called when the keyboard view appears and whenever the profile
+changes. An index is built at most once and stays loaded for the process
+lifetime; changing profiles does not unload it. If the platform never enables
+asynchronous loading, the same lazy lookups remain synchronous for tests and
+desktop tooling.
+
 ## 3. Normalisation
 
 ### 3.1 Accent folding
