@@ -1,0 +1,38 @@
+Korean conjugation data
+=======================
+
+The generated Korean conjugation forms in core/data/ko_conj.tsv were produced
+at build time with KoParadigm and Kiwi. They are distributed as part of the
+Type1 Korean dictionary under the Creative Commons
+Attribution-ShareAlike 4.0 International licence (CC BY-SA 4.0), together with
+the other Type1 dictionary data.
+
+KoParadigm
+----------
+KoParadigm: Korean Inflectional Paradigm Generator
+https://github.com/Kyubyong/KoParadigm
+Copyright Kyubyong Park and contributors
+Licence: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+KoParadigm's verb and ending inventory is derived from the Standard Korean
+Language Dictionary (표준국어대사전), published by the National Institute of
+Korean Language, which is distributed under CC BY-SA 2.0 KR.
+https://stdict.korean.go.kr/
+https://creativecommons.org/licenses/by-sa/2.0/kr/
+
+Kiwi
+----
+Kiwi: Korean Intelligent Word Identifier
+https://github.com/bab2min/Kiwi
+Copyright Minchul Lee and contributors
+Licence: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+The Kiwi model files used at build time are also Apache-2.0. They were trained
+on the 21st Century Sejong Corpus and the National Institute of Korean Language
+"모두의 말뭉치" corpora. The source corpora are not redistributed with Type1.
+
+The generated conjugations are derived data. Attribution is given here and in
+core/data/NOTICE.md; redistributed derived data remains under the same
+share-alike terms.

@@ -66,6 +66,9 @@ Baseline of what mainstream Android keyboards offer, and where Type1 stands.
 - [x] Korean jamo composition (`ㄱ` + `ㅏ` → `가`, `가` + `ㄴ` + `ㅏ` → `가나`)
       and the shared correction pipeline on jamo units, including multi-slip
       words such as `댈개` → `딸기`
+- [x] Generated Korean conjugations (`있어요`, `먹었어요`, `했어요`, `이에요`,
+      `공부했어요`) from KoParadigm/Kiwi, marked as generated and ranked below
+      attested forms
 - [x] Shift variants (`ㅅ`/`ㅆ`, `ㄱ`/`ㄲ`, `ㅐ`/`ㅒ`, ...) have equal
       correction cost and are available from the base key's long-press popup
 - [x] English contractions restored (`dont` → `don't`, `cant` → `can't`,

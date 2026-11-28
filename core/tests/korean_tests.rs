@@ -217,6 +217,16 @@ fn suggestions_compose_jamo_and_rank_by_frequency() {
 }
 
 #[test]
+fn conjugated_forms_are_known_words() {
+	let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
+	for word in ["있어요", "먹었어요", "했어요", "갔어요", "이에요", "아니에요", "공부했어요"] {
+		assert!(KOREAN.exact(word).is_some(), "{word}");
+		let suggestion = profile.suggest(word);
+		assert!(!suggestion.apply, "{word} should not be replaced");
+	}
+}
+
+#[test]
 fn multi_slip_korean_words_are_suggested() {
 	let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
 	let suggestion = profile.suggest("댈개");

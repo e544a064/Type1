@@ -19,6 +19,12 @@ class AboutActivity : SettingsPageActivity() {
 		findViewById<TextView>(R.id.licenseWordfreq).setOnClickListener {
 			showLicense(R.string.settings_license_wordfreq, R.raw.license_wordfreq)
 		}
+		findViewById<TextView>(R.id.licenseKoreanConjugations).setOnClickListener {
+			showLicense(
+				R.string.settings_license_korean_conjugations,
+				R.raw.license_korean_conjugations,
+			)
+		}
 		findViewById<TextView>(R.id.licenseType1).setOnClickListener {
 			showLicense(R.string.settings_license_app, R.raw.license_type1)
 		}

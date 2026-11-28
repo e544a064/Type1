@@ -76,8 +76,10 @@ strip and release on the letter you want.
   changes such as `댈개` → `딸기` are therefore found by the normal whole-word
   rescue, then ranked by frequency. Shift variants have equal correction
   priority, so a tense consonant is never penalised as a typo. A known but rare
-  form still gets suggestions: `달기` offers `딸기` without being replaced
-  automatically.
+  forms still gets suggestions: `달기` offers `딸기` without being replaced
+  automatically. The dictionary also includes generated conjugations
+  (`있어요`, `먹었어요`, `했어요`, `이에요`, `공부했어요`) built from KoParadigm
+  and Kiwi; they are recognised exactly but rank below attested forms.
 - English contractions are restored (`dont` → `don't`, `cant` → `can't`,
   `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`). Any ordinary
   candidate that equals a contraction key is shown as the contraction, so
@@ -233,6 +235,7 @@ core/                     Rust crate (no Android dependency)
   data/en.tsv             derived wordfreq list (all single-token English forms)
   data/es.tsv             derived wordfreq list (Spanish forms with accents)
   data/ko.tsv             derived wordfreq list (Korean Hangul syllables)
+  data/ko_conj.tsv        generated Korean conjugation forms
   data/NOTICE.md          dictionary licences and attribution
   examples/evaluate.rs    dev-only correction evaluation
   examples/make_autocorrect_cases.rs  regenerate the typo fixtures
@@ -277,6 +280,8 @@ scripts/build-dictionary.ps1  regenerate core/data/fr.tsv from Lexique 3.83
 scripts/build-english-dictionary.py  regenerate core/data/en.tsv from wordfreq
 scripts/build-spanish-dictionary.py  regenerate core/data/es.tsv from wordfreq
 scripts/build-korean-dictionary.py  regenerate core/data/ko.tsv from wordfreq
+scripts/build-korean-conjugations.py  generate core/data/ko_conj.tsv
+scripts/korean_sequences.tsv  ending sequences for the conjugation generator
 scripts/export-wordfreq.py  export the full English wordfreq list
 tools/jni-smoke/          JVM smoke test for the JNI contract (no device)
 .github/workflows/release.yml  tag-triggered signed APK release
@@ -327,6 +332,16 @@ scale as the other dictionaries. Regenerate it with
 (CC BY-SA 4.0). It keeps every single Korean token up to 31 precomposed Hangul
 syllables, about 26,800 forms (0.37 MB), with the same frequency scale.
 Regenerate it with `scripts/build-korean-dictionary.py`.
+
+`core/data/ko_conj.tsv` adds generated Korean conjugations such as `있어요`,
+`먹었어요`, `했어요`, `이에요` and `공부했어요`. It is produced at build time by
+`scripts/build-korean-conjugations.py`, using KoParadigm for the verb/ending
+inventory and Kiwi for surface-form joining and irregular allomorphs. Generated
+forms inherit the stem's wordfreq prior with a small penalty and are marked as
+generated, so they rank after attested words and never auto-apply. The current
+build has about 579,000 forms (12.5 MB) from roughly 10,100 frequency-covered
+stems. The ending list is in `scripts/korean_sequences.tsv`; both build tools
+are documented in `core/data/NOTICE.md` and the in-app Korean licence notice.
 
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).

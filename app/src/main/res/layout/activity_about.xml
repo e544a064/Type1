@@ -55,6 +55,16 @@
 				android:textSize="16sp" />
 
 			<TextView
+				android:id="@+id/licenseKoreanConjugations"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:paddingBottom="12dp"
+				android:paddingTop="12dp"
+				android:text="@string/settings_license_korean_conjugations"
+				android:textColor="#FF4C6FFF"
+				android:textSize="16sp" />
+
+			<TextView
 				android:id="@+id/licenseType1"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"

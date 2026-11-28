@@ -44,7 +44,25 @@
 - This derived data is distributed with the GPL-3.0 application under the same
   CC BY-SA 4.0 terms for the data itself.
 
-`ko.tsv` is a derived list built from **wordfreq**:
+`ko_conj.tsv` contains generated Korean conjugation forms:
+
+- Generator: **KoParadigm 0.10.0**, Apache License 2.0,
+  <https://github.com/Kyubyong/KoParadigm>; its verb/ending inventory derives
+  from the Standard Korean Language Dictionary (CC BY-SA 2.0 KR),
+  <https://stdict.korean.go.kr/>.
+- Surface-form joining and irregular allomorphs: **Kiwi 0.25.1**, Apache License
+  2.0, <https://github.com/bab2min/Kiwi>. The Kiwi model files are also
+  Apache-2.0 and were trained on the 21st Century Sejong Corpus and the National
+  Institute of Korean Language "모두의 말뭉치" corpora; those source corpora are
+  not redistributed here.
+- Build: `scripts/build-korean-conjugations.py` using
+  `scripts/korean_sequences.tsv`. Forms already present in `ko.tsv` are omitted.
+  Each generated form inherits its stem's wordfreq prior, minus a small
+  generated-form penalty, and is marked with the `GENERATED` flag so it ranks
+  after attested words and is never auto-applied.
+- The generated data is distributed under CC BY-SA 4.0 with the rest of the
+  Korean dictionary data. See `app/src/main/res/raw/license_korean_conjugations.txt`
+  for the in-app notice.
 
 - wordfreq, Luminoso Technologies — <https://github.com/rspeer/wordfreq>
 - Export used: the full Korean `best` list from the wordfreq package

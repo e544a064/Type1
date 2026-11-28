@@ -477,6 +477,17 @@ fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	}
 }
 
+/// Generated conjugations are valid words but less trustworthy than attested
+/// dictionary entries, so they sort after attested candidates and never
+/// auto-apply.
+fn word_tier(word: &Word, tier: u8) -> u8 {
+	if word.flags & dictionary::GENERATED != 0 {
+		4
+	} else {
+		tier
+	}
+}
+
 /// `jusqua` -> `jusqu'à`: the remainder folds to the verb `a`, not `à`.
 fn elision_remainder(
 	clitic: &str,
@@ -621,7 +632,7 @@ impl Corrector {
 					Candidate::normal(
 						word.text,
 						word.log_freq * AGGRESSIVE_WEIGHT - cost,
-						1,
+						word_tier(word, 1),
 					),
 				);
 			}
@@ -654,7 +665,7 @@ impl Corrector {
 								- cost
 								- LENGTH_PENALTY * length_diff
 							),
-							1,
+							word_tier(word, 1),
 						),
 					);
 				}
@@ -803,7 +814,7 @@ impl Corrector {
 			Candidate::normal(
 				word.text,
 				-distance + word.log_freq * 0.001,
-				3,
+				word_tier(word, 3),
 			)
 		})
 		. collect()
@@ -940,7 +951,7 @@ impl Corrector {
 				Candidate::normal(
 					word.text,
 					word.log_freq * AGGRESSIVE_WEIGHT - distance,
-					tier,
+					word_tier(word, tier),
 				),
 			);
 		}

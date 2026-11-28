@@ -39,6 +39,7 @@
 	<string name="settings_licenses">Licences</string>
 	<string name="settings_license_lexique">Lexique 3.83 — CC BY-SA 4.0</string>
 	<string name="settings_license_wordfreq">wordfreq — CC BY-SA 4.0</string>
+	<string name="settings_license_korean_conjugations">Données de conjugaison coréennes — CC BY-SA 4.0</string>
 	<string name="settings_license_app">Type1 — GPL-3.0</string>
 	<string name="settings_licenses_hint">Touchez une licence pour lire sa notice.</string>
 

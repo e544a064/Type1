@@ -577,6 +577,12 @@ key or the other shift state of the same key.
 Backspace removes one jamo at a time (`가` → `ㄱ`, `값` → `갑`), while a word
 boundary applies the normal tier and margin rules.
 
+Generated conjugations from `ko_conj.tsv` participate in the same lookup and
+ranking, but carry the `GENERATED` flag. Their candidates are assigned tier 4,
+after attested candidates, and are never auto-applied. They can still be
+recognised exactly, protected as known words, and offered when no better
+attested candidate exists.
+
 ## 6. Merging and ranking
 
 ### 6.1 Duplicate handling

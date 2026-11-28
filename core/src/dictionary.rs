@@ -25,6 +25,8 @@ pub const VERB: u8 = 1;
 pub const NOUN: u8 = 2;
 pub const ADJ: u8 = 4;
 pub const ADV: u8 = 8;
+/// Generated conjugation, not an attested wordfreq surface form.
+pub const GENERATED: u8 = 16;
 
 #[derive(Debug)]
 struct Index {
@@ -148,8 +150,12 @@ pub static ENGLISH: Dictionary = Dictionary::new(include_str!("../data/en.tsv"))
 /// Spanish dictionary (wordfreq).
 pub static SPANISH: Dictionary = Dictionary::new(include_str!("../data/es.tsv"));
 
-/// Korean dictionary (wordfreq).
-pub static KOREAN: Dictionary = Dictionary::new(include_str!("../data/ko.tsv"));
+/// Korean dictionary: wordfreq forms plus generated conjugations.
+pub static KOREAN: Dictionary = Dictionary::new(concat!(
+	include_str!("../data/ko.tsv"),
+	"\n",
+	include_str!("../data/ko_conj.tsv"),
+));
 
 /// Compatibility wrappers for the default French dictionary.
 pub fn words() -> &'static [Word] {
@@ -190,11 +196,19 @@ mod tests {
 
 	#[test]
 	fn loads_the_korean_dictionary() {
-		assert!(KOREAN.words().len() >= 20_000);
+		assert!(KOREAN.words().len() >= 500_000);
 		assert!(KOREAN.exact("한글").is_some());
 		assert!(KOREAN.exact("사람").is_some());
 		assert!(KOREAN.exact("안녕").is_some());
 		assert!(KOREAN.exact("한굴").is_none());
+		assert!(KOREAN.exact("있어요").is_some());
+		assert!(KOREAN.exact("먹었어요").is_some());
+		assert!(KOREAN.exact("했어요").is_some());
+		assert!(KOREAN.exact("갔어요").is_some());
+		assert!(KOREAN.exact("이에요").is_some());
+		assert!(KOREAN.exact("예요").is_some());
+		assert!(KOREAN.exact("아니에요").is_some());
+		assert!(KOREAN.exact("공부했어요").is_some());
 	}
 
 	#[test]

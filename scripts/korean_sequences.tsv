@@ -1,0 +1,135 @@
+# Korean ending sequences for scripts/build-korean-conjugations.py.
+# Each line is: stem-tag, then one or more morpheme/tag pairs.
+# Tags follow Kiwi's Sejong-style tag set.
+VV	고/EC
+VV	ᆫ/ETM
+VV	는/ETM
+VA	ᆫ/ETM
+VV	어서/EC
+VV	어/EC
+VA	게/EC
+VA	어요/EF
+VV	면/EC
+VA	고/EC
+VA	은/ETM
+VV	었/EP	습니다/EF
+VV	어/EF
+VV	ᆫ다/EF
+VA	어서/EC
+VV	ᆯ/ETM
+VA	습니다/EF
+VV	었/EP	어요/EF
+VV	었/EP	는데/EC
+VV	지/EF
+VV	었/EP	던/ETM
+VA	는/ETM
+VV	ᆸ니다/EF
+VV	며/EC
+VV	었/EP	다/EF
+VA	음/EF
+VV	어도/EC
+VV	을/ETM
+VA	지만/EC
+VV	기/ETN
+VV	세요/EF
+VV	어요/EF
+VA	지/EF
+VV	던/ETM
+VV	ᆫ다고/EC
+VA	네요/EF
+VV	었/EP	네요/EF
+VA	어/EF
+VA	ᆸ니다/EF
+VV	는데/EC
+VA	다/EF
+VV	거나/EC
+VV	게/EC
+VV	자/EC
+VV	지/EC
+VV	다가/EC
+VV	도록/EC
+VV	으면/EC
+VV	었었/EP	는데/EC
+VV	고/EC	는/JX
+VA	었/EP	어요/EF
+VV	었/EP	지만/EC
+VV	네요/EF
+VV	겠/EP	으나/EC
+VV	ᆫ답니다/EF
+VV	려면/EC
+VV	ᆷ/EF
+VV	었/EP	다가/EC
+VA	으면/EC
+VV	기/ETN	도/JX
+VV	었/EP	는지/EC
+VV	ᆯ게요/EF
+VV	겠/EP	는데/EC
+VV	려는/ETM
+VA	세요/EF
+VV	겠/EP	다/EF
+VV	었/EP	을/ETM
+VA	을까/EF
+VV	었/EP	고/EC
+VA	면/EC
+VV	시/EP	어서/EC
+VV	었/EP	답니다/EF
+VV	었/EP	어/EF
+VV	겠/EP	습니다/EF
+VA	거나/EC
+VA	냐/EF
+VV	으려구요/EF
+VA	답니다/EF
+VA	니/EC
+VA	던/ETM
+VA	으니까/EC
+VA	겠/EP	네요/EF
+VV	었/EP	으며/EC
+VA	을까요/EF
+VA	으세요/EF
+VA	었/EP	는데/EC
+VV	라/EF
+VA	ᆯ까요/EF
+VV	겠/EP	어요/EF
+VV	었/EP	다/EC
+VV	었/EP	다는/ETM
+VV	겠/EP	네/EF
+VV	시/EP	면/EC
+VV	다/EC
+VV	ᆯ까/EF
+VV	다/EF
+VA	다더라/EF
+VV	시/EP	는/ETM
+VV	길래/EC
+VV	겠/EP	지만/EC
+
+# Copula (이다).
+VCP	에요/EF
+VCP	습니다/EF
+VCP	었/EP	어요/EF
+VCP	었/EP	습니다/EF
+VCP	ᆫ/ETM
+VCP	ᆯ/ETM
+VCP	라/EC
+VCP	라면/EC
+VCP	라서/EC
+VCP	고/EC
+VCP	지만/EC
+VCP	면/EC
+VCP	니까/EC
+VCP	는데/EC
+
+# Negative copula (아니다).
+VCN	에요/EF
+VCN	습니다/EF
+VCN	었/EP	어요/EF
+VCN	었/EP	습니다/EF
+VCN	ᆫ/ETM
+VCN	ᆯ/ETM
+VCN	라/EC
+VCN	라면/EC
+VCN	라서/EC
+VCN	고/EC
+VCN	지만/EC
+VCN	면/EC
+VCN	니까/EC
+VCN	는데/EC
