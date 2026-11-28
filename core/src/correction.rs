@@ -453,15 +453,15 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 	match clitic {
 		"j" | "t" | "m" | "n" => {
 			(word.flags & dictionary::VERB != 0 || matches!(text, "en" | "y"))
-				&& !(clitic == "t" && text == "est")
+			&& !(clitic == "t" && text == "est")
 		}
 		"s" => {
 			word.flags & dictionary::VERB != 0
-				|| matches!(text, "il" | "ils" | "on" | "y" | "en")
+			|| matches!(text, "il" | "ils" | "on" | "y" | "en")
 		}
 		"c" => {
 			matches!(text, "est" | "était" | "étaient" | "eût" | "en")
-				|| text.starts_with("est-")
+			|| text.starts_with("est-")
 		}
 		"d" => {
 			word.flags & (dictionary::NOUN | dictionary::ADV) != 0
@@ -481,12 +481,19 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 
 fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	match found.get(&candidate.text) {
-		Some(existing)
-			if existing.tier < candidate.tier
-				|| (existing.tier == candidate.tier
-					&& (existing.score > candidate.score
-						|| (existing.score == candidate.score
-							&& (!existing.generated || candidate.generated)))) => {}
+		Some(existing) if (
+			existing.tier < candidate.tier
+			|| (
+				existing.tier == candidate.tier
+				&& (
+					existing.score > candidate.score
+					|| (
+						existing.score == candidate.score
+						&& (!existing.generated || candidate.generated)
+					)
+				)
+			)
+		) => {}
 		_ => {
 			found.insert(candidate.text.clone(), candidate);
 		}
@@ -1149,11 +1156,13 @@ impl Corrector {
 		// filtered and ranked. Promote at most the best one back into the strip,
 		// so `있어요` can correct `앳여요` without six generated forms replacing
 		// attested words such as `딸기`.
-		let best_generated = list
-		. iter()
-		. filter(|candidate| candidate.generated)
-		. max_by(|a, b| a.score.total_cmp(&b.score))
-		. cloned();
+		let best_generated = (
+			list
+			. iter()
+			. filter(|candidate| candidate.generated)
+			. max_by(|a, b| a.score.total_cmp(&b.score))
+			. cloned()
+		);
 		list.retain(|candidate| !candidate.generated);
 		if let Some(mut candidate) = best_generated {
 			if candidate.score >= MIN_SCORE {

@@ -233,18 +233,18 @@ fn a_close_typo_reaches_a_generated_conjugation() {
 	assert!(suggestion.apply);
 	let texts: Vec<&str> = (
 		suggestion
-		.candidates
-		.iter()
-		.map(|candidate| candidate.text.as_str())
-		.collect()
+		. candidates
+		. iter()
+		. map(|candidate| candidate.text.as_str())
+		. collect()
 	);
 	assert!(texts.contains(&"있어요"), "got {texts:?}");
 	assert_eq!(
 		suggestion
-		.candidates
-		.iter()
-		.filter(|candidate| candidate.generated)
-		.count(),
+		. candidates
+		. iter()
+		. filter(|candidate| candidate.generated)
+		. count(),
 		1,
 		"only one generated candidate should be shown: {texts:?}"
 	);
@@ -313,10 +313,10 @@ fn a_known_rare_word_still_suggests_a_frequent_shift_variant() {
 	assert!(texts.contains(&"딸기"), "got {texts:?}");
 	assert_eq!(
 		suggestion
-		.candidates
-		.iter()
-		.filter(|candidate| candidate.generated)
-		.count(),
+		. candidates
+		. iter()
+		. filter(|candidate| candidate.generated)
+		. count(),
 		1,
 		"got {texts:?}"
 	);
