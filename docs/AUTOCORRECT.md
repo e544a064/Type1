@@ -578,10 +578,12 @@ Backspace removes one jamo at a time (`가` → `ㄱ`, `값` → `갑`), while a
 boundary applies the normal tier and margin rules.
 
 Generated conjugations from `ko_conj.tsv` participate in the same lookup and
-ranking, but carry the `GENERATED` flag. Their candidates are assigned tier 4,
-after attested candidates, and are never auto-applied. They can still be
-recognised exactly, protected as known words, and offered when no better
-attested candidate exists.
+ranking. They carry the `GENERATED` flag. During list building their candidates
+stay behind attested candidates so they cannot change the attested filter;
+after ranking, the best generated candidate above the minimum score is promoted
+into the final list, and only one generated candidate is kept. A generated
+candidate may auto-apply for an unknown word, but never replaces a word already
+known to the dictionary.
 
 ## 6. Merging and ranking
 

@@ -79,7 +79,8 @@ strip and release on the letter you want.
   forms still gets suggestions: `달기` offers `딸기` without being replaced
   automatically. The dictionary also includes generated conjugations
   (`있어요`, `먹었어요`, `했어요`, `이에요`, `공부했어요`) built from KoParadigm
-  and Kiwi; they are recognised exactly but rank below attested forms.
+  and Kiwi. The best generated candidate can be promoted into the strip, but at
+  most one is shown, so generated paradigms do not crowd out attested words.
 - English contractions are restored (`dont` → `don't`, `cant` → `can't`,
   `isnt` → `isn't`, `youre` → `you're`, `oclock` → `o'clock`). Any ordinary
   candidate that equals a contraction key is shown as the contraction, so
@@ -338,10 +339,11 @@ Regenerate it with `scripts/build-korean-dictionary.py`.
 `scripts/build-korean-conjugations.py`, using KoParadigm for the verb/ending
 inventory and Kiwi for surface-form joining and irregular allomorphs. Generated
 forms inherit the stem's wordfreq prior with a small penalty and are marked as
-generated, so they rank after attested words and never auto-apply. The current
-build has about 579,000 forms (12.5 MB) from roughly 10,100 frequency-covered
-stems. The ending list is in `scripts/korean_sequences.tsv`; both build tools
-are documented in `core/data/NOTICE.md` and the in-app Korean licence notice.
+generated. They are kept out of the attested-candidate filtering and at most the
+best generated candidate is promoted into the strip. The current build has about
+579,000 forms (12.5 MB) from roughly 10,100 frequency-covered stems. The ending
+list is in `scripts/korean_sequences.tsv`; both build tools are documented in
+`core/data/NOTICE.md` and the in-app Korean licence notice.
 
 The complete correction, ranking and auto-apply specification is in
 [docs/AUTOCORRECT.md](docs/AUTOCORRECT.md).

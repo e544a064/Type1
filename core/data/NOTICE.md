@@ -57,9 +57,11 @@
   not redistributed here.
 - Build: `scripts/build-korean-conjugations.py` using
   `scripts/korean_sequences.tsv`. Forms already present in `ko.tsv` are omitted.
-  Each generated form inherits its stem's wordfreq prior, minus a small
-  generated-form penalty, and is marked with the `GENERATED` flag so it ranks
-  after attested words and is never auto-applied.
+  Each generated form inherits its stem's wordfreq prior minus a small penalty
+  and is marked with the `GENERATED` flag. Generated candidates are kept out of
+  the attested-candidate filtering; at most the best one is promoted into the
+  final suggestion list. A generated candidate can auto-apply for an unknown
+  word, but never replaces a word the dictionary already knows.
 - The generated data is distributed under CC BY-SA 4.0 with the rest of the
   Korean dictionary data. See `app/src/main/res/raw/license_korean_conjugations.txt`
   for the in-app notice.

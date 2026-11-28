@@ -81,6 +81,8 @@ pub struct Candidate {
 	/// True for a host personal-dictionary candidate. Such candidates are
 	/// suggestions only and never trigger automatic replacement.
 	pub personal: bool,
+	/// True for a generated conjugation rather than an attested dictionary form.
+	pub generated: bool,
 }
 
 impl Candidate {
@@ -90,6 +92,17 @@ impl Candidate {
 			score,
 			tier,
 			personal: false,
+			generated: false,
+		}
+	}
+
+	fn from_word(word: &Word, score: f32, tier: u8) -> Self {
+		Candidate {
+			text: word.text.to_string(),
+			score,
+			tier,
+			personal: false,
+			generated: word.flags & dictionary::GENERATED != 0,
 		}
 	}
 
@@ -99,6 +112,7 @@ impl Candidate {
 			score,
 			tier,
 			personal: true,
+			generated: false,
 		}
 	}
 }
@@ -467,19 +481,21 @@ fn elision_allowed(clitic: &str, word: &dictionary::Word) -> bool {
 
 fn insert(found: &mut HashMap<String, Candidate>, candidate: Candidate) {
 	match found.get(&candidate.text) {
-		Some(existing) if existing.tier < candidate.tier || (
-			existing.tier == candidate.tier
-			&& existing.score >= candidate.score
-		) => {}
+		Some(existing)
+			if existing.tier < candidate.tier
+				|| (existing.tier == candidate.tier
+					&& (existing.score > candidate.score
+						|| (existing.score == candidate.score
+							&& (!existing.generated || candidate.generated)))) => {}
 		_ => {
 			found.insert(candidate.text.clone(), candidate);
 		}
 	}
 }
 
-/// Generated conjugations are valid words but less trustworthy than attested
-/// dictionary entries, so they sort after attested candidates and never
-/// auto-apply.
+/// Generated conjugations stay behind attested candidates during list building
+/// so they cannot change the attested filter. One best generated candidate is
+/// promoted into the final strip afterwards.
 fn word_tier(word: &Word, tier: u8) -> u8 {
 	if word.flags & dictionary::GENERATED != 0 {
 		4
@@ -629,8 +645,8 @@ impl Corrector {
 				let cost = 0.25;
 				insert(
 					&mut found,
-					Candidate::normal(
-						word.text,
+					Candidate::from_word(
+						word,
 						word.log_freq * AGGRESSIVE_WEIGHT - cost,
 						word_tier(word, 1),
 					),
@@ -658,8 +674,8 @@ impl Corrector {
 					let length_diff = word_units.len().abs_diff(typed_units.len()) as f32;
 					insert(
 						&mut found,
-						Candidate::normal(
-							word.text,
+						Candidate::from_word(
+							word,
 							(
 								word.log_freq * AGGRESSIVE_WEIGHT
 								- cost
@@ -811,8 +827,8 @@ impl Corrector {
 		. into_iter()
 		. take(MAX_RESULTS)
 		. map(|(word, distance)| {
-			Candidate::normal(
-				word.text,
+			Candidate::from_word(
+				word,
 				-distance + word.log_freq * 0.001,
 				word_tier(word, 3),
 			)
@@ -948,8 +964,8 @@ impl Corrector {
 			};
 			insert(
 				found,
-				Candidate::normal(
-					word.text,
+				Candidate::from_word(
+					word,
 					word.log_freq * AGGRESSIVE_WEIGHT - distance,
 					word_tier(word, tier),
 				),
@@ -1058,7 +1074,7 @@ impl Corrector {
 			let score = word.log_freq * AGGRESSIVE_WEIGHT;
 			insert(
 				&mut found,
-				Candidate::normal(word.text, score, 1),
+				Candidate::from_word(word, score, 1),
 			);
 			known_texts.push(word.text);
 			typed_score = Some(score);
@@ -1129,6 +1145,23 @@ impl Corrector {
 			// only offer alternatives with a plausible score.
 			list.retain(|candidate| candidate.score >= MIN_SCORE);
 		}
+		// Generated conjugations are kept out of the attested list while it is
+		// filtered and ranked. Promote at most the best one back into the strip,
+		// so `있어요` can correct `앳여요` without six generated forms replacing
+		// attested words such as `딸기`.
+		let best_generated = list
+		. iter()
+		. filter(|candidate| candidate.generated)
+		. max_by(|a, b| a.score.total_cmp(&b.score))
+		. cloned();
+		list.retain(|candidate| !candidate.generated);
+		if let Some(mut candidate) = best_generated {
+			if candidate.score >= MIN_SCORE {
+				candidate.tier = 1;
+				list.push(candidate);
+				sort_candidates(&mut list);
+			}
+		}
 		list.truncate(MAX_RESULTS);
 
 		let Some(best) = list.first() else {
@@ -1151,6 +1184,11 @@ impl Corrector {
 			}
 		}
 		if personal_exact || best.personal {
+			apply = false;
+		}
+		if is_known && best.generated {
+			// Generated forms may be offered, but they do not replace a word the
+			// dictionary already knows.
 			apply = false;
 		}
 		Suggestion {

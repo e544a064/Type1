@@ -227,6 +227,30 @@ fn conjugated_forms_are_known_words() {
 }
 
 #[test]
+fn a_close_typo_reaches_a_generated_conjugation() {
+	let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
+	let suggestion = profile.suggest("앳여요");
+	assert!(suggestion.apply);
+	let texts: Vec<&str> = (
+		suggestion
+		.candidates
+		.iter()
+		.map(|candidate| candidate.text.as_str())
+		.collect()
+	);
+	assert!(texts.contains(&"있어요"), "got {texts:?}");
+	assert_eq!(
+		suggestion
+		.candidates
+		.iter()
+		.filter(|candidate| candidate.generated)
+		.count(),
+		1,
+		"only one generated candidate should be shown: {texts:?}"
+	);
+}
+
+#[test]
 fn multi_slip_korean_words_are_suggested() {
 	let profile = Profile::from_ids("sebeolsik", &["ko"]).unwrap();
 	let suggestion = profile.suggest("댈개");
@@ -287,6 +311,15 @@ fn a_known_rare_word_still_suggests_a_frequent_shift_variant() {
 		. collect()
 	);
 	assert!(texts.contains(&"딸기"), "got {texts:?}");
+	assert_eq!(
+		suggestion
+		.candidates
+		.iter()
+		.filter(|candidate| candidate.generated)
+		.count(),
+		1,
+		"got {texts:?}"
+	);
 }
 
 #[test]
