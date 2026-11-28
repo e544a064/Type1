@@ -70,6 +70,26 @@ pub struct Candidate {
 	pub personal: bool,
 }
 
+impl Candidate {
+	fn normal(text: impl Into<String>, score: f32, tier: u8) -> Self {
+		Candidate {
+			text: text.into(),
+			score,
+			tier,
+			personal: false,
+		}
+	}
+
+	fn personal(text: impl Into<String>, score: f32, tier: u8) -> Self {
+		Candidate {
+			text: text.into(),
+			score,
+			tier,
+			personal: true,
+		}
+	}
+}
+
 /// The candidates to show for a typed token, and whether the best one is
 /// trustworthy enough to replace the token automatically.
 #[derive(Clone, Debug)]
@@ -330,12 +350,11 @@ fn insert_elision(
 	let text = format!("{clitic}'{remainder}");
 	insert(
 		found,
-		Candidate {
+		Candidate::normal(
 			text,
-			score: log_freq * AGGRESSIVE_WEIGHT - penalty - cost,
+			log_freq * AGGRESSIVE_WEIGHT - penalty - cost,
 			tier,
-			personal: false,
-		},
+		),
 	);
 }
 
@@ -445,12 +464,11 @@ impl Corrector {
 			let cost = 0.25;
 			insert(
 				&mut found,
-				Candidate {
-					text: word.text.to_string(),
-					score: word.log_freq * AGGRESSIVE_WEIGHT - cost,
-					tier: 1,
-					personal: false,
-				},
+				Candidate::normal(
+					word.text,
+					word.log_freq * AGGRESSIVE_WEIGHT - cost,
+					1,
+				),
 			);
 		}
 
@@ -473,16 +491,15 @@ impl Corrector {
 					let length_diff = word_bytes.len().abs_diff(typed_bytes.len()) as f32;
 					insert(
 						&mut found,
-						Candidate {
-							text: word.text.to_string(),
-							score: (
+						Candidate::normal(
+							word.text,
+							(
 								word.log_freq * AGGRESSIVE_WEIGHT
 								- cost
 								- LENGTH_PENALTY * length_diff
 							),
-							tier: 1,
-							personal: false,
-						},
+							1,
+						),
 					);
 				}
 			}
@@ -607,11 +624,12 @@ impl Corrector {
 		matches
 		. into_iter()
 		. take(MAX_RESULTS)
-		. map(|(word, distance)| Candidate {
-			text: word.text.to_string(),
-			score: -distance + word.log_freq * 0.001,
-			tier: 3,
-			personal: false,
+		. map(|(word, distance)| {
+			Candidate::normal(
+				word.text,
+				-distance + word.log_freq * 0.001,
+				3,
+			)
 		})
 		. collect()
 	}
@@ -665,37 +683,28 @@ impl Corrector {
 				if lower == key {
 					insert(
 						found,
-						Candidate {
-							text: contraction.to_string(),
-							score: CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
-							tier: 1,
-							personal: false,
-						},
+						Candidate::normal(
+							contraction.to_string(),
+							CONTRACTION_LOG_FREQ * AGGRESSIVE_WEIGHT,
+							1,
+						),
 					);
 				}
-				if ambiguous {
-					// Keep the ordinary word as well: `lets` must stay
-					// available next to `let's`.
-					if let Some(candidate) = found.get(key).cloned() {
-						insert(
-							found,
-							Candidate {
-								text: contraction.to_string(),
-								score: candidate.score + CONTRACTION_ALIAS_BONUS,
-								tier: candidate.tier,
-								personal: false,
-							},
-						);
-					}
-				} else if let Some(candidate) = found.remove(key) {
+				// Keep an ambiguous ordinary word next to its contraction
+				// (`lets` and `let's`); otherwise replace the ordinary form.
+				let existing = if ambiguous {
+					found.get(key).cloned()
+				} else {
+					found.remove(key)
+				};
+				if let Some(candidate) = existing {
 					insert(
 						found,
-						Candidate {
-							text: contraction.to_string(),
-							score: candidate.score + CONTRACTION_ALIAS_BONUS,
-							tier: candidate.tier,
-							personal: false,
-						},
+						Candidate::normal(
+							contraction.to_string(),
+							candidate.score + CONTRACTION_ALIAS_BONUS,
+							candidate.tier,
+						),
 					);
 				}
 			}
@@ -731,12 +740,11 @@ impl Corrector {
 			};
 			insert(
 				found,
-				Candidate {
-					text: word.text().to_string(),
-					score: word.score() - distance,
+				Candidate::personal(
+					word.text(),
+					word.score() - distance,
 					tier,
-					personal: true,
-				},
+				),
 			);
 		}
 	}
@@ -755,12 +763,11 @@ impl Corrector {
 			};
 			insert(
 				found,
-				Candidate {
-					text: word.text.to_string(),
-					score: word.log_freq * AGGRESSIVE_WEIGHT - distance,
+				Candidate::normal(
+					word.text,
+					word.log_freq * AGGRESSIVE_WEIGHT - distance,
 					tier,
-					personal: false,
-				},
+				),
 			);
 		}
 	}
@@ -861,12 +868,7 @@ impl Corrector {
 			let score = word.log_freq * AGGRESSIVE_WEIGHT;
 			insert(
 				&mut found,
-				Candidate {
-					text: word.text.to_string(),
-					score,
-					tier: 1,
-					personal: false,
-				},
+				Candidate::normal(word.text, score, 1),
 			);
 			known_texts.push(word.text);
 			typed_score = Some(score);
@@ -875,12 +877,7 @@ impl Corrector {
 			let score = word.score();
 			insert(
 				&mut found,
-				Candidate {
-					text: word.text().to_string(),
-					score,
-					tier: 1,
-					personal: true,
-				},
+				Candidate::personal(word.text(), score, 1),
 			);
 			known_texts.push(word.text());
 			typed_score = Some(typed_score.map_or(score, |existing| existing.max(score)));
@@ -1058,12 +1055,11 @@ impl Corrector {
 				if !added.insert(text.clone()) {
 					continue;
 				}
-				list.push(Candidate {
-					text: text.clone(),
-					score: *log_freq * AGGRESSIVE_WEIGHT,
-					tier: 1,
-					personal: false,
-				});
+				list.push(Candidate::normal(
+					text.clone(),
+					*log_freq * AGGRESSIVE_WEIGHT,
+					1,
+				));
 			}
 		}
 		// The typed letter itself as a word (`a` when typing `à`).
@@ -1075,12 +1071,11 @@ impl Corrector {
 				. and_then(|entries| entries.get(&typed_base_text))
 			) {
 				added.insert(typed_base_text.clone());
-				list.push(Candidate {
-					text: typed_base_text,
-					score: *log_freq * AGGRESSIVE_WEIGHT,
-					tier: 1,
-					personal: false,
-				});
+				list.push(Candidate::normal(
+					typed_base_text,
+					*log_freq * AGGRESSIVE_WEIGHT,
+					1,
+				));
 			}
 		}
 		list.sort_by(|a, b| {
@@ -1095,12 +1090,7 @@ impl Corrector {
 		for (neighbour, cost) in neighbours {
 			let text = neighbour.to_string();
 			if added.insert(text.clone()) {
-				list.push(Candidate {
-					text,
-					score: -cost,
-					tier: 2,
-					personal: false,
-				});
+				list.push(Candidate::normal(text, -cost, 2));
 			}
 		}
 		list.truncate(MAX_RESULTS);
